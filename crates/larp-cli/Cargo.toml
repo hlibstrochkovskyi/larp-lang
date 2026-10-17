@@ -11,6 +11,9 @@ path = "src/main.rs"
 
 [dependencies]
 larp-diagnostics.workspace = true
+larp-source.workspace = true
+larp-compiler.workspace = true
+larp-vm.workspace = true
 
 [lints]
 workspace = true

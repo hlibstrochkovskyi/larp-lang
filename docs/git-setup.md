@@ -20,8 +20,8 @@ branch with the alternate repository's saved history. The alternate repository
 uses the maintainer's existing author/committer configuration, with no assistant
 credit, remote, or push.
 
-A portable `artifacts/larp-foundation.bundle` is generated from `main` after the
-foundation commit. Both the bundle and alternate metadata are ignored by Git.
+A portable `artifacts/larp-foundation.bundle` is regenerated from `main` after
+implementation commits. Both the bundle and alternate metadata are ignored by Git.
 To restore a normal repository in a new writable location:
 
 ```sh

@@ -1,0 +1,20 @@
+[package]
+name = "larp-compiler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+larp-source.workspace = true
+larp-diagnostics.workspace = true
+larp-types.workspace = true
+larp-syntax.workspace = true
+larp-ir.workspace = true
+larp-bytecode.workspace = true
+
+[dev-dependencies]
+larp-vm.workspace = true
+
+[lints]
+workspace = true

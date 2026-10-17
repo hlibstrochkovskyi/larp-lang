@@ -1,0 +1,15 @@
+[package]
+name = "larp-vm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+larp-types.workspace = true
+larp-source.workspace = true
+larp-diagnostics.workspace = true
+larp-bytecode.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,3 @@
+main_character {
+    yap("Fake it till you compile.");
+}

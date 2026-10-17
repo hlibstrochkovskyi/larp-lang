@@ -5,7 +5,7 @@
       "id": "scalars",
       "path": "pass/scalars.larp",
       "milestone": "M1",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "49\nfr\n"
@@ -15,7 +15,7 @@
       "id": "loops",
       "path": "pass/loops.larp",
       "milestone": "M2",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "1009\n10\n"
@@ -25,7 +25,7 @@
       "id": "functions",
       "path": "pass/functions.larp",
       "milestone": "M2",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "120\n"
@@ -115,7 +115,7 @@
       "id": "truthiness",
       "path": "fail/truthiness.larp",
       "milestone": "M1",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-T002"
@@ -125,7 +125,7 @@
       "id": "narrowing",
       "path": "fail/narrowing.larp",
       "milestone": "M1",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-T041"
@@ -135,7 +135,7 @@
       "id": "mixed-width",
       "path": "fail/mixed-width.larp",
       "milestone": "M1",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-T001"
@@ -255,7 +255,7 @@
       "id": "overflow",
       "path": "runtime/overflow.larp",
       "milestone": "M2",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R001"
@@ -279,6 +279,46 @@
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R005"
+      }
+    },
+    {
+      "id": "short-circuit",
+      "path": "pass/short-circuit.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "safe\n"
+      }
+    },
+    {
+      "id": "floats",
+      "path": "pass/floats.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "inf\n-inf\nnan\ncap\n"
+      }
+    },
+    {
+      "id": "branches",
+      "path": "pass/branches.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "fr\ncap\n"
+      }
+    },
+    {
+      "id": "string-output",
+      "path": "pass/string-output.larp",
+      "milestone": "M1",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "line\r\n🦀\t\"\n"
       }
     }
   ]

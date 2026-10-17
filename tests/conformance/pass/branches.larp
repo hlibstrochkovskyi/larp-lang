@@ -1,0 +1,12 @@
+sidequest choose(verdict input) -> text uses() {
+    if (input) {
+        return "fr";
+    } else {
+        return "cap";
+    }
+}
+
+main_character {
+    yap(choose(fr));
+    yap(choose(cap));
+}

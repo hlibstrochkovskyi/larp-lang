@@ -1,0 +1,5 @@
+main_character {
+    no_cap(fr || (1 / 0 == 0));
+    no_cap(!(cap && (1 / 0 == 0)));
+    yap("safe");
+}

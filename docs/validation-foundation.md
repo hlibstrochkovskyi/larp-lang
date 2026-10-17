@@ -1,5 +1,8 @@
 # Foundation validation
 
+Historical bootstrap snapshot. See [implementation status](implementation-status.md)
+and [scalar-core validation](validation-scalar-core.md) for the current compiler.
+
 Date: 2026-10-17. Environment: Linux, system rustc 1.99.0, Cargo 1.99.0,
 rustfmt 1.10.0, Clippy 0.1.99. No third-party Rust dependencies.
 

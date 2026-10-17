@@ -14,7 +14,7 @@ fn help_reports_actual_implementation_status() {
     assert!(
         String::from_utf8(output.stdout)
             .unwrap()
-            .contains("No LARP compiler")
+            .contains("verified in-memory bytecode")
     );
     assert!(output.stderr.is_empty());
 }
@@ -32,8 +32,6 @@ fn explanation_has_code_and_actionable_conversion_help() {
 #[test]
 fn unavailable_and_invalid_commands_fail_without_pretending_to_compile() {
     for args in [
-        vec!["run", "missing.larp"],
-        vec!["check", "missing.larp"],
         vec!["build", "missing.larp"],
         vec!["fmt", "missing.larp"],
         vec!["explain", "LARP-T999"],
@@ -45,4 +43,65 @@ fn unavailable_and_invalid_commands_fail_without_pretending_to_compile() {
         assert!(output.stdout.is_empty());
         assert!(!output.stderr.is_empty());
     }
+}
+
+fn fixture(name: &str) -> String {
+    format!(
+        "{}/../../tests/conformance/{name}",
+        env!("CARGO_MANIFEST_DIR")
+    )
+}
+
+#[test]
+fn check_compiles_without_observing_and_run_executes_real_source() {
+    let file = fixture("pass/functions.larp");
+    let checked = larp(&["check", &file]);
+    assert!(checked.status.success());
+    assert!(checked.stdout.is_empty());
+    let output = larp(&["run", &file]);
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"120\n");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn compile_and_runtime_failures_have_nonzero_exit_codes_and_source_locations() {
+    for (file, code) in [
+        ("fail/truthiness.larp", "LARP-T002"),
+        ("runtime/overflow.larp", "LARP-R001"),
+    ] {
+        let output = larp(&["run", &fixture(file)]);
+        assert_eq!(output.status.code(), Some(1));
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(stderr.contains(code));
+        assert!(stderr.contains(" --> "));
+        assert!(output.stdout.is_empty());
+    }
+    assert_eq!(larp(&["check", "missing.larp"]).status.code(), Some(1));
+    assert_eq!(
+        larp(&["run", &fixture("pass/scalars.larp"), "--fuel", "0"])
+            .status
+            .code(),
+        Some(1)
+    );
+    assert_eq!(
+        larp(&["run", &fixture("pass/scalars.larp"), "--fuel", "invalid"])
+            .status
+            .code(),
+        Some(2)
+    );
+}
+
+#[test]
+fn dumps_expose_the_compiler_artifacts() {
+    let bytecode = larp(&["dump", &fixture("pass/functions.larp")]);
+    assert!(bytecode.status.success());
+    assert!(
+        String::from_utf8(bytecode.stdout)
+            .unwrap()
+            .contains("Call(0)")
+    );
+    let ir = larp(&["dump", &fixture("pass/functions.larp"), "--ir"]);
+    assert!(ir.status.success());
+    assert!(String::from_utf8(ir.stdout).unwrap().contains("Branch"));
 }

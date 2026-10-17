@@ -15,6 +15,7 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 cargo test --workspace --locked --offline
 python3 tools/check_corpus.py
+python3 tools/run_conformance.py
 git diff --check
 ```
 
@@ -23,9 +24,14 @@ toolchain download is needed for a compatible system compiler. New dependencies
 require a concrete need, license review, and a lockfile update; offline builds
 will then require a populated Cargo cache.
 
-The source and diagnostic libraries are compiler infrastructure, not a compiler.
+The real scalar compiler runs through syntax, semantics, typed IR, bytecode
+verification, and the VM. `tools/run_conformance.py` tests active cases through
+the CLI; `--all` also attempts pending features and is expected to fail until
+the full specification is implemented. Do not change a fixture to active without
+running it and keeping it in CI.
+
 `experiments/scenario-model` tests a state transition model in Rust. It does not
-validate LARP syntax, region typing, effect checking, GC, or bytecode.
+validate LARP region typing, scenario effects, GC, or scenario bytecode.
 `tools/check_corpus.py` validates fixture metadata and paths only.
 
 Use [the roadmap](docs/roadmap.md) to choose a vertical slice. Keep the checked-in

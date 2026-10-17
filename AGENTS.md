@@ -18,5 +18,6 @@
   when a boundary has real code; avoid placeholder compiler subsystems.
 - Run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --locked
   --offline -- -D warnings`, `cargo test --workspace --locked --offline`, and
-  `python3 tools/check_corpus.py` for changes to the foundation.
+  `python3 tools/check_corpus.py`, and `python3 tools/run_conformance.py` for
+  changes to the compiler or foundation.
 - Run `git diff --check` before committing. Keep commits focused and in English.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the pending conformance inventory; never execute or validate LARP."""
+"""Validate conformance metadata; use run_conformance.py to execute active cases."""
 
 import json
 from pathlib import Path
@@ -36,7 +36,7 @@ def main() -> None:
                 is not None, "Invalid case ID")
         require(case_id not in seen_ids, f"Duplicate case ID: {case_id}")
         seen_ids.add(case_id)
-        require(case["status"] == "pending", f"No compiler harness exists: {case_id}")
+        require(case["status"] in {"pending", "active"}, f"Unknown fixture status: {case_id}")
         require(case["milestone"] in {f"M{i}" for i in range(1, 7)},
                 f"Unknown milestone: {case_id}")
         require(isinstance(case["path"], str), f"Invalid path: {case_id}")
@@ -65,7 +65,8 @@ def main() -> None:
                     f"Wrong diagnostic family: {case_id}")
     actual = {path.resolve() for path in CORPUS.rglob("*.larp")}
     require(actual == seen_paths, f"Unlisted fixtures: {sorted(actual - seen_paths)}")
-    print(f"Validated {len(cases)} pending fixture definitions. "
+    active = sum(case["status"] == "active" for case in cases)
+    print(f"Validated {len(cases)} fixture definitions ({active} active, {len(cases) - active} pending). "
           "No LARP programs were compiled or executed.")
 
 

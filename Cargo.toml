@@ -12,6 +12,12 @@ publish = false
 [workspace.dependencies]
 larp-source = { path = "crates/larp-source" }
 larp-diagnostics = { path = "crates/larp-diagnostics" }
+larp-types = { path = "crates/larp-types" }
+larp-syntax = { path = "crates/larp-syntax" }
+larp-bytecode = { path = "crates/larp-bytecode" }
+larp-ir = { path = "crates/larp-ir" }
+larp-compiler = { path = "crates/larp-compiler" }
+larp-vm = { path = "crates/larp-vm" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

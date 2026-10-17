@@ -1,9 +1,9 @@
 # Implementation roadmap
 
-Status: foundation established; compiler milestones are pending. This is a
+Status: M1 is implemented; M2 is in progress. This is a
 sequence of acceptance gates, not a delivery-date promise.
 
-## M0 — Reviewable design and repository foundation (current)
+## M0 — Reviewable design and repository foundation (established)
 
 - Independent English design review, proposed specification, grammar, and sources.
 - Rust workspace, source locations, diagnostic registry, honest CLI shell, CI.
@@ -13,7 +13,7 @@ sequence of acceptance gates, not a delivery-date promise.
 Gate: local formatting, Clippy, workspace tests, and corpus inventory checks pass.
 The proposed design still needs maintainer review; model tests do not approve it.
 
-## M1 — First real compiler-to-VM slice
+## M1 — First real compiler-to-VM slice (implemented)
 
 Implement only scalar locals, arithmetic, comparisons, `if`/`else`, and `yap` in
 `main_character`. Include the lexer, parser, resolver/type checker, minimal typed
@@ -29,9 +29,14 @@ First implementation issue: **Compile scalar main blocks to verified bytecode**.
 Acceptance scope: `mf`, `unc`, `verdict`, `text`, literal/local expressions,
 `+ - *`, comparisons, `if`/`else`, `no_cap`, `yap`, and structured errors. CLI must explicitly
 diagnose syntax outside this subset. This issue can start after design review;
-its implementation is not part of the setup.
+it is now implemented with active CLI conformance tests.
 
-## M2 — Usable algorithmic core
+## M2 — Usable algorithmic core (in progress)
+
+Implemented: functions, forward/mutual recursion, scopes, branches, all three loop
+forms, return checks, all scalar arithmetic, fatal errors, and finite effect bounds.
+Remaining: option/result, recovery callbacks, checked conversions, and parseScore.
+Recovery callbacks share the closure machinery planned in M3.
 
 Functions, recursion, lexical scopes, branches, all loop forms, return checks,
 exact numeric semantics, option/result, checked conversions, and fatal errors.

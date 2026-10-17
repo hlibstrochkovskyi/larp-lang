@@ -1,0 +1,8 @@
+main_character {
+    geeked zero = 0.0;
+    geeked nan = zero / zero;
+    yap(1.0 / zero);
+    yap(-1.0 / zero);
+    yap(nan);
+    yap(nan == nan);
+}

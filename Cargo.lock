@@ -3,10 +3,34 @@
 version = 4
 
 [[package]]
+name = "larp-bytecode"
+version = "0.1.0-dev"
+dependencies = [
+ "larp-source",
+ "larp-types",
+]
+
+[[package]]
 name = "larp-cli"
 version = "0.1.0-dev"
 dependencies = [
+ "larp-compiler",
  "larp-diagnostics",
+ "larp-source",
+ "larp-vm",
+]
+
+[[package]]
+name = "larp-compiler"
+version = "0.1.0-dev"
+dependencies = [
+ "larp-bytecode",
+ "larp-diagnostics",
+ "larp-ir",
+ "larp-source",
+ "larp-syntax",
+ "larp-types",
+ "larp-vm",
 ]
 
 [[package]]
@@ -17,9 +41,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "larp-ir"
+version = "0.1.0-dev"
+dependencies = [
+ "larp-bytecode",
+ "larp-source",
+ "larp-types",
+]
+
+[[package]]
 name = "larp-scenario-model"
 version = "0.1.0-dev"
 
 [[package]]
 name = "larp-source"
 version = "0.1.0-dev"
+
+[[package]]
+name = "larp-syntax"
+version = "0.1.0-dev"
+dependencies = [
+ "larp-diagnostics",
+ "larp-source",
+ "larp-types",
+]
+
+[[package]]
+name = "larp-types"
+version = "0.1.0-dev"
+
+[[package]]
+name = "larp-vm"
+version = "0.1.0-dev"
+dependencies = [
+ "larp-bytecode",
+ "larp-diagnostics",
+ "larp-source",
+ "larp-types",
+]

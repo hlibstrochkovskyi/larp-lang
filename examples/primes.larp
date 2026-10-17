@@ -1,0 +1,21 @@
+sidequest isPrime(mf number) -> verdict {
+    if (number < 2) {
+        return cap;
+    }
+    mf divisor = 2;
+    locked_in while (divisor * divisor <= number) {
+        if (number % divisor == 0) {
+            return cap;
+        }
+        divisor += 1;
+    }
+    return fr;
+}
+
+main_character {
+    npc loop (mf candidate in 2..50) {
+        if (isPrime(candidate)) {
+            yap(candidate);
+        }
+    }
+}

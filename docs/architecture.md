@@ -1,7 +1,8 @@
 # Compiler and runtime architecture
 
-Status: proposed implementation direction. Only source/diagnostic infrastructure,
-the CLI shell, and the isolated scenario model currently exist.
+Status: the scalar pipeline below is implemented from source through verified
+in-memory bytecode and VM execution. Object memory management and scenarios
+remain the implementation direction; see [status](implementation-status.md).
 
 ## Pipeline and contracts
 
@@ -56,11 +57,16 @@ Current crates:
 | --- | --- |
 | `larp-source` | Immutable source text, validated spans, locations |
 | `larp-diagnostics` | Structured diagnostic data and stable code explanations |
-| `larp-cli` | Argument handling and the implemented `explain` command |
+| `larp-types` | Scalar types, checked operations, and effect bounds |
+| `larp-syntax` | Lexer, AST, recovering recursive-descent / Pratt parser |
+| `larp-compiler` | Name, type, control-flow, and effect checking |
+| `larp-ir` | Typed basic blocks and bytecode lowering |
+| `larp-bytecode` | In-memory instructions, dataflow verifier, disassembly |
+| `larp-vm` | Iterative call frames, checked execution, observation sinks |
+| `larp-cli` | `check`, `run`, `dump`, and `explain` |
 | `larp-scenario-model` | Isolated experiment, not linked into the CLI |
 
-Add `larp-syntax` when the first scanner/parser slice starts; add semantic, IR,
-bytecode, and VM crates as they acquire code. The dependency direction is from
+Each crate contains working code. The dependency direction is from
 CLI to compiler/runtime, never from semantic libraries to CLI. The VM and
 bytecode format must not depend on AST types. Share only deliberately stable
 artifact types between the emitter and loader.
@@ -145,7 +151,7 @@ types and related spans in data, not embedded in ANSI strings. Memes never repla
 an actionable explanation. A formatter must operate on parsed syntax with comment
 preservation; it is not a regex substitution pass.
 
-Commands land in this order: existing `explain`; real `check`; compiler-to-VM
-`run`; verified artifact `build`/`run`; `fmt`; tooling integrations. No language
+Commands already available: `explain`, `check`, compiler-to-VM `run`, and
+IR/bytecode `dump`. Next: verified artifact `build`/`run`; `fmt`; tooling integrations. No language
 server, incremental query engine, package manager, or optimizer is needed before
 basic programs pass conformance.
