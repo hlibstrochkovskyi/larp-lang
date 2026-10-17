@@ -1,0 +1,5 @@
+archetype Broken {
+    mf value;
+    init() { crashout("construction failed"); }
+}
+main_character { let value = new Broken(); }

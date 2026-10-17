@@ -26,23 +26,30 @@ toolchain download is needed for a compatible system compiler. New dependencies
 require a concrete need, license review, and a lockfile update; offline builds
 will then require a populated Cargo cache.
 
-The compiler runs scalars, closures, option/result recovery, and dynamic/fixed
-arrays through syntax, semantics, typed IR, bytecode verification, and the VM.
+The compiler runs scalars, closures, option/result recovery, dynamic/fixed arrays,
+and nominal classes through syntax, semantics, typed IR, bytecode verification,
+and the VM.
 `tools/run_conformance.py` tests active cases through the CLI. `--gc-stress`
-repeats runtime cases with collection at every array/closure allocation
-safepoint; CI runs both modes. `--all` also attempts pending features and is expected to fail until
-the full specification is implemented. Do not change a fixture to active without
+repeats runtime cases with collection at every object/array/closure allocation
+safepoint; CI runs both modes. `--all` also attempts pending features and is
+expected to fail until the full specification is implemented. Do not change a fixture to active without
 running it and keeping it in CI.
 
 Run `cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress` for a
 returned closure, option fallback, parsing recovery, and checked conversion.
 Run `cargo run -p larp-cli -- run examples/collections.larp --gc-stress`
-for an eager filter/map pipeline. Compiler integration tests execute closures,
-recovery, and collections with normal collection and collection at every
-array/closure allocation safepoint. The VM API exposes `Limits::gc_stress` and `execute_with_stats` for tests of allocation,
-reclamation, and roots. Heap tests include generation reuse, transitive roots,
-array/closure cycles, fixed-array payloads, and unfinished callback outputs.
-Object GC coverage remains pending.
+for an eager filter/map pipeline.
+Run `cargo run -p larp-cli -- run examples/objects.larp --gc-stress` for classes,
+private state, and an extracted bound method. Exercise closures, recovery,
+collections, and objects with normal collection and collection at every
+allocation safepoint.
+The VM API exposes `Limits::gc_stress` and `execute_with_stats` for tests of
+allocation, reclamation, and roots. Heap tests include generation reuse, transitive roots,
+cycles across objects/arrays/closures, fixed-array payloads, and unfinished
+callback outputs. Constructor initialization uses control-flow analysis before
+bytecode lowering. Changes must preserve constructor escape restrictions, member
+visibility, immutable `self` bindings, and effect checks through bound methods.
+Roles and extension dispatch remain pending.
 
 `experiments/scenario-model` tests a state transition model in Rust. It does not
 validate LARP region typing, scenario effects, GC, or scenario bytecode.

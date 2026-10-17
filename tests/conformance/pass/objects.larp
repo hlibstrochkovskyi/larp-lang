@@ -1,0 +1,16 @@
+archetype Founder {
+    highkey text name;
+    lowkey mf aura;
+    init(text name) { self.name = name; self.aura = 0; }
+    highkey sidequest train(mf bonus) -> unit uses(read, write, abort) { self.aura += bonus; }
+    highkey sidequest score() -> mf uses(read) { return self.aura; }
+}
+main_character {
+    let founder = new Founder("unc");
+    let alias = founder;
+    alias.train(5);
+    no_cap(founder == alias);
+    no_cap(founder != new Founder("unc"));
+    yap(founder.name);
+    yap(founder.score());
+}

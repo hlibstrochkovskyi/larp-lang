@@ -1,0 +1,4 @@
+archetype Broken {
+    init(mfs<mf> values) { values.push(1); }
+}
+main_character {}

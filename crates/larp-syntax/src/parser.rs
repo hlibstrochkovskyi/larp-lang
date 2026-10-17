@@ -15,12 +15,15 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
         depth: 0,
         errors: Vec::new(),
     };
+    let mut classes = Vec::new();
     let mut functions = Vec::new();
     let mut main = None;
     while !parser.eof() {
         let start = parser.pos;
         let result = if parser.word("sidequest") {
             parser.function().map(|function| functions.push(function))
+        } else if parser.word("archetype") {
+            parser.class().map(|class| classes.push(class))
         } else if parser.eat_word("main_character") {
             if main.is_some() {
                 Err(parser.error(
@@ -33,7 +36,7 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
         } else {
             Err(parser.error(
                 "LARP-P002",
-                "Expected sidequest or main_character; other declarations are not implemented yet",
+                "Expected archetype, sidequest, or main_character; other declarations are not implemented yet",
             ))
         };
         if let Err(error) = result {
@@ -41,7 +44,11 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
             if parser.pos == start {
                 parser.advance();
             }
-            while !parser.eof() && !parser.word("sidequest") && !parser.word("main_character") {
+            while !parser.eof()
+                && !parser.word("sidequest")
+                && !parser.word("archetype")
+                && !parser.word("main_character")
+            {
                 parser.advance();
             }
         }
@@ -53,6 +60,7 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
     }
     if parser.errors.is_empty() {
         Ok(Program {
+            classes,
             functions,
             main: main.unwrap(),
         })
@@ -268,6 +276,20 @@ impl Parser<'_> {
                 "Extension declarations are not implemented yet",
             ));
         }
+        let parameters = self.parameters()?;
+        self.expect("->")?;
+        let result = self.ty()?;
+        let effects = self.effects()?;
+        let body = self.block()?;
+        Ok(Function {
+            name,
+            parameters,
+            result,
+            effects,
+            body,
+        })
+    }
+    fn parameters(&mut self) -> Result<Vec<(TypeExpr, Name)>> {
         self.expect("(")?;
         let mut parameters = Vec::new();
         if !self.punct(")") {
@@ -279,16 +301,74 @@ impl Parser<'_> {
             }
         }
         self.expect(")")?;
-        self.expect("->")?;
-        let result = self.ty()?;
-        let effects = self.effects()?;
-        let body = self.block()?;
-        Ok(Function {
-            name,
-            parameters,
-            result,
-            effects,
-            body,
+        Ok(parameters)
+    }
+    fn class(&mut self) -> Result<Class> {
+        self.guarded(|parser| {
+            let start = parser.current().span;
+            parser.expect_word("archetype")?;
+            let name = parser.name()?;
+            if parser.punct(":") {
+                return Err(parser.error(
+                    "LARP-P002",
+                    "Role implementation lists are not implemented yet",
+                ));
+            }
+            parser.expect("{")?;
+            let mut fields = Vec::new();
+            let mut methods = Vec::new();
+            let mut constructors = Vec::new();
+            while !parser.punct("}") && !parser.eof() {
+                let member_start = parser.pos;
+                let parsed = (|| -> Result<()> {
+                    if parser.word("init") {
+                        let start = parser.current().span;
+                        parser.advance();
+                        let parameters = parser.parameters()?;
+                        let body = parser.block()?;
+                        constructors.push(Constructor {
+                            parameters,
+                            body,
+                            span: parser.joined(start),
+                        });
+                    } else {
+                        let public = if parser.eat_word("highkey") {
+                            true
+                        } else {
+                            parser.eat_word("lowkey");
+                            false
+                        };
+                        if parser.word("sidequest") {
+                            methods.push(Method {
+                                function: parser.function()?,
+                                public,
+                            });
+                        } else {
+                            let ty = parser.ty()?;
+                            let name = parser.name()?;
+                            parser.expect(";")?;
+                            fields.push(Field { name, ty, public });
+                        }
+                    }
+                    Ok(())
+                })();
+                if let Err(error) = parsed {
+                    parser.errors.push(*error);
+                    if parser.pos == member_start
+                        || parser.previous().kind != Kind::Punctuation(";")
+                    {
+                        parser.synchronize();
+                    }
+                }
+            }
+            parser.expect("}")?;
+            Ok(Class {
+                name,
+                fields,
+                methods,
+                constructors,
+                span: parser.joined(start),
+            })
         })
     }
     fn block(&mut self) -> Result<Block> {
@@ -483,7 +563,7 @@ impl Parser<'_> {
     fn is_place(mut expression: &Expr) -> bool {
         loop {
             match &expression.kind {
-                ExprKind::Name(_) => return true,
+                ExprKind::Name(_) | ExprKind::SelfValue => return true,
                 ExprKind::Member { receiver, .. } | ExprKind::Index { receiver, .. } => {
                     expression = receiver;
                 }
@@ -509,12 +589,27 @@ impl Parser<'_> {
             Kind::Word(ref word) if word == "fr" || word == "cap" => {
                 ExprKind::Verdict(word == "fr")
             }
-            Kind::Word(ref word) if word == "new" || word == "self" => {
-                return Err(Box::new(Diagnostic::error(
-                    "LARP-P002",
-                    token.span,
-                    "This value form is not implemented yet",
-                )));
+            Kind::Word(ref word) if word == "self" => ExprKind::SelfValue,
+            Kind::Word(ref word) if word == "new" => {
+                let class = self.name()?;
+                self.expect("(")?;
+                let mut arguments = Vec::new();
+                if !self.punct(")") {
+                    loop {
+                        arguments.push(self.expr(0)?);
+                        if self.pos - token_start > 256 {
+                            return Err(self.error(
+                                "LARP-P003",
+                                "An expression exceeds the current 256-token limit",
+                            ));
+                        }
+                        if !self.eat(",") {
+                            break;
+                        }
+                    }
+                }
+                self.expect(")")?;
+                ExprKind::New { class, arguments }
             }
             Kind::Word(ref word) if word == "no_bitches" => ExprKind::None,
             Kind::Word(_) => {

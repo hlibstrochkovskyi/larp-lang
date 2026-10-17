@@ -1,0 +1,5 @@
+archetype Broken {
+    mf value;
+    init(verdict condition) { if (condition) { self.value = 1; } }
+}
+main_character {}

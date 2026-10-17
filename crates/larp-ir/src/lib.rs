@@ -8,12 +8,15 @@ pub type BlockId = usize;
 
 #[derive(Debug)]
 pub struct Program {
+    pub classes: Vec<larp_bytecode::Class>,
     pub functions: Vec<Function>,
     pub entry: usize,
 }
 
 #[derive(Debug)]
 pub struct Function {
+    pub owner: Option<usize>,
+    pub constructor: Option<usize>,
     pub name: String,
     pub parameters: Vec<Type>,
     pub captures: Vec<Type>,
@@ -40,6 +43,24 @@ pub struct Instruction {
 
 #[derive(Debug)]
 pub enum InstructionKind {
+    Construct {
+        destination: Local,
+        class: usize,
+        arguments: Vec<Local>,
+    },
+    GetField {
+        destination: Local,
+        receiver: Local,
+        class: usize,
+        field: usize,
+    },
+    SetField {
+        destination: Local,
+        receiver: Local,
+        class: usize,
+        field: usize,
+        value: Local,
+    },
     Constant {
         destination: Local,
         value: Scalar,
@@ -85,6 +106,10 @@ pub enum InstructionKind {
 
 #[derive(Debug)]
 pub enum Terminator {
+    ConstructReturn {
+        class: usize,
+        fields: Vec<Local>,
+    },
     Unreachable,
     Goto(BlockId),
     Branch {
@@ -156,6 +181,45 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                     let span = instruction.span;
                     let mut emit = |op| code.push(ByteInstruction { op, span });
                     match &instruction.kind {
+                        InstructionKind::Construct {
+                            destination,
+                            class,
+                            arguments,
+                        } => {
+                            for argument in arguments {
+                                emit(Op::Load(*argument));
+                            }
+                            emit(Op::Construct(*class));
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::GetField {
+                            destination,
+                            receiver,
+                            class,
+                            field,
+                        } => {
+                            emit(Op::Load(*receiver));
+                            emit(Op::GetField {
+                                class: *class,
+                                field: *field,
+                            });
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::SetField {
+                            destination,
+                            receiver,
+                            class,
+                            field,
+                            value,
+                        } => {
+                            emit(Op::Load(*receiver));
+                            emit(Op::Load(*value));
+                            emit(Op::SetField {
+                                class: *class,
+                                field: *field,
+                            });
+                            emit(Op::Store(*destination));
+                        }
                         InstructionKind::Constant { destination, value } => {
                             emit(Op::Constant(value.clone()));
                             emit(Op::Store(*destination));
@@ -244,6 +308,18 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                 }
                 let span = block.span;
                 match block.terminator {
+                    Terminator::ConstructReturn { class, ref fields } => {
+                        for field in fields {
+                            code.push(ByteInstruction {
+                                op: Op::Load(*field),
+                                span,
+                            });
+                        }
+                        code.push(ByteInstruction {
+                            op: Op::NewObject(class),
+                            span,
+                        });
+                    }
                     Terminator::Unreachable => {}
                     Terminator::Goto(target) => {
                         patches.push((code.len(), target, false));
@@ -328,6 +404,8 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                 }
             }
             ByteFunction {
+                owner: function.owner,
+                constructor: function.constructor,
                 name: function.name.clone(),
                 parameters: function.parameters.clone(),
                 captures: function.captures.clone(),
@@ -340,6 +418,7 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
         })
         .collect();
     larp_bytecode::Module {
+        classes: program.classes.clone(),
         functions,
         entry: program.entry,
     }

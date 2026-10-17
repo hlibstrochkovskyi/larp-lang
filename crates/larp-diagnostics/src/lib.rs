@@ -11,6 +11,16 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-T011",
+        title: "Invalid constructor initialization",
+        explanation: "An archetype must have exactly one init. Every field must be assigned on every successful constructor path before reading it or completing construction. Assign missing fields in every branch, including early returns.",
+    },
+    DiagnosticCode {
+        id: "LARP-T012",
+        title: "Invalid constructor operation",
+        explanation: "A partially initialized self cannot escape, be captured, call methods, or be returned explicitly. Constructors cannot mutate existing heap state or perform observations or external I/O. Use initialized field values and pure/read-only helpers; create fresh nested objects with new.",
+    },
+    DiagnosticCode {
         id: "LARP-R008",
         title: "Checked conversion failed",
         explanation: "fraud<T>(value) could not represent the integer in its target type. Use ascend<T>(value) and handle the result with cope for recoverable range errors.",

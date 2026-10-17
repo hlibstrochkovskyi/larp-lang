@@ -155,7 +155,7 @@
       "id": "private-field",
       "path": "fail/private-field.larp",
       "milestone": "M4",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-T010"
@@ -479,6 +479,96 @@
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R004"
+      }
+    },
+    {
+      "id": "objects",
+      "path": "pass/objects.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "unc\n5\n"
+      }
+    },
+    {
+      "id": "constructor-flow",
+      "path": "pass/constructor-flow.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "1\n3\n"
+      }
+    },
+    {
+      "id": "bound-private",
+      "path": "pass/bound-private.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "49\n"
+      }
+    },
+    {
+      "id": "missing-field",
+      "path": "fail/missing-field.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T011"
+      }
+    },
+    {
+      "id": "partial-self",
+      "path": "fail/partial-self.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T012"
+      }
+    },
+    {
+      "id": "constructor-mutation",
+      "path": "fail/constructor-mutation.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T012"
+      }
+    },
+    {
+      "id": "private-method",
+      "path": "fail/private-method.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T010"
+      }
+    },
+    {
+      "id": "nominal-classes",
+      "path": "fail/nominal-classes.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T001"
+      }
+    },
+    {
+      "id": "constructor-abort",
+      "path": "runtime/constructor-abort.larp",
+      "milestone": "M4",
+      "status": "active",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R003"
       }
     }
   ]

@@ -1,0 +1,8 @@
+archetype Choice {
+    highkey mf value;
+    init(verdict early) {
+        if (early) { self.value = 1; return; }
+        goon { self.value = 3; touch_grass; }
+    }
+}
+main_character { yap(new Choice(fr).value); yap(new Choice(cap).value); }

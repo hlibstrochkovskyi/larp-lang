@@ -12,10 +12,11 @@ Usage:
   larp dump FILE.larp [--ir]
 
 Implemented: scalar types, first-class functions, closures, arrays, options/results,
+archetypes, constructors, private/public fields, instance and bound methods,
 branches, loops, checked conversions, effect bounds, typed IR,
 verified in-memory bytecode, eager collection pipelines, and a VM with tracing GC.
-Planned: objects, roles, extensions, scenarios, persisted build artifacts, fmt.
---gc-stress collects at every array/closure allocation safepoint.";
+Planned: roles, extensions, scenarios, persisted build artifacts, fmt.
+--gc-stress collects at every object/array/closure allocation safepoint.";
 
 fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
@@ -34,7 +35,7 @@ fn main() -> ExitCode {
         }
         ["--version"] | ["-V"] => {
             println!(
-                "larp {} (collections and recovery core)",
+                "larp {} (objects, collections, and recovery core)",
                 env!("CARGO_PKG_VERSION")
             );
             ExitCode::SUCCESS

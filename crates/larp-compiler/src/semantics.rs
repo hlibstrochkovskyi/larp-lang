@@ -8,6 +8,7 @@ use larp_types::{Binary, Effects, Intrinsic, Scalar, Type, Unary, binary_type, u
 mod arrays;
 mod calls;
 mod closures;
+mod objects;
 use std::collections::HashMap;
 
 type Result<T> = std::result::Result<T, Box<Diagnostic>>;
@@ -18,6 +19,8 @@ struct Header {
     parameters: Vec<Type>,
     result: Type,
     effects: Effects,
+    owner: Option<usize>,
+    constructor: Option<usize>,
 }
 
 fn error(code: &str, span: Span, message: impl Into<String>) -> Box<Diagnostic> {
@@ -41,7 +44,7 @@ fn effects(declared: &Option<Vec<Name>>) -> Result<Effects> {
     Ok(effects)
 }
 
-fn ty(expression: &ast::TypeExpr) -> Result<Type> {
+fn ty(expression: &ast::TypeExpr, class_types: &HashMap<String, Type>) -> Result<Type> {
     let result = match &expression.kind {
         ast::TypeExprKind::Integer(_) => Err(error(
             "LARP-T001",
@@ -49,11 +52,12 @@ fn ty(expression: &ast::TypeExpr) -> Result<Type> {
             "An integer literal is only valid as a fixed-array length",
         )),
         ast::TypeExprKind::Named { name, arguments } => match name.text.as_str() {
-            "baddie" if arguments.len() == 1 => Ok(Type::option(ty(&arguments[0])?)),
-            "result" if arguments.len() == 2 => {
-                Ok(Type::result(ty(&arguments[0])?, ty(&arguments[1])?))
-            }
-            "mfs" if arguments.len() == 1 => Ok(Type::array(ty(&arguments[0])?)),
+            "baddie" if arguments.len() == 1 => Ok(Type::option(ty(&arguments[0], class_types)?)),
+            "result" if arguments.len() == 2 => Ok(Type::result(
+                ty(&arguments[0], class_types)?,
+                ty(&arguments[1], class_types)?,
+            )),
+            "mfs" if arguments.len() == 1 => Ok(Type::array(ty(&arguments[0], class_types)?)),
             "hediJeans" if arguments.len() == 2 => {
                 let ast::TypeExprKind::Integer(digits) = &arguments[1].kind else {
                     return Err(error(
@@ -74,7 +78,7 @@ fn ty(expression: &ast::TypeExpr) -> Result<Type> {
                             "Fixed-array length exceeds the collection length limit",
                         )
                     })?;
-                Ok(Type::fixed_array(ty(&arguments[0])?, length))
+                Ok(Type::fixed_array(ty(&arguments[0], class_types)?, length))
             }
             "baddie" | "result" | "mfs" | "hediJeans" => Err(error(
                 "LARP-T001",
@@ -86,20 +90,25 @@ fn ty(expression: &ast::TypeExpr) -> Result<Type> {
                 expression.span,
                 "This type does not accept generic arguments",
             )),
-            _ => Type::from_name(&name.text).ok_or_else(|| {
-                error(
-                    "LARP-T005",
-                    name.span,
-                    format!("Unknown type '{}'", name.text),
-                )
-            }),
+            _ => Type::from_name(&name.text)
+                .or_else(|| class_types.get(&name.text).cloned())
+                .ok_or_else(|| {
+                    error(
+                        "LARP-T005",
+                        name.span,
+                        format!("Unknown type '{}'", name.text),
+                    )
+                }),
         },
         ast::TypeExprKind::Function {
             parameters,
             result,
             effects: bound,
         } => {
-            let parameters = parameters.iter().map(ty).collect::<Result<Vec<_>>>()?;
+            let parameters = parameters
+                .iter()
+                .map(|parameter| ty(parameter, class_types))
+                .collect::<Result<Vec<_>>>()?;
             if parameters.contains(&Type::Unit) {
                 return Err(error(
                     "LARP-T001",
@@ -107,7 +116,11 @@ fn ty(expression: &ast::TypeExpr) -> Result<Type> {
                     "Function parameters cannot have type unit",
                 ));
             }
-            Ok(Type::function(parameters, ty(result)?, effects(bound)?))
+            Ok(Type::function(
+                parameters,
+                ty(result, class_types)?,
+                effects(bound)?,
+            ))
         }
     }?;
     if !result.within_limits() {
@@ -128,113 +141,7 @@ fn ty(expression: &ast::TypeExpr) -> Result<Type> {
 }
 
 pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>> {
-    let mut errors = Vec::new();
-    let mut headers: Vec<Header> = Vec::new();
-    let mut names: HashMap<String, usize> = HashMap::new();
-    if ast.functions.len() >= 4096 {
-        return Err(vec![Diagnostic::error(
-            "LARP-P003",
-            ast.main.span,
-            "Too many functions (limit: 4096 including main)",
-        )]);
-    }
-    for function in &ast.functions {
-        let result = (|| -> Result<Header> {
-            if let Some(previous) = names.get(&function.name.text) {
-                let mut diagnostic = error(
-                    "LARP-N002",
-                    function.name.span,
-                    format!("Duplicate function '{}'", function.name.text),
-                );
-                diagnostic.related.push(Label {
-                    span: headers[*previous].name.span,
-                    message: "First declaration".into(),
-                });
-                return Err(diagnostic);
-            }
-            let mut parameters = Vec::new();
-            for (parameter_type, _) in &function.parameters {
-                let parameter_type = ty(parameter_type)?;
-                if parameter_type == Type::Unit {
-                    return Err(error(
-                        "LARP-T001",
-                        function.name.span,
-                        "Function parameters cannot have type unit",
-                    ));
-                }
-                parameters.push(parameter_type);
-            }
-            let effects = effects(&function.effects)?;
-            Ok(Header {
-                name: function.name.clone(),
-                parameters,
-                result: ty(&function.result)?,
-                effects,
-            })
-        })();
-        match result {
-            Ok(header) => {
-                names.insert(header.name.text.clone(), headers.len());
-                headers.push(header);
-            }
-            Err(error) => errors.push(*error),
-        }
-    }
-    if !errors.is_empty() {
-        return Err(errors);
-    }
-    let entry = headers.len();
-    headers.push(Header {
-        name: Name {
-            text: "main_character".into(),
-            span: ast.main.span,
-        },
-        parameters: Vec::new(),
-        result: Type::Unit,
-        effects: Effects::ALL,
-    });
-    let mut functions = Vec::new();
-    let mut generated = Vec::new();
-    for (index, header) in headers.iter().enumerate() {
-        let body = if index == entry {
-            &ast.main
-        } else {
-            &ast.functions[index].body
-        };
-        let mut builder = Builder::new(
-            header,
-            &headers,
-            &names,
-            body.span,
-            headers.len() + generated.len(),
-        );
-        if index != entry {
-            for (slot, (_, name)) in ast.functions[index].parameters.iter().enumerate() {
-                if let Err(error) = builder.declare(
-                    name,
-                    Binding {
-                        slot,
-                        ty: header.parameters[slot].clone(),
-                        writable: true,
-                        span: name.span,
-                    },
-                ) {
-                    builder.errors.push(*error);
-                }
-            }
-        }
-        builder.block(body, false);
-        builder.finish();
-        generated.extend(builder.generated);
-        functions.push(builder.function);
-        errors.extend(builder.errors);
-    }
-    if errors.is_empty() {
-        functions.extend(generated);
-        Ok(Program { functions, entry })
-    } else {
-        Err(errors)
-    }
+    objects::check_program(ast)
 }
 
 #[derive(Clone)]
@@ -259,6 +166,9 @@ struct Builder<'a> {
     breaks: Vec<BlockId>,
     headers: &'a [Header],
     names: &'a HashMap<String, usize>,
+    classes: &'a [larp_bytecode::Class],
+    class_types: &'a HashMap<String, Type>,
+    constructor_fields: Vec<Binding>,
     errors: Vec<Diagnostic>,
     generated: Vec<Function>,
     generated_base: usize,
@@ -271,11 +181,15 @@ impl<'a> Builder<'a> {
         header: &Header,
         headers: &'a [Header],
         names: &'a HashMap<String, usize>,
+        classes: &'a [larp_bytecode::Class],
+        class_types: &'a HashMap<String, Type>,
         span: Span,
         generated_base: usize,
     ) -> Self {
         Self {
             function: Function {
+                owner: header.owner,
+                constructor: header.constructor,
                 name: header.name.text.clone(),
                 parameters: header.parameters.clone(),
                 captures: Vec::new(),
@@ -295,6 +209,9 @@ impl<'a> Builder<'a> {
             breaks: Vec::new(),
             headers,
             names,
+            classes,
+            class_types,
+            constructor_fields: Vec::new(),
             errors: Vec::new(),
             generated: Vec::new(),
             generated_base,
@@ -309,7 +226,16 @@ impl<'a> Builder<'a> {
         let reachable = self.function.reachable();
         for (block, live) in self.function.blocks.iter_mut().zip(reachable) {
             if live && matches!(block.terminator, Terminator::Unreachable) {
-                if self.function.result == Type::Unit {
+                if let Some(class) = self.function.constructor {
+                    block.terminator = Terminator::ConstructReturn {
+                        class,
+                        fields: self
+                            .constructor_fields
+                            .iter()
+                            .map(|field| field.slot)
+                            .collect(),
+                    };
+                } else if self.function.result == Type::Unit {
                     block.terminator = Terminator::Return(None);
                 } else {
                     self.errors.push(Diagnostic::error(
@@ -324,6 +250,9 @@ impl<'a> Builder<'a> {
                 }
             }
         }
+    }
+    fn resolve_type(&self, expression: &ast::TypeExpr) -> Result<Type> {
+        ty(expression, self.class_types)
     }
     fn local(&mut self, ty: Type) -> Local {
         let slot = self.function.locals.len();
@@ -389,6 +318,13 @@ impl<'a> Builder<'a> {
         Ok(())
     }
     fn require(&mut self, effects: Effects, span: Span) -> Result<()> {
+        if self.function.constructor.is_some() && effects.contains(Effects::WRITE) {
+            return Err(error(
+                "LARP-T012",
+                span,
+                "A constructor cannot mutate existing objects or call an operation with write effects",
+            ));
+        }
         self.required = self.required.union(effects);
         if self.function.effects.contains(effects) {
             Ok(())
@@ -458,7 +394,10 @@ impl<'a> Builder<'a> {
                 name,
                 value,
             } => {
-                let declared = declared.as_ref().map(ty).transpose()?;
+                let declared = declared
+                    .as_ref()
+                    .map(|ty| self.resolve_type(ty))
+                    .transpose()?;
                 let value = self.expression(value, declared.clone(), true)?;
                 if value.ty == Type::Unit {
                     return Err(error(
@@ -549,7 +488,7 @@ impl<'a> Builder<'a> {
                 end,
                 body,
             } => {
-                let index_type = ty(index_type)?;
+                let index_type = self.resolve_type(index_type)?;
                 if !index_type.is_integer() {
                     return Err(error(
                         "LARP-T001",
@@ -630,6 +569,28 @@ impl<'a> Builder<'a> {
                 self.current = done;
             }
             StatementKind::Return(expression) => {
+                if let Some(class) = self.function.constructor {
+                    if expression.is_some() {
+                        return Err(error(
+                            "LARP-T012",
+                            span,
+                            "A constructor accepts return; but cannot return an explicit value",
+                        ));
+                    }
+                    self.terminate(
+                        Terminator::ConstructReturn {
+                            class,
+                            fields: self
+                                .constructor_fields
+                                .iter()
+                                .map(|field| field.slot)
+                                .collect(),
+                        },
+                        span,
+                    );
+                    self.current = self.new_block(span);
+                    return Ok(());
+                }
                 let expected = match &self.inferred_result {
                     None => Some(self.function.result.clone()),
                     Some(inferred) => inferred.clone(),
@@ -679,6 +640,12 @@ impl<'a> Builder<'a> {
     }
     fn hint(&self, expression: &Expr) -> Option<Type> {
         match &expression.kind {
+            ExprKind::SelfValue => self.resolve("self").map(|binding| binding.ty).or_else(|| {
+                self.function
+                    .constructor
+                    .map(|class| Type::class(class, self.classes[class].name.as_str()))
+            }),
+            ExprKind::New { class, .. } => self.class_types.get(&class.text).cloned(),
             ExprKind::Name(name) => {
                 self.resolve(&name.text)
                     .map(|binding| binding.ty)
@@ -735,8 +702,19 @@ impl<'a> Builder<'a> {
                     match (self.hint(receiver), name.text.as_str()) {
                         (Some(Type::Baddie(payload)), "copium") => Some(payload.as_ref().clone()),
                         (Some(Type::Result(payloads)), "cope") => Some(payloads.0.clone()),
-                        (_, "isSome" | "isOk") => Some(Type::Verdict),
-                        _ => None,
+                        (Some(Type::Baddie(_)), "isSome") | (Some(Type::Result(_)), "isOk") => {
+                            Some(Type::Verdict)
+                        }
+                        (Some(Type::Array(_) | Type::FixedArray(_, _) | Type::Text), "size") => {
+                            Some(Type::Mf)
+                        }
+                        _ => {
+                            if let Some(Type::Function(signature)) = self.hint(callee) {
+                                Some(signature.result.clone())
+                            } else {
+                                None
+                            }
+                        }
                     }
                 } else if let Some(Type::Function(signature)) = self.hint(callee) {
                     Some(signature.result.clone())
@@ -756,6 +734,9 @@ impl<'a> Builder<'a> {
                 .first()
                 .and_then(|value| self.hint(value))
                 .map(Type::array),
+            ExprKind::Member { receiver, name } => self
+                .hint(receiver)
+                .and_then(|ty| self.member_hint(&ty, name)),
             _ => None,
         }
     }
@@ -814,6 +795,10 @@ impl<'a> Builder<'a> {
             }
             ExprKind::Text(value) => self.literal(Scalar::Text(value.clone()), span),
             ExprKind::Verdict(value) => self.literal(Scalar::Verdict(*value), span),
+            ExprKind::SelfValue => self.self_value(span)?,
+            ExprKind::New { class, arguments } => {
+                self.construct(class, arguments, span, evaluate)?
+            }
             ExprKind::Name(name) => {
                 if let Some(binding) = self.resolve(&name.text) {
                     self.read(&binding, span)
@@ -969,15 +954,16 @@ impl<'a> Builder<'a> {
                 self.intrinsic(Intrinsic::None(option), Vec::new(), span)?
             }
             ExprKind::Member { receiver, name } => {
+                if self.function.constructor.is_some()
+                    && matches!(receiver.kind, ExprKind::SelfValue)
+                {
+                    return self.constructor_field_read(name, span);
+                }
                 let receiver = self.expression(receiver, None, evaluate)?;
                 if receiver.ty == Type::ConversionError && name.text == "message" {
                     self.intrinsic(Intrinsic::ConversionMessage, vec![receiver.slot], span)?
                 } else {
-                    return Err(error(
-                        "LARP-T001",
-                        name.span,
-                        format!("Unknown field '{}' on {}", name.text, receiver.ty),
-                    ));
+                    self.member_value(receiver, name, span)?
                 }
             }
             ExprKind::Lambda { parameters, body } => {

@@ -21,9 +21,16 @@ pub(crate) struct Array {
 }
 
 #[derive(Debug)]
+pub(crate) struct Instance {
+    pub class: usize,
+    pub fields: Vec<Value>,
+}
+
+#[derive(Debug)]
 pub(crate) enum Object {
     Closure(Closure),
     Array(Array),
+    Instance(Instance),
 }
 
 impl From<Closure> for Object {
@@ -35,6 +42,12 @@ impl From<Closure> for Object {
 impl From<Array> for Object {
     fn from(array: Array) -> Self {
         Self::Array(array)
+    }
+}
+
+impl From<Instance> for Object {
+    fn from(instance: Instance) -> Self {
+        Self::Instance(instance)
     }
 }
 
@@ -138,6 +151,20 @@ impl Heap {
         }
     }
 
+    pub fn instance(&self, handle: Handle) -> Option<&Instance> {
+        match self.object(handle)? {
+            Object::Instance(instance) => Some(instance),
+            _ => None,
+        }
+    }
+
+    pub fn instance_mut(&mut self, handle: Handle) -> Option<&mut Instance> {
+        match self.object_mut(handle)? {
+            Object::Instance(instance) => Some(instance),
+            _ => None,
+        }
+    }
+
     pub fn collect<'a>(&mut self, roots: impl Iterator<Item = &'a Value>) {
         let mut pending = Vec::new();
         for root in roots {
@@ -155,6 +182,7 @@ impl Heap {
             let values = match object {
                 Object::Closure(closure) => &closure.captures,
                 Object::Array(array) => &array.values,
+                Object::Instance(instance) => &instance.fields,
             };
             for value in values {
                 value.handles(&mut pending);
@@ -302,6 +330,73 @@ mod tests {
                 .unwrap();
         }
         heap.collect(std::iter::once(&Value::Array(handle)));
+        assert_eq!(heap.live, 20_001);
+        heap.collect(std::iter::empty());
+        assert_eq!(heap.live, 0);
+    }
+    #[test]
+    fn objects_arrays_and_closures_form_traced_cycles_with_stable_identities() {
+        let mut heap = Heap::default();
+        let instance = heap
+            .allocate(Instance {
+                class: 0,
+                fields: vec![],
+            })
+            .unwrap();
+        let array = heap
+            .allocate(Array {
+                values: vec![Value::Object(instance)],
+                iterations: 0,
+            })
+            .unwrap();
+        let closure = heap
+            .allocate(Closure {
+                function: 0,
+                captures: vec![Value::Array(array)],
+            })
+            .unwrap();
+        heap.instance_mut(instance)
+            .unwrap()
+            .fields
+            .push(Value::Option(Some(Box::new(Value::Closure(closure)))));
+        let root = Value::FixedArray(vec![Value::Result(Ok(Box::new(Value::Object(instance))))]);
+        heap.collect(std::iter::once(&root));
+        assert_eq!(heap.live, 3);
+        assert_eq!(heap.instance(instance).unwrap().class, 0);
+        assert!(heap.array(array).is_some());
+        assert!(heap.get(closure).is_some());
+        assert!(Value::Object(instance).equals(&Value::Object(instance)));
+        heap.collect(std::iter::empty());
+        assert_eq!(heap.live, 0);
+        assert_eq!(heap.reclaimed, 3);
+        let replacement = heap
+            .allocate(Instance {
+                class: 0,
+                fields: vec![],
+            })
+            .unwrap();
+        assert!(!Value::Object(replacement).equals(&Value::Object(instance)));
+        assert!(heap.instance(instance).is_none());
+    }
+
+    #[test]
+    fn deep_object_chains_are_collected_without_recursive_graph_destruction() {
+        let mut heap = Heap::default();
+        let mut handle = heap
+            .allocate(Instance {
+                class: 0,
+                fields: vec![],
+            })
+            .unwrap();
+        for _ in 0..20_000 {
+            handle = heap
+                .allocate(Instance {
+                    class: 0,
+                    fields: vec![Value::Object(handle)],
+                })
+                .unwrap();
+        }
+        heap.collect(std::iter::once(&Value::Object(handle)));
         assert_eq!(heap.live, 20_001);
         heap.collect(std::iter::empty());
         assert_eq!(heap.live, 0);

@@ -96,6 +96,25 @@ impl Builder<'_> {
         })
     }
 
+    pub(super) fn call_value(
+        &mut self,
+        callee: Value,
+        arguments: &[Expr],
+        span: Span,
+        evaluate: bool,
+    ) -> Result<Value> {
+        let Type::Function(signature) = &callee.ty else {
+            return Err(error("LARP-T001", span, "The field value is not callable"));
+        };
+        self.arity(arguments, signature.parameters.len(), span)?;
+        let values = arguments
+            .iter()
+            .zip(&signature.parameters)
+            .map(|(argument, ty)| self.expression(argument, Some(ty.clone()), evaluate))
+            .collect::<Result<Vec<_>>>()?;
+        self.indirect_value(callee, values, span)
+    }
+
     pub(super) fn call(
         &mut self,
         callee: &Expr,
@@ -309,11 +328,15 @@ impl Builder<'_> {
             parameters,
             result,
             effects,
+            owner: None,
+            constructor: None,
         };
         let mut child = Builder::new(
             &header,
             self.headers,
             self.names,
+            self.classes,
+            self.class_types,
             span,
             self.generated_base + self.generated.len(),
         );
@@ -373,7 +396,7 @@ impl Builder<'_> {
                     "Conversion requires one explicit target type",
                 ));
             }
-            let target = ty(&type_arguments[0])?;
+            let target = self.resolve_type(&type_arguments[0])?;
             let source = self.expression(&arguments[0], None, evaluate)?;
             if !target.is_integer() || !source.ty.is_integer() {
                 return Err(error(
@@ -505,7 +528,26 @@ impl Builder<'_> {
         span: Span,
         evaluate: bool,
     ) -> Result<Value> {
+        if self.function.constructor.is_some() && matches!(receiver.kind, ExprKind::SelfValue) {
+            let class = self.function.constructor.unwrap();
+            if self.classes[class]
+                .fields
+                .iter()
+                .any(|field| field.name == name.text)
+            {
+                let callee = self.constructor_field_read(name, span)?;
+                return self.call_value(callee, arguments, span, evaluate);
+            }
+            return Err(error(
+                "LARP-T012",
+                span,
+                "A partially initialized self cannot call a method",
+            ));
+        }
         let receiver = self.expression(receiver, None, evaluate)?;
+        if receiver.ty.class_id().is_some() {
+            return self.object_call(receiver, name, arguments, span, evaluate);
+        }
         if receiver.ty.element().is_some() || receiver.ty == Type::Text {
             return self.array_method(receiver, name, arguments, expected, span, evaluate);
         }

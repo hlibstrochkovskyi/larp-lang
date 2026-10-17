@@ -3,7 +3,7 @@
 mod heap;
 mod value;
 
-use heap::{Array, Closure, Heap};
+use heap::{Array, Closure, Heap, Instance};
 use larp_bytecode::{Op, VerifiedModule};
 use larp_diagnostics::Diagnostic;
 use larp_source::Span;
@@ -203,7 +203,9 @@ pub fn execute_with_stats(
         // All source operands remain on the stack at allocation safepoints.
         if matches!(
             instruction.op,
-            Op::MakeClosure(_) | Op::Intrinsic(Intrinsic::ArrayNew { .. } | Intrinsic::Sorted(_))
+            Op::MakeClosure(_)
+                | Op::NewObject(_)
+                | Op::Intrinsic(Intrinsic::ArrayNew { .. } | Intrinsic::Sorted(_))
         ) && heap.should_collect(limits.gc_stress)
         {
             collect(&mut heap, &stack, &frames);
@@ -269,26 +271,62 @@ pub fn execute_with_stats(
                     .map_err(|message| error("LARP-R006", message.into()))?;
                 stack.push(Value::Closure(handle));
             }
-            Op::Call(_) | Op::CallIndirect(_) => {
+            Op::NewObject(class) => {
+                let count = module.classes[*class].fields.len();
+                let fields = stack.split_off(stack.len() - count);
+                let handle = heap
+                    .allocate(Instance {
+                        class: *class,
+                        fields,
+                    })
+                    .map_err(|message| error("LARP-R006", message.into()))?;
+                stack.truncate(frame.stack_base);
+                frames.pop();
+                stack.push(Value::Object(handle));
+            }
+            Op::GetField { class, field } => {
+                let Value::Object(handle) = stack.pop().unwrap() else {
+                    unreachable!("verified object receiver")
+                };
+                let instance = heap.instance(handle).expect("rooted live object");
+                debug_assert_eq!(instance.class, *class);
+                stack.push(instance.fields[*field].clone());
+            }
+            Op::SetField { class, field } => {
+                let value = stack.pop().unwrap();
+                let Value::Object(handle) = stack.pop().unwrap() else {
+                    unreachable!("verified object receiver")
+                };
+                let instance = heap.instance_mut(handle).expect("rooted live object");
+                debug_assert_eq!(instance.class, *class);
+                instance.fields[*field] = value;
+                stack.push(Value::Scalar(Scalar::Unit));
+            }
+            Op::Call(_) | Op::CallIndirect(_) | Op::Construct(_) => {
                 if frames.len() >= limits.call_frames {
                     return Err(error("LARP-R006", "Call-frame limit exceeded".into()));
                 }
                 let count = match &instruction.op {
                     Op::Call(target) => module.functions[*target].parameters.len(),
+                    Op::Construct(class) => module.functions[module.classes[*class].constructor]
+                        .parameters
+                        .len(),
                     Op::CallIndirect(larp_types::Type::Function(signature)) => {
                         signature.parameters.len()
                     }
                     _ => unreachable!("verified call signature"),
                 };
                 let arguments = stack.split_off(stack.len() - count);
-                let (target, captures) = if let Op::Call(target) = instruction.op {
-                    (target, Vec::new())
-                } else {
-                    let Value::Closure(handle) = stack.pop().unwrap() else {
-                        unreachable!("verified closure")
-                    };
-                    let closure = heap.get(handle).expect("rooted live closure handle");
-                    (closure.function, closure.captures.clone())
+                let (target, captures) = match instruction.op {
+                    Op::Call(target) => (target, Vec::new()),
+                    Op::Construct(class) => (module.classes[class].constructor, Vec::new()),
+                    _ => {
+                        let Value::Closure(handle) = stack.pop().unwrap() else {
+                            unreachable!("verified closure")
+                        };
+                        let closure = heap.get(handle).expect("rooted live closure handle");
+                        (closure.function, closure.captures.clone())
+                    }
                 };
                 let callee = &module.functions[target];
                 let mut locals = vec![None; callee.locals.len()];

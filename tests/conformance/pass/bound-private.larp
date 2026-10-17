@@ -1,0 +1,11 @@
+archetype Secret {
+    mf value;
+    init(mf value) { self.value = value; }
+    sidequest read() -> mf uses(read) { return self.value; }
+    highkey sidequest export() -> fn() -> mf uses(read) uses() { return self.read; }
+}
+main_character {
+    let value = new Secret(49);
+    let read = value.export();
+    yap(read());
+}

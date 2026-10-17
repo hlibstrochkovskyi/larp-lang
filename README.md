@@ -16,13 +16,15 @@ main_character {
 }
 ```
 
-**Status: executable algorithmic core with collections, closures, and recovery.**
+**Status: executable algorithmic core with classes, collections, and closures.**
 The example above compiles to verified in-memory bytecode and runs on the LARP VM, printing
 `1009`. Functions, recursion, loops, checked arithmetic, effect bounds, first-class
 functions, snapshot captures, options/results, checked conversions, dynamic/fixed
-arrays, and eager collection pipelines work today. Closures and dynamic arrays
-use a tracing collector. Objects and language-level scenarios remain in
-development; the separate scenario model is still an experiment.
+arrays, and eager collection pipelines work today. Nominal classes support
+constructors, public/private fields and methods, and bound methods. Objects,
+closures, and dynamic arrays use a tracing collector. Roles, extensions, and
+language-level scenarios remain in development; the separate scenario model is
+still an experiment.
 
 ## Start here
 
@@ -49,6 +51,7 @@ cargo run -p larp-cli -- explain LARP-T041
 cargo run -p larp-cli -- run examples/primes.larp
 cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
 cargo run -p larp-cli -- run examples/collections.larp --gc-stress
+cargo run -p larp-cli -- run examples/objects.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo test --workspace --locked --offline
 python3 tools/run_conformance.py

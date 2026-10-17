@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Status: M1, M2, and the M3 feature set are implemented; M4 is next. This is a
+Status: M1, M2, and the M3 feature set are implemented; M4 is in progress. This is a
 sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -63,12 +63,21 @@ Gate: the collection pipeline produces `5\n50\n`; structural callback mutation
 through an alias aborts; captured local bindings are snapshots; higher-order
 calls cannot erase effects. No user-defined generic declarations required yet.
 
-## M4 — Objects and managed lifetime
+## M4 — Objects and managed lifetime (in progress)
 
-Nominal classes, constructor checking, visibility, methods, roles, extension
-resolution, heap identities, and a collector capable of collecting cycles.
-Introduce GC earlier if collections/closures already need it; M4 completes its
-object coverage rather than postponing all collection to here.
+Implemented class slice: nominal `archetype` declarations, one checked `init`,
+public/private fields and methods, immutable `self` bindings, direct instance
+calls, extracted bound methods, and lexical private access in nested closures.
+Constructor field locals undergo definite-initialization analysis over the CFG;
+only terminal allocation publishes a completed identity. Existing heap mutation,
+observation, and I/O are forbidden during construction; nested construction is
+allowed. Object fields participate in tracing, including object/array/closure
+cycles and temporary roots during nested allocations.
+
+Remaining: roles, class-to-role coercion, interface dispatch, concrete extensions,
+and exact member/extension resolution. Class method extraction is implemented;
+built-in collection method extraction remains pending. The complete M4 gate
+remains open.
 
 Gate: public/private cases, role dispatch, exact member priority, identity
 aliasing, constructor escape rejection, and collection under stress mode pass.
@@ -108,6 +117,6 @@ remote when a remote exists; local checks do not prove hosted CI passed.
 ## Later RFCs
 
 Modules/packages, user-defined generics, richer pattern matching and result
-propagation, scenario validation groups, nested/first-class scenarios, object
-graphs, generalized effects, async, native backend, optimizer, debugger, LSP.
+propagation, scenario validation groups, nested/first-class scenarios, scenario
+object graphs, generalized effects, async, native backend, optimizer, debugger, LSP.
 Keep the typed IR backend-neutral, but do not promise native ABI compatibility.

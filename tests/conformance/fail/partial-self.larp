@@ -1,0 +1,5 @@
+archetype Broken {
+    mf value;
+    init() { self.value = 1; let capture = () => self.value; }
+}
+main_character {}

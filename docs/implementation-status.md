@@ -1,8 +1,8 @@
 # Implementation status
 
-The compiler currently implements an executable algorithmic subset of Specification
-v0.1. Programs are lexed, parsed, name/type/effect checked, lowered into typed
-control-flow IR, compiled to stack bytecode, verified, and executed by LARP's VM.
+The compiler currently implements algorithmic programs and nominal classes from
+Specification v0.1. Programs are lexed, parsed, name/type/effect checked, lowered
+into typed control-flow IR, compiled to stack bytecode, verified, and executed by LARP's VM.
 No host `eval`, source-to-Python/JavaScript translation, or AST execution is used.
 
 ## Working features
@@ -31,6 +31,16 @@ No host `eval`, source-to-Python/JavaScript translation, or AST execution is use
   Runtime guards reject structural mutation of an iterated receiver through any
   alias. Indexed replacement remains permitted.
 - `text.size()` counts Unicode scalars.
+- Nominal `archetype` classes with one `init`, mutable typed fields, default
+  `lowkey` visibility, and `highkey` public members. Class values share non-null
+  identity through aliases and support identity equality.
+- Instance methods with an immutable `self` binding, direct calls, extracted
+  bound methods, and private access retained by lexical nested closures.
+- Constructor field initialization checked over control flow, including early
+  `return;` paths and reads before assignment. No partial identity exists during
+  initialization; terminal allocation publishes the completed object. Constructors
+  cannot capture/use `self` as a value, call its methods, mutate existing heap
+  state, observe, or perform I/O. Nested `new` is allowed.
 - `parseScore(text)`, checked `ascend<mf/unc>`, aborting `fraud<mf/unc>`, and
   immutable `ConversionError.message`. Float/integer conversions are rejected.
 - `if`/`else`, `locked_in while`, `npc loop`, `goon`, and `touch_grass`.
@@ -43,9 +53,11 @@ No host `eval`, source-to-Python/JavaScript translation, or AST execution is use
   function signature and effect checks; the VM accepts only a verified module.
 - Verified closure capture layouts and immutable capture slots; total result-tag
   branching gives each successor the correct payload type.
-- Non-moving mark/sweep array and closure storage with generation-checked handles,
-  explicit roots, stress collection, and execution statistics through the Rust
-  VM API. Suspended collection callbacks and partial results remain rooted.
+- Nominal bytecode layout/access checks, immutable method receiver slots,
+  constructor-only terminal allocation, and constructor effect restrictions.
+- Non-moving mark/sweep object, array, and closure storage with generation-checked
+  handles, explicit roots, stress collection, and execution statistics through
+  the Rust VM API. Suspended collection callbacks and partial results remain rooted.
 
 ## CLI
 
@@ -55,28 +67,31 @@ cargo run -p larp-cli -- run examples/primes.larp
 cargo run -p larp-cli -- run examples/primes.larp --fuel 100000
 cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
 cargo run -p larp-cli -- run examples/collections.larp --gc-stress
+cargo run -p larp-cli -- run examples/objects.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo run -p larp-cli -- dump examples/primes.larp --ir
 cargo run -p larp-cli -- explain LARP-T041
 ```
 
 `check` compiles and verifies without execution. `run` recompiles source and
-executes in-memory bytecode. `--gc-stress` collects at every array/closure
+executes in-memory bytecode. `--gc-stress` collects at every object/array/closure
 allocation safepoint and may be combined with `--fuel`. `dump` emits disassembly
-or typed IR. `build` and `fmt` explicitly report that they are unavailable. Input is one UTF-8 file.
+or typed IR. `build` and `fmt` explicitly report that they are unavailable. Input
+is one UTF-8 file.
 Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 ## Not implemented yet
 
-Classes, roles, extensions, bound-method extraction, scenario regions,
+Roles, class-to-role coercion, extension resolution, extraction of built-in
+collection methods as bound functions, scenario regions,
 `larp/flex/canon/palantir`, lazy bindings, `sybau`, persisted artifacts,
 modules, host I/O APIs, and formatting. These are tracked by the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
 
 The scenario model remains independent and is not a substitute for compiling
-scenario programs. GC manages closures and dynamic arrays, including cycles
-between them. Option/result/fixed-array wrappers are owned values that trace any
-contained handles. Text uses owned immutable storage. Object graphs and scenario
+scenario programs. GC manages objects, closures, and dynamic arrays, including
+cycles between them. Option/result/fixed-array wrappers are owned values that
+trace any contained handles. Text uses owned immutable storage. Lazy cells and scenario
 roots need additional GC integration when those features are implemented.
 
 ## Current limits and conservative checks
@@ -108,6 +123,11 @@ roots need additional GC integration when those features are implemented.
   type `unit`. Array literal operands are limited to 65,536, within the existing
   expression-token limit; runtime dynamic arrays may grow up to the `mf` length
   limit. Negative/out-of-range indices and oversized growth abort.
+- Class declarations are limited to 4096, with at most 65,536 fields/methods
+  across the module. Constructor initialization analysis is bounded to 4,000,000
+  block/field cells. Constructor calls conservatively carry `read,write,abort`;
+  ordinary operations/callbacks with `write` bounds are rejected during
+  construction, even when a particular call might only affect fresh storage.
 - Function types track effects but do not yet carry scenario-eligibility summaries.
   Region restrictions will need their own checks before scenarios can run.
 
@@ -145,9 +165,10 @@ a fixed array still retain their shared identity.
 
 ## Evidence
 
-See [collections validation](validation-collections.md) for the current executed
-checks, coverage, and limits. [Functions and recovery validation](validation-functions-and-recovery.md)
-records the preceding milestone.
+See [objects validation](validation-objects.md) for current executed checks,
+coverage, and limits. [Collections validation](validation-collections.md) and
+[functions and recovery validation](validation-functions-and-recovery.md) record
+preceding milestones.
 
 `cargo test --workspace --locked --offline` exercises the frontend, compiler/VM,
 bad bytecode, limits, diagnostics, and the independent model. Deterministic
@@ -156,6 +177,5 @@ coverage-guided fuzzing.
 
 `python3 tools/run_conformance.py` executes every active fixture through `check`
 and `run`, comparing stdout or primary diagnostic codes and source locations.
-`--gc-stress` repeats execution with collection at every array/closure allocation
-safepoint. Pending cases remain explicit. `--all` attempts the full corpus and currently
-fails on unimplemented features; this is not a complete v0.1 release.
+`--gc-stress` repeats execution with collection at every object/array/closure
+allocation safepoint. Pending cases remain explicit. `--all` attempts the full corpus and currently fails on unimplemented features; this is not a complete v0.1 release.

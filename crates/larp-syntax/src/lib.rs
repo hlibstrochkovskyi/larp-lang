@@ -1,4 +1,4 @@
-//! Source-preserving AST and handwritten frontend for the executable scalar core.
+//! Source-preserving AST and handwritten language frontend.
 
 mod lexer;
 mod parser;
@@ -15,8 +15,38 @@ pub struct Name {
 
 #[derive(Debug)]
 pub struct Program {
+    pub classes: Vec<Class>,
     pub functions: Vec<Function>,
     pub main: Block,
+}
+
+#[derive(Debug)]
+pub struct Class {
+    pub name: Name,
+    pub fields: Vec<Field>,
+    pub methods: Vec<Method>,
+    pub constructors: Vec<Constructor>,
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub struct Field {
+    pub name: Name,
+    pub ty: TypeExpr,
+    pub public: bool,
+}
+
+#[derive(Debug)]
+pub struct Method {
+    pub function: Function,
+    pub public: bool,
+}
+
+#[derive(Debug)]
+pub struct Constructor {
+    pub parameters: Vec<(TypeExpr, Name)>,
+    pub body: Block,
+    pub span: Span,
 }
 
 #[derive(Debug)]
@@ -121,6 +151,11 @@ pub enum ExprKind {
     Verdict(bool),
     None,
     Name(Name),
+    SelfValue,
+    New {
+        class: Name,
+        arguments: Vec<Expr>,
+    },
     Array(Vec<Expr>),
     Unary {
         op: Unary,

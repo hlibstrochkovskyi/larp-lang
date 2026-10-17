@@ -20,6 +20,7 @@ pub enum Type {
     Array(Arc<Type>),
     FixedArray(Arc<Type>, usize),
     ConversionError,
+    Class(usize, Arc<str>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -30,6 +31,17 @@ pub struct Signature {
 }
 
 impl Type {
+    pub fn class(id: usize, name: impl Into<Arc<str>>) -> Self {
+        Self::Class(id, name.into())
+    }
+
+    pub fn class_id(&self) -> Option<usize> {
+        match self {
+            Self::Class(id, _) => Some(*id),
+            _ => None,
+        }
+    }
+
     pub fn from_name(name: &str) -> Option<Self> {
         Some(match name {
             "mf" => Self::Mf,
@@ -193,6 +205,7 @@ impl fmt::Display for Type {
             Self::Array(element) => write!(f, "mfs<{element}>"),
             Self::FixedArray(element, length) => write!(f, "hediJeans<{element}, {length}>"),
             Self::ConversionError => f.write_str("ConversionError"),
+            Self::Class(_, name) => f.write_str(name),
             _ => f.write_str(match self {
                 Self::Mf => "mf",
                 Self::Unc => "unc",

@@ -9,6 +9,7 @@ pub(crate) enum Value {
     ConversionError(String),
     Closure(Handle),
     Array(Handle),
+    Object(Handle),
     FixedArray(Vec<Value>),
 }
 
@@ -21,6 +22,7 @@ impl Value {
             (Self::Result(Ok(a)), Self::Result(Ok(b)))
             | (Self::Result(Err(a)), Self::Result(Err(b))) => a.equals(b),
             (Self::ConversionError(a), Self::ConversionError(b)) => a == b,
+            (Self::Object(a), Self::Object(b)) => a == b,
             (Self::FixedArray(a), Self::FixedArray(b)) => {
                 a.len() == b.len() && a.iter().zip(b).all(|(a, b)| a.equals(b))
             }
@@ -32,7 +34,9 @@ impl Value {
         let mut values = vec![self];
         while let Some(value) = values.pop() {
             match value {
-                Self::Closure(handle) | Self::Array(handle) => pending.push(*handle),
+                Self::Closure(handle) | Self::Array(handle) | Self::Object(handle) => {
+                    pending.push(*handle)
+                }
                 Self::FixedArray(elements) => values.extend(elements),
                 Self::Option(Some(value)) | Self::Result(Ok(value)) | Self::Result(Err(value)) => {
                     values.push(value)

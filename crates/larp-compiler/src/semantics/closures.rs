@@ -46,7 +46,11 @@ impl Builder<'_> {
             let context = signature
                 .as_ref()
                 .map(|signature| signature.parameters[index].clone());
-            let declared = parameter.ty.as_ref().map(ty).transpose()?;
+            let declared = parameter
+                .ty
+                .as_ref()
+                .map(|ty| self.resolve_type(ty))
+                .transpose()?;
             if let (Some(expected), Some(actual)) = (&context, &declared) {
                 self.matches(expected.clone(), actual.clone(), parameter.name.span)?;
             }
@@ -67,7 +71,15 @@ impl Builder<'_> {
             parameter_types.push(ty);
         }
         let mut captures = Vec::new();
-        for name in free_names(parameters, body) {
+        let free = free_names(parameters, body);
+        if self.function.constructor.is_some() && free.contains("self") {
+            return Err(error(
+                "LARP-T012",
+                span,
+                "A constructor cannot capture a partially initialized self; copy an initialized field value into a local first",
+            ));
+        }
+        for name in free {
             if let Some(binding) = self.resolve(&name) {
                 let copied = self.read(&binding, span);
                 captures.push((name, binding, copied.slot));
@@ -85,11 +97,15 @@ impl Builder<'_> {
             effects: signature
                 .as_ref()
                 .map_or(Effects::ALL, |signature| signature.effects),
+            owner: self.function.owner,
+            constructor: None,
         };
         let mut child = Builder::new(
             &header,
             self.headers,
             self.names,
+            self.classes,
+            self.class_types,
             span,
             self.generated_base + self.generated.len(),
         );
@@ -214,6 +230,14 @@ fn free_names(parameters: &[ast::LambdaParameter], body: &ast::LambdaBody) -> BT
         fn expr(&mut self, expr: &Expr) {
             match &expr.kind {
                 ExprKind::Name(name) => self.name(name),
+                ExprKind::SelfValue => {
+                    self.free.insert("self".into());
+                }
+                ExprKind::New { arguments, .. } => {
+                    for argument in arguments {
+                        self.expr(argument);
+                    }
+                }
                 ExprKind::Unary { operand, .. } => self.expr(operand),
                 ExprKind::Binary { left, right, .. } => {
                     self.expr(left);

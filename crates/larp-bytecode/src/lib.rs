@@ -5,14 +5,41 @@ use larp_types::{Binary, Effects, Intrinsic, Scalar, Type, Unary, binary_type, u
 use std::collections::VecDeque;
 use std::fmt::Write;
 
+mod classes;
+
 #[derive(Clone, Debug)]
 pub struct Module {
+    pub classes: Vec<Class>,
     pub functions: Vec<Function>,
     pub entry: usize,
 }
 
 #[derive(Clone, Debug)]
+pub struct Class {
+    pub name: String,
+    pub fields: Vec<Field>,
+    pub constructor: usize,
+    pub methods: Vec<Method>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Field {
+    pub name: String,
+    pub ty: Type,
+    pub public: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct Method {
+    pub name: String,
+    pub function: usize,
+    pub public: bool,
+}
+
+#[derive(Clone, Debug)]
 pub struct Function {
+    pub owner: Option<usize>,
+    pub constructor: Option<usize>,
     pub name: String,
     pub parameters: Vec<Type>,
     pub captures: Vec<Type>,
@@ -40,6 +67,16 @@ pub enum Op {
     JumpIfFalse(usize),
     Call(usize),
     MakeClosure(usize),
+    Construct(usize),
+    NewObject(usize),
+    GetField {
+        class: usize,
+        field: usize,
+    },
+    SetField {
+        class: usize,
+        field: usize,
+    },
     CallIndirect(Type),
     Intrinsic(Intrinsic),
     MatchResult {
@@ -84,6 +121,27 @@ impl VerifiedModule {
 
     pub fn disassemble(&self) -> String {
         let mut result = String::new();
+        for (index, class) in self.0.classes.iter().enumerate() {
+            let _ = writeln!(
+                result,
+                "class {index} {} constructor={}",
+                class.name, class.constructor
+            );
+            for (field, layout) in class.fields.iter().enumerate() {
+                let _ = writeln!(
+                    result,
+                    "  field {field} {}: {} public={}",
+                    layout.name, layout.ty, layout.public
+                );
+            }
+            for method in &class.methods {
+                let _ = writeln!(
+                    result,
+                    "  method {} function={} public={}",
+                    method.name, method.function, method.public
+                );
+            }
+        }
         for (index, function) in self.0.functions.iter().enumerate() {
             let _ = writeln!(
                 result,
@@ -112,6 +170,8 @@ struct State {
 pub fn operation_effect(op: &Op) -> Effects {
     match op {
         Op::Print => Effects::OBSERVE,
+        Op::GetField { .. } => Effects::READ,
+        Op::SetField { .. } => Effects::WRITE,
         Op::Assert | Op::Crash => Effects::ABORT,
         Op::Unary(Unary::Negate, ty) if ty.is_integer() => Effects::ABORT,
         Op::Binary(
@@ -141,6 +201,10 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
     if !entry.parameters.is_empty() || !entry.captures.is_empty() || entry.result != Type::Unit {
         return Err(invalid("Entry must take no parameters and return unit"));
     }
+    if entry.owner.is_some() || entry.constructor.is_some() {
+        return Err(invalid("Entry cannot belong to a class"));
+    }
+    classes::preflight_types(&module)?;
     // A forward call/closure can expose another function's types during
     // dataflow. Validate every type before any structural type comparison.
     for (index, function) in module.functions.iter().enumerate() {
@@ -196,6 +260,7 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
             }
         }
     }
+    classes::validate_layouts(&module)?;
     for index in 0..module.functions.len() {
         verify_function(&module, index)?;
     }
@@ -232,12 +297,25 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
             "Capture slots do not match the closure signature".into(),
         ));
     }
+    let receiver_readonly = module
+        .classes
+        .iter()
+        .any(|class| class.methods.iter().any(|method| method.function == index));
     // Validate structural indices and capabilities even in unreachable code.
     for (pc, instruction) in function.code.iter().enumerate() {
         let mut effects = operation_effect(&instruction.op);
         match &instruction.op {
             Op::Load(local) | Op::Store(local) if *local >= function.locals.len() => {
                 return Err(error(Some(pc), "Local index out of bounds".into()));
+            }
+            Op::Store(0) if receiver_readonly => {
+                return Err(error(Some(pc), "Method receiver is read-only".into()));
+            }
+            Op::Return if function.constructor.is_some() => {
+                return Err(error(
+                    Some(pc),
+                    "Constructor requires terminal object completion".into(),
+                ));
             }
             Op::Store(local) if (capture_start..capture_end).contains(local) => {
                 return Err(error(Some(pc), "Captured bindings are read-only".into()));
@@ -249,6 +327,8 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                 let Some(callee) = module.functions.get(*target) else {
                     return Err(error(Some(pc), "Call target out of bounds".into()));
                 };
+                classes::call_access(module, function, *target)
+                    .map_err(|message| error(Some(pc), message))?;
                 effects = effects.union(callee.effects);
                 if !callee.captures.is_empty() {
                     return Err(error(
@@ -257,8 +337,34 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                     ));
                 }
             }
-            Op::MakeClosure(target) if *target >= module.functions.len() => {
-                return Err(error(Some(pc), "Closure target out of bounds".into()));
+            Op::MakeClosure(target) => {
+                if *target >= module.functions.len() {
+                    return Err(error(Some(pc), "Closure target out of bounds".into()));
+                }
+                classes::call_access(module, function, *target)
+                    .map_err(|message| error(Some(pc), message))?;
+            }
+            Op::Construct(class) => {
+                let layout = module
+                    .classes
+                    .get(*class)
+                    .ok_or_else(|| error(Some(pc), "Class index out of bounds".into()))?;
+                effects = effects.union(module.functions[layout.constructor].effects);
+            }
+            Op::NewObject(class) => {
+                if *class >= module.classes.len() {
+                    return Err(error(Some(pc), "Class index out of bounds".into()));
+                }
+                if function.constructor != Some(*class) {
+                    return Err(error(
+                        Some(pc),
+                        "Object allocation requires its constructor".into(),
+                    ));
+                }
+            }
+            Op::GetField { class, field } | Op::SetField { class, field } => {
+                classes::field_access(module, function, *class, *field)
+                    .map_err(|message| error(Some(pc), message))?;
             }
             Op::CallIndirect(Type::Function(signature)) => {
                 effects = effects.union(signature.effects)
@@ -297,6 +403,15 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                 return Err(error(Some(pc), "Invalid binary operand type".into()));
             }
             _ => {}
+        }
+        if function.constructor.is_some()
+            && effects.contains(Effects::WRITE)
+            && !matches!(instruction.op, Op::Construct(_))
+        {
+            return Err(error(
+                Some(pc),
+                "Constructor cannot mutate existing heap state".into(),
+            ));
         }
         if !function.effects.contains(effects) {
             return Err(error(
@@ -366,6 +481,36 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                 }
                 state.stack.push(callee.result.clone());
             }
+            Op::Construct(class) => {
+                let constructor = &module.functions[module.classes[*class].constructor];
+                for ty in constructor.parameters.iter().rev() {
+                    pop(&mut state, ty.clone())?;
+                }
+                state.stack.push(constructor.result.clone());
+            }
+            Op::NewObject(class) => {
+                let layout = &module.classes[*class];
+                for field in layout.fields.iter().rev() {
+                    pop(&mut state, field.ty.clone())?;
+                }
+                if !state.stack.is_empty() {
+                    return Err(failure(
+                        "Object completion leaves extra operands on the stack".into(),
+                    ));
+                }
+                continue;
+            }
+            Op::GetField { class, field } => {
+                let layout = &module.classes[*class];
+                pop(&mut state, Type::class(*class, layout.name.as_str()))?;
+                state.stack.push(layout.fields[*field].ty.clone());
+            }
+            Op::SetField { class, field } => {
+                let layout = &module.classes[*class];
+                pop(&mut state, layout.fields[*field].ty.clone())?;
+                pop(&mut state, Type::class(*class, layout.name.as_str()))?;
+                state.stack.push(Type::Unit);
+            }
             Op::MakeClosure(target) => {
                 let callee = &module.functions[*target];
                 for capture in callee.captures.iter().rev() {
@@ -411,7 +556,9 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                     return Err(failure("Print requires a scalar value".into()));
                 }
             }
-            Op::Assert => pop(&mut state, Type::Verdict)?,
+            Op::Assert => {
+                pop(&mut state, Type::Verdict)?;
+            }
             Op::Crash => {
                 pop(&mut state, Type::Text)?;
                 continue;

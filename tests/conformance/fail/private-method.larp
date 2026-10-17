@@ -1,0 +1,5 @@
+archetype Secret {
+    init() {}
+    sidequest hidden() -> mf uses() { return 49; }
+}
+main_character { let value = new Secret(); let forbidden = value.hidden; }

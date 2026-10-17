@@ -232,7 +232,7 @@ fn types_scopes_signatures_and_dead_code_are_checked_before_execution() {
         ("main_character { Unknown x = 1; }", "LARP-T005"),
         ("main_character { mf f = 1; f(); }", "LARP-T001"),
         ("main_character { return 1; }", "LARP-T001"),
-        ("archetype A {} main_character {}", "LARP-P002"),
+        ("archetype A {} main_character {}", "LARP-T011"),
     ] {
         rejects(text, code);
     }

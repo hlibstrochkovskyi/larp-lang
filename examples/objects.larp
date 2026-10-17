@@ -1,0 +1,28 @@
+archetype Founder {
+    highkey text name;
+    highkey unc netWorth;
+    lowkey mf aura;
+
+    init(text name, unc money) {
+        self.name = name;
+        self.netWorth = money;
+        self.aura = 0;
+    }
+
+    highkey sidequest train(mf bonus) -> unit uses(read, write, abort) {
+        self.aura += bonus;
+    }
+
+    highkey sidequest isMogging(mf opponent) -> verdict uses(read) {
+        return self.aura mogg opponent;
+    }
+}
+
+main_character {
+    Founder bro = new Founder("unc", 20);
+    let train = bro.train;
+    train(5);
+    yap(bro.name);
+    yap(bro.netWorth);
+    yap(bro.isMogging(2));
+}

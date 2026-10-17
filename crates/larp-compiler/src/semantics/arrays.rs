@@ -2,6 +2,12 @@ use super::*;
 
 enum Place {
     Local(Binding),
+    Field {
+        receiver: Value,
+        class: usize,
+        field: usize,
+        ty: Type,
+    },
     Element {
         container: Value,
         index: Value,
@@ -13,12 +19,14 @@ impl Place {
     fn ty(&self) -> Type {
         match self {
             Self::Local(binding) => binding.ty.clone(),
+            Self::Field { ty, .. } => ty.clone(),
             Self::Element { container, .. } => container.ty.element().unwrap().clone(),
         }
     }
     fn writable(&self) -> bool {
         match self {
             Self::Local(binding) => binding.writable,
+            Self::Field { .. } => true,
             Self::Element {
                 container, parent, ..
             } => matches!(container.ty, Type::Array(_)) || parent.writable(),
@@ -225,6 +233,45 @@ impl Builder<'_> {
 
     fn prepare_place(&mut self, target: &Expr) -> Result<Place> {
         match &target.kind {
+            ExprKind::SelfValue => {
+                if self.function.constructor.is_some() {
+                    return Err(error(
+                        "LARP-T012",
+                        target.span,
+                        "A partially initialized self is not an assignable value",
+                    ));
+                }
+                self.resolve("self").map(Place::Local).ok_or_else(|| {
+                    error(
+                        "LARP-T001",
+                        target.span,
+                        "self is available only in an instance method",
+                    )
+                })
+            }
+            ExprKind::Member { receiver, name } => {
+                if self.function.constructor.is_some()
+                    && matches!(receiver.kind, ExprKind::SelfValue)
+                {
+                    return Ok(Place::Local(self.constructor_field(name)?));
+                }
+                let receiver = self.expression(receiver, None, true)?;
+                let class = receiver.ty.class_id().ok_or_else(|| {
+                    error(
+                        "LARP-T001",
+                        name.span,
+                        "Only archetype fields can be assigned through member access",
+                    )
+                })?;
+                let field = self.class_field(class, name)?;
+                let ty = self.classes[class].fields[field].ty.clone();
+                Ok(Place::Field {
+                    receiver,
+                    class,
+                    field,
+                    ty,
+                })
+            }
             ExprKind::Name(name) => self.resolve(&name.text).map(Place::Local).ok_or_else(|| {
                 error(
                     "LARP-N001",
@@ -273,6 +320,12 @@ impl Builder<'_> {
     fn read_place(&mut self, place: &Place, span: Span) -> Result<Value> {
         match place {
             Place::Local(binding) => Ok(self.read(binding, span)),
+            Place::Field {
+                receiver,
+                class,
+                field,
+                ..
+            } => self.get_field(receiver.clone(), *class, *field, span),
             Place::Element {
                 container,
                 index,
@@ -290,6 +343,12 @@ impl Builder<'_> {
 
     fn write_place(&mut self, place: &Place, value: Value, span: Span) -> Result<()> {
         match place {
+            Place::Field {
+                receiver,
+                class,
+                field,
+                ..
+            } => self.set_field(receiver.clone(), *class, *field, value, span)?,
             Place::Local(binding) => self.emit(
                 Inst::Copy {
                     destination: binding.slot,

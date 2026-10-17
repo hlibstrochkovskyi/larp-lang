@@ -6,6 +6,8 @@ fn function(parameters: Vec<Type>, result: Type, effects: Effects, code: Vec<Op>
     let source = SourceFile::new(SourceId(0), "arrays.larp", "");
     let span = source.span(0..0).unwrap();
     Function {
+        owner: None,
+        constructor: None,
         name: "array_test".into(),
         locals: parameters.clone(),
         parameters,
@@ -31,6 +33,7 @@ fn unit() -> Function {
 
 fn verify_target(target: Function) -> Result<(), VerifyError> {
     verify(Module {
+        classes: vec![],
         functions: vec![unit(), target],
         entry: 0,
     })
