@@ -167,8 +167,8 @@ pub const CODES: &[DiagnosticCode] = &[
     },
     DiagnosticCode {
         id: "LARP-R004",
-        title: "Invalid array index",
-        explanation: "An array index was negative or outside its bounds. Indices have type mf. No unchecked access or implicit conversion is performed.",
+        title: "Collection index or length out of range",
+        explanation: "An array index was negative or outside its bounds, or a collection length exceeded 2147483647. Indices have type mf. Indexed assignments validate the place before evaluating the right side. No unchecked access or implicit conversion is performed.",
     },
     DiagnosticCode {
         id: "LARP-R005",

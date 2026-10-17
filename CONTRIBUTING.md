@@ -26,21 +26,23 @@ toolchain download is needed for a compatible system compiler. New dependencies
 require a concrete need, license review, and a lockfile update; offline builds
 will then require a populated Cargo cache.
 
-The compiler runs scalars, closures, and option/result recovery through syntax,
-semantics, typed IR, bytecode verification, and the VM.
+The compiler runs scalars, closures, option/result recovery, and dynamic/fixed
+arrays through syntax, semantics, typed IR, bytecode verification, and the VM.
 `tools/run_conformance.py` tests active cases through the CLI. `--gc-stress`
-repeats runtime cases with collection before every closure allocation; CI runs
-both modes. `--all` also attempts pending features and is expected to fail until
+repeats runtime cases with collection at every array/closure allocation
+safepoint; CI runs both modes. `--all` also attempts pending features and is expected to fail until
 the full specification is implemented. Do not change a fixture to active without
 running it and keeping it in CI.
 
 Run `cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress` for a
 returned closure, option fallback, parsing recovery, and checked conversion.
-The compiler integration tests execute closure and recovery programs with normal
-collection and collection at every closure-allocation safepoint. The VM API
-exposes `Limits::gc_stress` and `execute_with_stats` for tests of allocation,
+Run `cargo run -p larp-cli -- run examples/collections.larp --gc-stress`
+for an eager filter/map pipeline. Compiler integration tests execute closures,
+recovery, and collections with normal collection and collection at every
+array/closure allocation safepoint. The VM API exposes `Limits::gc_stress` and `execute_with_stats` for tests of allocation,
 reclamation, and roots. Heap tests include generation reuse, transitive roots,
-and synthetic unreachable cycles; object and array GC coverage is still pending.
+array/closure cycles, fixed-array payloads, and unfinished callback outputs.
+Object GC coverage remains pending.
 
 `experiments/scenario-model` tests a state transition model in Rust. It does not
 validate LARP region typing, scenario effects, GC, or scenario bytecode.

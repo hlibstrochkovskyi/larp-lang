@@ -8,6 +8,8 @@ pub(crate) enum Value {
     Result(Result<Box<Value>, Box<Value>>),
     ConversionError(String),
     Closure(Handle),
+    Array(Handle),
+    FixedArray(Vec<Value>),
 }
 
 impl Value {
@@ -19,6 +21,9 @@ impl Value {
             (Self::Result(Ok(a)), Self::Result(Ok(b)))
             | (Self::Result(Err(a)), Self::Result(Err(b))) => a.equals(b),
             (Self::ConversionError(a), Self::ConversionError(b)) => a == b,
+            (Self::FixedArray(a), Self::FixedArray(b)) => {
+                a.len() == b.len() && a.iter().zip(b).all(|(a, b)| a.equals(b))
+            }
             _ => false,
         }
     }
@@ -27,7 +32,8 @@ impl Value {
         let mut values = vec![self];
         while let Some(value) = values.pop() {
             match value {
-                Self::Closure(handle) => pending.push(*handle),
+                Self::Closure(handle) | Self::Array(handle) => pending.push(*handle),
+                Self::FixedArray(elements) => values.extend(elements),
                 Self::Option(Some(value)) | Self::Result(Ok(value)) | Self::Result(Err(value)) => {
                     values.push(value)
                 }
@@ -103,6 +109,16 @@ pub(crate) fn intrinsic(
                 })?)
             }
         }
+        Intrinsic::ArrayNew { .. }
+        | Intrinsic::Size(_)
+        | Intrinsic::CheckIndex(_)
+        | Intrinsic::Index(_)
+        | Intrinsic::SetIndex(_)
+        | Intrinsic::Push(_)
+        | Intrinsic::Sorted(_)
+        | Intrinsic::Map { .. }
+        | Intrinsic::Filter { .. }
+        | Intrinsic::ForEach { .. } => unreachable!("heap intrinsic handled by VM"),
         Intrinsic::ConversionMessage => {
             let Value::ConversionError(message) = arguments.remove(0) else {
                 unreachable!("verified conversion error")

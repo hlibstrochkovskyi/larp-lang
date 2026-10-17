@@ -14,9 +14,33 @@ pub(crate) struct Closure {
     pub captures: Vec<Value>,
 }
 
+#[derive(Debug)]
+pub(crate) struct Array {
+    pub values: Vec<Value>,
+    pub iterations: usize,
+}
+
+#[derive(Debug)]
+pub(crate) enum Object {
+    Closure(Closure),
+    Array(Array),
+}
+
+impl From<Closure> for Object {
+    fn from(closure: Closure) -> Self {
+        Self::Closure(closure)
+    }
+}
+
+impl From<Array> for Object {
+    fn from(array: Array) -> Self {
+        Self::Array(array)
+    }
+}
+
 struct Slot {
     generation: u64,
-    closure: Option<Closure>,
+    object: Option<Object>,
 }
 
 pub(crate) struct Heap {
@@ -50,20 +74,21 @@ impl Heap {
         stress || self.live >= self.next_collection
     }
 
-    pub fn allocate(&mut self, closure: Closure) -> Result<Handle, &'static str> {
+    pub fn allocate(&mut self, object: impl Into<Object>) -> Result<Handle, &'static str> {
+        let object = object.into();
         let index = if let Some(index) = self.free.pop() {
             let slot = &mut self.slots[index];
             slot.generation = slot
                 .generation
                 .checked_add(1)
                 .ok_or("Heap handle generation exhausted")?;
-            slot.closure = Some(closure);
+            slot.object = Some(object);
             index
         } else {
             let index = self.slots.len();
             self.slots.push(Slot {
                 generation: 0,
-                closure: Some(closure),
+                object: Some(object),
             });
             index
         };
@@ -76,12 +101,41 @@ impl Heap {
         })
     }
 
-    pub fn get(&self, handle: Handle) -> Option<&Closure> {
+    fn object(&self, handle: Handle) -> Option<&Object> {
         self.slots
             .get(handle.index)
             .filter(|slot| slot.generation == handle.generation)?
-            .closure
+            .object
             .as_ref()
+    }
+
+    fn object_mut(&mut self, handle: Handle) -> Option<&mut Object> {
+        self.slots
+            .get_mut(handle.index)
+            .filter(|slot| slot.generation == handle.generation)?
+            .object
+            .as_mut()
+    }
+
+    pub fn get(&self, handle: Handle) -> Option<&Closure> {
+        match self.object(handle)? {
+            Object::Closure(closure) => Some(closure),
+            _ => None,
+        }
+    }
+
+    pub fn array(&self, handle: Handle) -> Option<&Array> {
+        match self.object(handle)? {
+            Object::Array(array) => Some(array),
+            _ => None,
+        }
+    }
+
+    pub fn array_mut(&mut self, handle: Handle) -> Option<&mut Array> {
+        match self.object_mut(handle)? {
+            Object::Array(array) => Some(array),
+            _ => None,
+        }
     }
 
     pub fn collect<'a>(&mut self, roots: impl Iterator<Item = &'a Value>) {
@@ -94,16 +148,20 @@ impl Heap {
             if marked.get(handle.index) != Some(&false) {
                 continue;
             }
-            let Some(closure) = self.get(handle) else {
+            let Some(object) = self.object(handle) else {
                 continue;
             };
             marked[handle.index] = true;
-            for capture in &closure.captures {
-                capture.handles(&mut pending);
+            let values = match object {
+                Object::Closure(closure) => &closure.captures,
+                Object::Array(array) => &array.values,
+            };
+            for value in values {
+                value.handles(&mut pending);
             }
         }
         for (index, slot) in self.slots.iter_mut().enumerate() {
-            if !marked[index] && slot.closure.take().is_some() {
+            if !marked[index] && slot.object.take().is_some() {
                 self.free.push(index);
                 self.reclaimed += 1;
                 self.live -= 1;
@@ -166,12 +224,10 @@ mod tests {
                 captures: vec![Value::Closure(first)],
             })
             .unwrap();
-        heap.slots[first.index]
-            .closure
-            .as_mut()
-            .unwrap()
-            .captures
-            .push(Value::Closure(second));
+        let Some(Object::Closure(closure)) = heap.slots[first.index].object.as_mut() else {
+            unreachable!()
+        };
+        closure.captures.push(Value::Closure(second));
         let mut current = second;
         for _ in 0..20_000 {
             current = heap
@@ -186,5 +242,68 @@ mod tests {
         heap.collect(std::iter::empty());
         assert_eq!(heap.live, 0);
         assert_eq!(heap.reclaimed, 20_002);
+    }
+    #[test]
+    fn array_closure_cycles_and_fixed_array_payloads_are_traced_and_reclaimed() {
+        let mut heap = Heap::default();
+        let array = heap
+            .allocate(Array {
+                values: vec![],
+                iterations: 0,
+            })
+            .unwrap();
+        let closure = heap
+            .allocate(Closure {
+                function: 0,
+                captures: vec![Value::Result(Ok(Box::new(Value::FixedArray(vec![
+                    Value::Array(array),
+                ]))))],
+            })
+            .unwrap();
+        heap.array_mut(array)
+            .unwrap()
+            .values
+            .push(Value::Closure(closure));
+        let root = Value::Option(Some(Box::new(Value::FixedArray(vec![Value::Array(array)]))));
+        heap.collect(std::iter::once(&root));
+        assert!(heap.array(array).is_some());
+        assert!(heap.get(closure).is_some());
+        assert_eq!(heap.live, 2);
+        heap.collect(std::iter::empty());
+        assert_eq!(heap.live, 0);
+        assert!(heap.array(array).is_none());
+        assert!(heap.get(closure).is_none());
+        let new_array = heap
+            .allocate(Array {
+                values: vec![],
+                iterations: 0,
+            })
+            .unwrap();
+        assert!(heap.array(new_array).is_some());
+        assert!(heap.get(closure).is_none());
+        assert!(heap.array(closure).is_none());
+    }
+
+    #[test]
+    fn deep_array_edges_do_not_recurse_during_marking_or_sweeping() {
+        let mut heap = Heap::default();
+        let mut handle = heap
+            .allocate(Array {
+                values: vec![],
+                iterations: 0,
+            })
+            .unwrap();
+        for _ in 0..20_000 {
+            handle = heap
+                .allocate(Array {
+                    values: vec![Value::Array(handle)],
+                    iterations: 0,
+                })
+                .unwrap();
+        }
+        heap.collect(std::iter::once(&Value::Array(handle)));
+        assert_eq!(heap.live, 20_001);
+        heap.collect(std::iter::empty());
+        assert_eq!(heap.live, 0);
     }
 }

@@ -1,0 +1,13 @@
+main_character {
+    mfs<mf> values = [1, 2];
+    mfs<mf> alias = values;
+    alias.push(3);
+    yap(values.size());
+    values.forEach(x => { alias[1] = 9; });
+    yap(values[1]);
+    hediJeans<mf, 2> fixed = [1, 2];
+    let copy = fixed;
+    copy[0] = 49;
+    yap(fixed[0]);
+    yap(copy[0]);
+}

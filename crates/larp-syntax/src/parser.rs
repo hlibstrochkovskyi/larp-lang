@@ -215,7 +215,7 @@ impl Parser<'_> {
                 let mut arguments = Vec::new();
                 if parser.eat("<") {
                     loop {
-                        arguments.push(parser.ty()?);
+                        arguments.push(parser.type_argument()?);
                         if !parser.eat(",") {
                             break;
                         }
@@ -229,6 +229,18 @@ impl Parser<'_> {
                 span: parser.joined(start),
             })
         })
+    }
+    fn type_argument(&mut self) -> Result<TypeExpr> {
+        if let Kind::Integer(value) = &self.current().kind {
+            let argument = TypeExpr {
+                kind: TypeExprKind::Integer(value.clone()),
+                span: self.current().span,
+            };
+            self.advance();
+            Ok(argument)
+        } else {
+            self.ty()
+        }
     }
     fn effects(&mut self) -> Result<Option<Vec<Name>>> {
         if !self.eat_word("uses") {
@@ -444,12 +456,20 @@ impl Parser<'_> {
             };
             if let Some(op) = assignment {
                 self.advance();
-                let ExprKind::Name(name) = expression.kind else {
-                    return Err(self.error("LARP-P001", "Assignment requires a local binding"));
-                };
+                if !Self::is_place(&expression) {
+                    return Err(Box::new(Diagnostic::error(
+                        "LARP-P001",
+                        expression.span,
+                        "Assignment requires a binding or a member/index path rooted in a binding",
+                    )));
+                }
                 let value = self.expr(0)?;
                 self.expect(";")?;
-                StatementKind::Assignment { name, op, value }
+                StatementKind::Assignment {
+                    target: expression,
+                    op,
+                    value,
+                }
             } else {
                 self.expect(";")?;
                 StatementKind::Expression(expression)
@@ -459,6 +479,17 @@ impl Parser<'_> {
             kind,
             span: self.joined(start),
         })
+    }
+    fn is_place(mut expression: &Expr) -> bool {
+        loop {
+            match &expression.kind {
+                ExprKind::Name(_) => return true,
+                ExprKind::Member { receiver, .. } | ExprKind::Index { receiver, .. } => {
+                    expression = receiver;
+                }
+                _ => return false,
+            }
+        }
     }
     fn expr(&mut self, minimum: u8) -> Result<Expr> {
         self.guarded(|parser| parser.expr_inner(minimum))
@@ -504,11 +535,23 @@ impl Parser<'_> {
                 operand: Box::new(self.expr(13)?),
             },
             Kind::Punctuation("[") => {
-                return Err(Box::new(Diagnostic::error(
-                    "LARP-P002",
-                    token.span,
-                    "Array literals are not implemented yet",
-                )));
+                let mut elements = Vec::new();
+                if !self.punct("]") {
+                    loop {
+                        elements.push(self.expr(0)?);
+                        if self.pos - token_start > 256 {
+                            return Err(self.error(
+                                "LARP-P003",
+                                "An expression exceeds the current 256-token limit",
+                            ));
+                        }
+                        if !self.eat(",") {
+                            break;
+                        }
+                    }
+                }
+                self.expect("]")?;
+                ExprKind::Array(elements)
             }
             _ => {
                 return Err(Box::new(Diagnostic::error(
@@ -568,11 +611,20 @@ impl Parser<'_> {
                 };
                 continue;
             }
-            if self.punct("[") || self.punct("=>") {
-                return Err(self.error(
-                    "LARP-P002",
-                    "Indexing is not implemented yet, or lambda parameters need parentheses",
-                ));
+            if minimum <= 15 && self.eat("[") {
+                let index = self.expr(0)?;
+                self.expect("]")?;
+                left = Expr {
+                    kind: ExprKind::Index {
+                        receiver: Box::new(left),
+                        index: Box::new(index),
+                    },
+                    span: self.joined(start),
+                };
+                continue;
+            }
+            if self.punct("=>") {
+                return Err(self.error("LARP-P002", "Lambda parameters need parentheses"));
             }
             let Some((op, precedence)) = self.operator() else {
                 break;
@@ -607,9 +659,9 @@ impl Parser<'_> {
         let saved = self.pos;
         let result = (|| -> Result<Vec<TypeExpr>> {
             self.expect("<")?;
-            let mut arguments = vec![self.ty()?];
+            let mut arguments = vec![self.type_argument()?];
             while self.eat(",") {
-                arguments.push(self.ty()?);
+                arguments.push(self.type_argument()?);
             }
             self.expect(">")?;
             if !self.punct("(") {

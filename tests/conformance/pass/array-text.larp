@@ -1,0 +1,5 @@
+main_character {
+    mfs<text> words = ["🦀", "é", "a"];
+    words.sorted().forEach(word => yap(word));
+    yap("aé🦀".size());
+}

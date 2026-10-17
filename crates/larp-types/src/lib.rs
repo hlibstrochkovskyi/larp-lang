@@ -17,6 +17,8 @@ pub enum Type {
     Function(Arc<Signature>),
     Baddie(Arc<Type>),
     Result(Arc<(Type, Type)>),
+    Array(Arc<Type>),
+    FixedArray(Arc<Type>, usize),
     ConversionError,
 }
 
@@ -64,6 +66,19 @@ impl Type {
         Self::Result(Arc::new((success, error)))
     }
 
+    pub fn array(element: Type) -> Self {
+        Self::Array(Arc::new(element))
+    }
+    pub fn fixed_array(element: Type, length: usize) -> Self {
+        Self::FixedArray(Arc::new(element), length)
+    }
+    pub fn element(&self) -> Option<&Type> {
+        match self {
+            Self::Array(element) | Self::FixedArray(element, _) => Some(element),
+            _ => None,
+        }
+    }
+
     pub fn is_printable(&self) -> bool {
         matches!(
             self,
@@ -73,7 +88,8 @@ impl Type {
 
     pub fn supports_equality(&self) -> bool {
         match self {
-            Self::Unit | Self::Function(_) => false,
+            Self::Unit | Self::Function(_) | Self::Array(_) => false,
+            Self::FixedArray(element, _) => element.supports_equality(),
             Self::Baddie(payload) => payload.supports_equality(),
             Self::Result(payloads) => {
                 payloads.0.supports_equality() && payloads.1.supports_equality()
@@ -105,7 +121,9 @@ impl Type {
                             .map(|parameter| (parameter, depth + 1)),
                     );
                 }
-                Self::Baddie(payload) => pending.push((payload, depth + 1)),
+                Self::Baddie(payload) | Self::Array(payload) | Self::FixedArray(payload, _) => {
+                    pending.push((payload, depth + 1))
+                }
                 Self::Result(payloads) => {
                     pending.push((&payloads.0, depth + 1));
                     pending.push((&payloads.1, depth + 1));
@@ -131,6 +149,14 @@ impl Type {
                     pending.extend(&signature.parameters);
                 }
                 Self::Baddie(payload) => pending.push(payload),
+                Self::Array(element) | Self::FixedArray(element, _) => {
+                    if **element == Self::Unit
+                        || matches!(ty, Self::FixedArray(_, length) if *length > i32::MAX as usize)
+                    {
+                        return false;
+                    }
+                    pending.push(element);
+                }
                 Self::Result(payloads) => {
                     pending.push(&payloads.0);
                     pending.push(&payloads.1);
@@ -164,6 +190,8 @@ impl fmt::Display for Type {
             }
             Self::Baddie(payload) => write!(f, "baddie<{payload}>"),
             Self::Result(payloads) => write!(f, "result<{}, {}>", payloads.0, payloads.1),
+            Self::Array(element) => write!(f, "mfs<{element}>"),
+            Self::FixedArray(element, length) => write!(f, "hediJeans<{element}, {length}>"),
             Self::ConversionError => f.write_str("ConversionError"),
             _ => f.write_str(match self {
                 Self::Mf => "mf",

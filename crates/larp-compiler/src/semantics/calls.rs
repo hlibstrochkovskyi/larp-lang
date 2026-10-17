@@ -22,9 +22,21 @@ impl Builder<'_> {
         arguments: Vec<Local>,
         span: Span,
     ) -> Result<Value> {
-        let signature = operation
-            .signature()
-            .expect("compiler selects valid intrinsic types");
+        let signature = operation.signature().ok_or_else(|| {
+            if operation.types().iter().any(|ty| !ty.within_limits()) {
+                error(
+                    "LARP-P003",
+                    span,
+                    "Intrinsic type exceeds complexity limits",
+                )
+            } else {
+                error(
+                    "LARP-T001",
+                    span,
+                    "Invalid intrinsic operand or result types",
+                )
+            }
+        })?;
         self.require(signature.effects, span)?;
         let slot = self.local(signature.result.clone());
         self.emit(
@@ -101,7 +113,7 @@ impl Builder<'_> {
                     "Generic method calls are not implemented",
                 ));
             }
-            return self.method(receiver, name, arguments, span, evaluate);
+            return self.method(receiver, name, arguments, expected, span, evaluate);
         }
         if let ExprKind::Name(name) = &callee.kind
             && self.resolve(&name.text).is_none()
@@ -489,10 +501,14 @@ impl Builder<'_> {
         receiver: &Expr,
         name: &Name,
         arguments: &[Expr],
+        expected: Option<Type>,
         span: Span,
         evaluate: bool,
     ) -> Result<Value> {
         let receiver = self.expression(receiver, None, evaluate)?;
+        if receiver.ty.element().is_some() || receiver.ty == Type::Text {
+            return self.array_method(receiver, name, arguments, expected, span, evaluate);
+        }
         match (&receiver.ty, name.text.as_str()) {
             (Type::Baddie(_), "isSome") => {
                 self.arity(arguments, 0, span)?;

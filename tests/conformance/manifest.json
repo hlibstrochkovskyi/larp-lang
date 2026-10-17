@@ -35,7 +35,7 @@
       "id": "collections",
       "path": "pass/collections.larp",
       "milestone": "M3",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "5\n50\n"
@@ -65,7 +65,7 @@
       "id": "fixed-array",
       "path": "pass/fixed-array.larp",
       "milestone": "M3",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "2\n3\n"
@@ -275,7 +275,7 @@
       "id": "callback-mutation",
       "path": "runtime/callback-mutation.larp",
       "milestone": "M3",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R005"
@@ -399,6 +399,86 @@
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R008"
+      }
+    },
+    {
+      "id": "array-aliases",
+      "path": "pass/array-aliases.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "3\n9\n1\n49\n"
+      }
+    },
+    {
+      "id": "array-function-results",
+      "path": "pass/array-function-results.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "1\n2\n3\n"
+      }
+    },
+    {
+      "id": "array-text",
+      "path": "pass/array-text.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "a\né\n🦀\n3\n"
+      }
+    },
+    {
+      "id": "fixed-array-length",
+      "path": "fail/fixed-array-length.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T001"
+      }
+    },
+    {
+      "id": "collection-callback-result",
+      "path": "fail/collection-callback-result.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T001"
+      }
+    },
+    {
+      "id": "empty-array",
+      "path": "fail/empty-array.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T003"
+      }
+    },
+    {
+      "id": "array-bounds",
+      "path": "runtime/array-bounds.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R004"
+      }
+    },
+    {
+      "id": "assignment-bounds",
+      "path": "runtime/assignment-bounds.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R004"
       }
     }
   ]

@@ -1,0 +1,4 @@
+main_character {
+    let values = [1, 2];
+    yap(values[-1]);
+}

@@ -273,7 +273,7 @@ fn malformed_intrinsics_are_rejected_even_after_return() {
         Intrinsic::None(Type::option(malformed.clone())),
         Intrinsic::Ok(Type::result(Type::Mf, malformed)),
     ] {
-        let expected = if intrinsic.signature().is_some() {
+        let expected = if intrinsic.types().iter().any(|ty| !ty.is_well_formed()) {
             "Malformed type"
         } else {
             "intrinsic"

@@ -1,0 +1,10 @@
+sidequest grow(mfs<mf> values) -> mf uses(write, observe, abort) {
+    yap("must not run");
+    values.push(2);
+    return 9;
+}
+
+main_character {
+    let values = [1];
+    values[1] = grow(values);
+}

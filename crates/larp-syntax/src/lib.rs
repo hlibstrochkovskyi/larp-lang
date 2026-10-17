@@ -36,6 +36,7 @@ pub struct TypeExpr {
 
 #[derive(Clone, Debug)]
 pub enum TypeExprKind {
+    Integer(String),
     Named {
         name: Name,
         arguments: Vec<TypeExpr>,
@@ -79,7 +80,7 @@ pub enum StatementKind {
         value: Expr,
     },
     Assignment {
-        name: Name,
+        target: Expr,
         op: Option<Binary>,
         value: Expr,
     },
@@ -120,6 +121,7 @@ pub enum ExprKind {
     Verdict(bool),
     None,
     Name(Name),
+    Array(Vec<Expr>),
     Unary {
         op: Unary,
         operand: Box<Expr>,
@@ -137,6 +139,10 @@ pub enum ExprKind {
     Member {
         receiver: Box<Expr>,
         name: Name,
+    },
+    Index {
+        receiver: Box<Expr>,
+        index: Box<Expr>,
     },
     Lambda {
         parameters: Vec<LambdaParameter>,

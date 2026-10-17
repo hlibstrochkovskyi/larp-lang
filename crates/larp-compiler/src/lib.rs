@@ -1,4 +1,4 @@
-//! Name resolution, scalar type/effect checking, typed IR, and verified bytecode.
+//! Name resolution, type/effect checking, typed IR, and verified bytecode.
 
 mod semantics;
 

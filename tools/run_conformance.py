@@ -24,7 +24,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin", type=Path, help="Use an already built larp binary")
     parser.add_argument("--all", action="store_true", help="Also attempt pending cases; failures are expected")
-    parser.add_argument("--gc-stress", action="store_true", help="Collect before every closure allocation")
+    parser.add_argument("--gc-stress", action="store_true", help="Collect at every array/closure allocation safepoint")
     args = parser.parse_args()
     subprocess.run([sys.executable, str(ROOT / "tools/check_corpus.py")], cwd=ROOT, check=True)
     binary = args.bin

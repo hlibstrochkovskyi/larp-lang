@@ -5,6 +5,7 @@ use larp_ir::{
 use larp_source::Span;
 use larp_syntax::{self as ast, Expr, ExprKind, Name, StatementKind};
 use larp_types::{Binary, Effects, Intrinsic, Scalar, Type, Unary, binary_type, unary_type};
+mod arrays;
 mod calls;
 mod closures;
 use std::collections::HashMap;
@@ -41,21 +42,44 @@ fn effects(declared: &Option<Vec<Name>>) -> Result<Effects> {
 }
 
 fn ty(expression: &ast::TypeExpr) -> Result<Type> {
-    match &expression.kind {
+    let result = match &expression.kind {
+        ast::TypeExprKind::Integer(_) => Err(error(
+            "LARP-T001",
+            expression.span,
+            "An integer literal is only valid as a fixed-array length",
+        )),
         ast::TypeExprKind::Named { name, arguments } => match name.text.as_str() {
             "baddie" if arguments.len() == 1 => Ok(Type::option(ty(&arguments[0])?)),
             "result" if arguments.len() == 2 => {
                 Ok(Type::result(ty(&arguments[0])?, ty(&arguments[1])?))
             }
-            "baddie" | "result" => Err(error(
+            "mfs" if arguments.len() == 1 => Ok(Type::array(ty(&arguments[0])?)),
+            "hediJeans" if arguments.len() == 2 => {
+                let ast::TypeExprKind::Integer(digits) = &arguments[1].kind else {
+                    return Err(error(
+                        "LARP-T001",
+                        arguments[1].span,
+                        "Fixed-array length must be a nonnegative integer literal",
+                    ));
+                };
+                let length = digits
+                    .replace('_', "")
+                    .parse::<usize>()
+                    .ok()
+                    .filter(|length| *length <= i32::MAX as usize)
+                    .ok_or_else(|| {
+                        error(
+                            "LARP-T004",
+                            arguments[1].span,
+                            "Fixed-array length exceeds the collection length limit",
+                        )
+                    })?;
+                Ok(Type::fixed_array(ty(&arguments[0])?, length))
+            }
+            "baddie" | "result" | "mfs" | "hediJeans" => Err(error(
                 "LARP-T001",
                 expression.span,
                 "Incorrect number of generic type arguments",
-            )),
-            "mfs" | "hediJeans" => Err(error(
-                "LARP-P002",
-                expression.span,
-                "Collection types are not implemented yet",
             )),
             _ if !arguments.is_empty() => Err(error(
                 "LARP-T005",
@@ -85,7 +109,22 @@ fn ty(expression: &ast::TypeExpr) -> Result<Type> {
             }
             Ok(Type::function(parameters, ty(result)?, effects(bound)?))
         }
+    }?;
+    if !result.within_limits() {
+        return Err(error(
+            "LARP-P003",
+            expression.span,
+            "Type complexity limit exceeded",
+        ));
     }
+    if !result.is_well_formed() {
+        return Err(error(
+            "LARP-T001",
+            expression.span,
+            "Invalid type: array elements and function parameters cannot have type unit",
+        ));
+    }
+    Ok(result)
 }
 
 pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>> {
@@ -206,6 +245,7 @@ struct Binding {
     span: Span,
 }
 
+#[derive(Clone)]
 struct Value {
     slot: Local,
     ty: Type,
@@ -446,39 +486,8 @@ impl<'a> Builder<'a> {
                     },
                 )?;
             }
-            StatementKind::Assignment { name, op, value } => {
-                let binding = self.resolve(&name.text).ok_or_else(|| {
-                    error(
-                        "LARP-N001",
-                        name.span,
-                        format!("Unknown binding '{}'", name.text),
-                    )
-                })?;
-                if !binding.writable {
-                    return Err(error(
-                        "LARP-T008",
-                        name.span,
-                        "Captured bindings and range-loop indices are read-only",
-                    ));
-                }
-                let previous = if op.is_some() {
-                    Some(self.read(&binding, name.span))
-                } else {
-                    None
-                };
-                let value = self.expression(value, Some(binding.ty.clone()), true)?;
-                let value = if let Some(op) = op {
-                    self.binary(*op, previous.unwrap(), value, span, true)?
-                } else {
-                    value
-                };
-                self.emit(
-                    Inst::Copy {
-                        destination: binding.slot,
-                        source: value.slot,
-                    },
-                    span,
-                );
+            StatementKind::Assignment { target, op, value } => {
+                self.assignment(target, *op, value, span)?
             }
             StatementKind::Expression(expression) => {
                 self.expression(expression, None, true)?;
@@ -740,6 +749,13 @@ impl<'a> Builder<'a> {
             {
                 Some(Type::Text)
             }
+            ExprKind::Index { receiver, .. } => {
+                self.hint(receiver).and_then(|ty| ty.element().cloned())
+            }
+            ExprKind::Array(elements) => elements
+                .first()
+                .and_then(|value| self.hint(value))
+                .map(Type::array),
             _ => None,
         }
     }
@@ -764,6 +780,25 @@ impl<'a> Builder<'a> {
         let span = expression.span;
         let value = match &expression.kind {
             ExprKind::Integer(digits) => self.integer(digits, false, expected.clone(), span)?,
+            ExprKind::Array(elements) => {
+                self.array_literal(elements, expected.clone(), span, evaluate)?
+            }
+            ExprKind::Index { receiver, index } => {
+                let receiver = self.expression(receiver, None, evaluate)?;
+                if receiver.ty.element().is_none() {
+                    return Err(error(
+                        "LARP-T001",
+                        span,
+                        "Indexing requires a dynamic or fixed array",
+                    ));
+                }
+                let index = self.expression(index, Some(Type::Mf), evaluate)?;
+                self.intrinsic(
+                    Intrinsic::Index(receiver.ty),
+                    vec![receiver.slot, index.slot],
+                    span,
+                )?
+            }
             ExprKind::Float(raw) => {
                 let value = raw
                     .parse::<f64>()

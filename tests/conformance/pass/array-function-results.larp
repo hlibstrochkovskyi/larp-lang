@@ -1,0 +1,6 @@
+main_character {
+    let values = [1, 2, 3];
+    let callbacks = values.map(x => () => x);
+    let output = callbacks.map(callback => callback());
+    output.forEach(x => yap(x));
+}

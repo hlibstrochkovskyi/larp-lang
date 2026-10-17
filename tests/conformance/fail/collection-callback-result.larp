@@ -1,0 +1,4 @@
+main_character {
+    let values = [1, 2];
+    let invalid = values.filter(x => x);
+}

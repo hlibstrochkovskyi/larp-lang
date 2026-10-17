@@ -9,6 +9,17 @@ impl Builder<'_> {
         expected: Option<Type>,
         span: Span,
     ) -> Result<Value> {
+        self.lambda_context(parameters, body, expected, span, false)
+    }
+
+    pub(super) fn lambda_context(
+        &mut self,
+        parameters: &[ast::LambdaParameter],
+        body: &ast::LambdaBody,
+        expected: Option<Type>,
+        span: Span,
+        infer_result: bool,
+    ) -> Result<Value> {
         let signature = match &expected {
             Some(Type::Function(signature)) => Some(signature.clone()),
             Some(other) => {
@@ -82,7 +93,7 @@ impl Builder<'_> {
             span,
             self.generated_base + self.generated.len(),
         );
-        if signature.is_none() {
+        if signature.is_none() || infer_result {
             child.inferred_result = Some(None);
         }
         child.scopes.insert(0, HashMap::new());
@@ -113,10 +124,14 @@ impl Builder<'_> {
         match body {
             ast::LambdaBody::Block(block) => child.block(block, false),
             ast::LambdaBody::Expression(expression) => {
-                let expected = signature.as_ref().map(|signature| signature.result.clone());
+                let expected = signature
+                    .as_ref()
+                    .filter(|_| !infer_result)
+                    .map(|signature| signature.result.clone());
                 let value = child.expression(expression, expected, true)?;
                 child.function.result = signature
                     .as_ref()
+                    .filter(|_| !infer_result)
                     .map_or(value.ty, |signature| signature.result.clone());
                 child.terminate(Terminator::Return(Some(value.slot)), span);
             }
@@ -133,6 +148,13 @@ impl Builder<'_> {
             child.function.result.clone(),
             child.required,
         );
+        if !function_type.within_limits() {
+            return Err(error(
+                "LARP-P003",
+                span,
+                "Inferred closure type exceeds complexity limits",
+            ));
+        }
         self.generated.extend(child.generated);
         let id = self.generated_base + self.generated.len();
         if id >= 4096 {
@@ -206,6 +228,15 @@ fn free_names(parameters: &[ast::LambdaParameter], body: &ast::LambdaBody) -> BT
                     }
                 }
                 ExprKind::Member { receiver, .. } => self.expr(receiver),
+                ExprKind::Index { receiver, index } => {
+                    self.expr(receiver);
+                    self.expr(index);
+                }
+                ExprKind::Array(elements) => {
+                    for element in elements {
+                        self.expr(element);
+                    }
+                }
                 ExprKind::Lambda { parameters, body } => self.lambda(parameters, body),
                 _ => {}
             }
@@ -223,8 +254,8 @@ fn free_names(parameters: &[ast::LambdaParameter], body: &ast::LambdaBody) -> BT
                     self.expr(value);
                     self.bound.last_mut().unwrap().insert(name.text.clone());
                 }
-                StatementKind::Assignment { name, value, .. } => {
-                    self.name(name);
+                StatementKind::Assignment { target, value, .. } => {
+                    self.expr(target);
                     self.expr(value);
                 }
                 StatementKind::Expression(value) => self.expr(value),

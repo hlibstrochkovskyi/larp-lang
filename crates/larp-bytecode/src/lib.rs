@@ -182,6 +182,9 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
                 | Op::CallIndirect(ty)
                 | Op::MatchResult { ty, .. } => validate(ty, Some(pc))?,
                 Op::Intrinsic(operation) => {
+                    for ty in operation.types() {
+                        validate(ty, Some(pc))?;
+                    }
                     if let Some(signature) = operation.signature() {
                         validate(&signature.result, Some(pc))?;
                         for ty in &signature.parameters {

@@ -1,0 +1,9 @@
+main_character {
+    mfs<mf> scores = [2, 4, 49];
+    mfs<mf> moggers = scores
+        .filter(x => x mogg 3)
+        .map(x => x + 1)
+        .sorted();
+
+    moggers.forEach(x => yap(x));
+}

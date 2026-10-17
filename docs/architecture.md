@@ -1,8 +1,8 @@
 # Compiler and runtime architecture
 
-Status: scalar, closure, and option/result programs compile through typed IR
-and verified in-memory bytecode to VM execution. Closure tracing is implemented;
-objects, arrays, scenario regions, and persisted artifacts remain planned.
+Status: scalar, closure, option/result, and collection programs compile through
+typed IR and verified in-memory bytecode to VM execution. Array/closure tracing
+is implemented; objects, scenario regions, and persisted artifacts remain planned.
 The pipeline below includes both current contracts and their intended extensions;
 see [implementation status](implementation-status.md) for the supported subset.
 
@@ -41,8 +41,9 @@ flowchart LR
    A later SSA optimization pass must not redefine language semantics.
 6. **Lowering:** emit typed instructions for numeric widths, locals, branches,
    closures, direct/indirect calls, intrinsics, total result-tag dispatch, and
-   observations. Object/array/scenario instructions are future extensions; those
-   must encode resolved field/method IDs instead of VM source-name lookup.
+   observations. Array operations use typed built-in intrinsics with validated
+   element/callback signatures. Object/scenario instructions are future extensions;
+   those must encode resolved field/method IDs instead of VM source-name lookup.
 7. **Verification:** check instruction indices, stack types at joins, initialized
    locals, branch targets, closure capture layouts, immutable capture slots,
    intrinsic types, call signatures, and effect bounds. Check unreachable code
@@ -52,9 +53,10 @@ flowchart LR
    comparisons and diagnostic formatting remain bounded. Scenario nesting/escape
    and host capability validation must be added alongside those features.
 8. **VM:** explicit value stack and call frames, checked arithmetic, tagged
-   option/result values, and a traced closure heap. A LARP runtime trap is
-   structured data, not a Rust panic. Future scenario frames must be discarded
-   when a trap propagates through the VM loop.
+   option/result/fixed-array values, and a traced array/closure heap. Collection
+   callbacks suspend their caller in explicit continuation state. A LARP runtime
+   trap is structured data, not a Rust panic. Future scenario frames must be
+   discarded when a trap propagates through the VM loop.
 
 The parser may be temporarily exercised without a backend, but the first
 executable language slice must go all the way through typed IR and bytecode.
@@ -73,7 +75,7 @@ Current crates:
 | `larp-compiler` | Name, type, control-flow, and effect checking |
 | `larp-ir` | Typed basic blocks and bytecode lowering |
 | `larp-bytecode` | In-memory instructions, dataflow verifier, disassembly |
-| `larp-vm` | Iterative frames, tagged values, closure GC, checked execution, observations |
+| `larp-vm` | Iterative frames/callbacks, tagged values, array/closure GC, checked execution, observations |
 | `larp-cli` | `check`, `run`, `dump`, and `explain` |
 | `larp-scenario-model` | Isolated experiment, not linked into the CLI |
 
@@ -107,39 +109,77 @@ success payload, the other the error payload. Only the latter invokes the
 handler. This avoids an unsafe unwrap operation or an artificial abort effect in
 pure recovery. IR block parameters become typed stores at branch entry.
 
+## Collections and places
+
+Dynamic arrays carry shared heap identity. Fixed arrays are owned element vectors
+with value-copy semantics; copying a reference element retains that element's
+identity. Literal construction, indexing, indexed replacement, size, growth,
+sorting, and higher-order operations lower to typed intrinsics. The same intrinsic
+signature defines operand/result types and required effects for both the compiler
+and bytecode verifier. Dynamic reads require `read`, mutation requires `write`,
+and checked index/growth operations include `abort`. Fixed-value updates have no
+heap mutation effect. Higher-order intrinsics add the callback's static effect
+bound to receiver reads; there is no special route around effect checking.
+
+An indexed assignment saves its place's indices and reference receivers and
+validates each index before evaluating the right side. An invalid place aborts
+before right-side effects; growth on the right cannot make it valid. Compound
+assignment also reads the old element first.
+Fixed-array ancestors are rebuilt through their saved places after evaluation,
+preserving sibling updates made by the right side rather than writing back an
+outdated whole-array snapshot. A captured fixed value cannot be reassigned;
+references contained within it can still refer to mutable dynamic arrays.
+
+`map`, `filter`, and `forEach` suspend the caller with an iteration record holding
+receiver, callback, next index, current filter element, and unfinished output.
+Each callback uses an ordinary VM frame. Returning resumes the iteration in the
+VM loop, so nested pipelines do not recurse through the Rust stack. A per-array
+iteration count rejects `push` before mutation even through aliases or captures.
+Indexed replacement is nonstructural and remains allowed. Nested read-only
+iterations of one receiver are permitted. Normal completion releases the guard;
+a fatal trap terminates execution and releases the owning VM heap.
+
+Filtering and mapping allocate new dynamic arrays; sorting copies the receiver
+and uses stable integer/text ordering. Text length counts Unicode scalars.
+Dynamic arrays have no equality; fixed-array equality recurses only through
+element types that themselves support equality.
+
 ## Runtime representation and memory
 
 The current VM uses tagged Rust `Value` variants: scalar values, tagged
-option/result payloads, nominal conversion errors, and closure handles. Options
-and results own their payloads; tracing walks through those wrappers to find
-contained handles. Text currently uses owned immutable storage. Avoid NaN boxing
-until profiling proves a need.
+option/result payloads, fixed arrays, nominal conversion errors, and array/closure
+handles. Options, results, and fixed arrays own their payloads; tracing walks
+through those wrappers to find contained handles. Text currently uses owned
+immutable storage. Avoid NaN boxing until profiling proves a need.
 
 Closures contain a generated function identity and copied captured values, never
 Rust references into a VM stack. Ordinary parameters occupy the first frame
 slots, followed by immutable capture slots and mutable locals/temporaries.
 Nested and returned closures retain their captured values after the creating
 frame exits. Capture bindings are snapshots; no source-level capture reassignment
-is allowed. Future reference values will retain shared identity when copied.
+is allowed. Captured dynamic arrays retain shared identity when copied.
 
-Closure storage is a non-moving arena of optional entries with a generation in
-each reusable handle. Stale generations cannot resolve to a newly allocated
-closure; generation overflow is a checked resource failure. The collector uses
-iterative marking and sweeping, including transitive handles in captured
-options/results. Synthetic heap tests exercise long capture chains and cycles;
-current source closures cannot construct mutable capture cycles.
+Array/closure storage is a non-moving arena of optional typed entries with a
+generation in each reusable handle. Stale generations cannot resolve to a newly
+allocated entry; generation overflow is a checked resource failure. The collector
+uses iterative marking and sweeping, including transitive handles in captured
+options/results/fixed arrays. Mutable arrays can create cycles with closures;
+unreachable cycles are reclaimed without recursive graph destruction.
 
-Collection occurs immediately before `MakeClosure`, while its captured operands
-are still on the VM value stack. The complete stack and initialized locals of
-all active frames are roots. Stress mode collects at every such safepoint; the
+Collection occurs before closure/array construction and sorting while operands
+are still on the VM value stack, and before publishing completed callback
+outputs while their continuation is still rooted. The complete stack,
+initialized locals of all active frames, and each suspended iteration's receiver,
+callback, current element, and output buffer are roots. Array elements and closure
+captures are traced edges. Stress mode collects at every such safepoint; the
 normal threshold adapts to the live heap. CLI `run --gc-stress` and the Rust
 `Limits::gc_stress` option select stress mode. `execute_with_stats` exposes allocation,
 collection, reclamation, and peak-live counts for tests. A final collection after
-successful program exit reclaims the remaining closure heap. Trap paths release
-the owning Rust heap as execution unwinds.
+successful program exit reclaims the remaining array/closure heap. Trap paths
+release the owning Rust heap as execution unwinds.
 
-Arrays, object layouts, role dispatch tables, lazy cells, and scenario snapshots
-are planned. Their fields and temporary allocation buffers must become roots or
+Object layouts, role dispatch tables, lazy cells, and scenario snapshots are
+planned. Their fields and temporary allocation buffers must become roots or
 traced edges before their allocation instructions can run. Objects will contain
 class/layout identity and field values; role values will contain a receiver and
 dispatch identity. Preserve stable language identity across collection and allow

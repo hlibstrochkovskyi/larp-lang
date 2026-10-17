@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Status: M1 and the M2 feature set are implemented; M3 is in progress. This is a
+Status: M1, M2, and the M3 feature set are implemented; M4 is next. This is a
 sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -43,21 +43,25 @@ Gate: execute loop/factorial/error fixtures; test recursion bounds, division
 edge cases, short-circuiting, invalid return paths, and multiple diagnostics
 without cascades. `parseScore` and recovery behave as specified.
 
-## M3 — Collections and functions as values (in progress)
+## M3 — Collections and functions as values (implemented feature set)
 
 Implemented: first-class named/prelude functions, explicit function types,
 contextual and annotated lambdas, immutable snapshot captures, nested/returned
 closures, and effect-bound preservation through indirect calls. Built-in generic
-option/result types and their recovery dot calls are available. Closure memory
-is managed by a non-moving tracing collector with stress mode.
+option/result types and their recovery dot calls are available. Array/closure
+memory is managed by a non-moving tracing collector with stress mode.
 
-Remaining: dynamic/fixed arrays, indexing, eager collection operations, collection
-dot calls, callback mutation checks, and the collection pipeline fixture. No
-user-defined generic declarations are required for this milestone.
+Dynamic/fixed arrays support contextual literals, checked indexing, indexed
+assignment, and `size()`. Dynamic arrays provide `push`, stable `sorted`, eager
+`filter`, `map`, and `forEach`. Built-in callbacks preserve their effect bounds;
+iteration guards reject structural mutation through any receiver alias. The VM
+uses explicit suspended iterations rather than recursive host callback calls,
+and traces their receiver, callback, and unfinished outputs. Array/closure cycles
+are collectible. User-defined generic declarations remain deferred.
 
-Gate: the collection pipeline produces `5\n50\n`; callback mutation through an
-alias aborts; captured local bindings are snapshots; higher-order calls cannot
-erase effects. No user-defined generic declarations required yet.
+Gate: the collection pipeline produces `5\n50\n`; structural callback mutation
+through an alias aborts; captured local bindings are snapshots; higher-order
+calls cannot erase effects. No user-defined generic declarations required yet.
 
 ## M4 — Objects and managed lifetime
 
