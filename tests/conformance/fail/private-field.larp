@@ -1,0 +1,11 @@
+archetype Founder {
+    lowkey mf aura;
+    init() {
+        self.aura = 0;
+    }
+}
+
+main_character {
+    Founder bro = new Founder();
+    yap(bro.aura);
+}

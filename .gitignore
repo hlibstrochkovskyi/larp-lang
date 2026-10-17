@@ -1,0 +1,10 @@
+/target/
+/.git-foundation/
+/artifacts/
+/Ideas-not-for push!/
+/.agents/
+/.codex/
+/.aws/
+*.larpbc
+*.profraw
+.DS_Store

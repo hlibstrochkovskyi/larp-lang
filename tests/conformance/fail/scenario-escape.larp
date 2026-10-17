@@ -1,0 +1,14 @@
+archetype Counter {
+    highkey mf value;
+    init() {
+        self.value = 0;
+    }
+}
+
+main_character {
+    Counter real = new Counter();
+    mf outside = 0;
+    larp (real) as Trial {
+        outside = real.value;
+    }
+}

@@ -1,0 +1,10 @@
+sidequest apply(fn(mf) -> mf uses(observe, abort) callback) -> mf uses() {
+    return callback(1);
+}
+
+main_character {
+    apply(x => {
+        yap(x);
+        return x;
+    });
+}

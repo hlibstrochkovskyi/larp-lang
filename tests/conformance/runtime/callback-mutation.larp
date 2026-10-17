@@ -1,0 +1,4 @@
+main_character {
+    mfs<mf> values = [1, 2];
+    values.forEach(x => values.push(x));
+}

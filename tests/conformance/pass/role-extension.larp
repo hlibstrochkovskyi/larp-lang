@@ -1,0 +1,22 @@
+role Mogger {
+    sidequest score() -> mf uses(read);
+}
+
+archetype Founder : Mogger {
+    lowkey mf aura;
+    init(mf aura) {
+        self.aura = aura;
+    }
+    highkey sidequest score() -> mf uses(read) {
+        return self.aura;
+    }
+}
+
+sidequest mf.doubled() -> mf {
+    return self * 2;
+}
+
+main_character {
+    Mogger bro = new Founder(49);
+    yap(bro.score().doubled());
+}

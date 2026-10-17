@@ -1,0 +1,7 @@
+sidequest add(mf left, mf right) -> mf {
+    return left + right;
+}
+
+main_character {
+    yap(add(2_147_483_647, 1));
+}

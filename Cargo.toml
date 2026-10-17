@@ -1,0 +1,20 @@
+[workspace]
+members = ["crates/*", "experiments/scenario-model"]
+default-members = ["crates/larp-cli"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0-dev"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[workspace.dependencies]
+larp-source = { path = "crates/larp-source" }
+larp-diagnostics = { path = "crates/larp-diagnostics" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"

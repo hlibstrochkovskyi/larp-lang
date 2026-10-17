@@ -1,0 +1,285 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "scalars",
+      "path": "pass/scalars.larp",
+      "milestone": "M1",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "49\nfr\n"
+      }
+    },
+    {
+      "id": "loops",
+      "path": "pass/loops.larp",
+      "milestone": "M2",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "1009\n10\n"
+      }
+    },
+    {
+      "id": "functions",
+      "path": "pass/functions.larp",
+      "milestone": "M2",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "120\n"
+      }
+    },
+    {
+      "id": "collections",
+      "path": "pass/collections.larp",
+      "milestone": "M3",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "5\n50\n"
+      }
+    },
+    {
+      "id": "recovery",
+      "path": "pass/recovery.larp",
+      "milestone": "M2",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "20\n0\n"
+      }
+    },
+    {
+      "id": "role-extension",
+      "path": "pass/role-extension.larp",
+      "milestone": "M4",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "98\n"
+      }
+    },
+    {
+      "id": "fixed-array",
+      "path": "pass/fixed-array.larp",
+      "milestone": "M3",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "2\n3\n"
+      }
+    },
+    {
+      "id": "lazy-capture",
+      "path": "pass/lazy-capture.larp",
+      "milestone": "M6",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "4\n4\n"
+      }
+    },
+    {
+      "id": "scenario",
+      "path": "pass/scenario.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "20\n3\n"
+      }
+    },
+    {
+      "id": "scenario-method",
+      "path": "pass/scenario-method.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "1\n"
+      }
+    },
+    {
+      "id": "scenario-result-is-data",
+      "path": "pass/scenario-result-is-data.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "run",
+        "stdout": "7\n"
+      }
+    },
+    {
+      "id": "truthiness",
+      "path": "fail/truthiness.larp",
+      "milestone": "M1",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T002"
+      }
+    },
+    {
+      "id": "narrowing",
+      "path": "fail/narrowing.larp",
+      "milestone": "M1",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T041"
+      }
+    },
+    {
+      "id": "mixed-width",
+      "path": "fail/mixed-width.larp",
+      "milestone": "M1",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T001"
+      }
+    },
+    {
+      "id": "inference",
+      "path": "fail/inference.larp",
+      "milestone": "M3",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T003"
+      }
+    },
+    {
+      "id": "private-field",
+      "path": "fail/private-field.larp",
+      "milestone": "M4",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T010"
+      }
+    },
+    {
+      "id": "effect-callback",
+      "path": "fail/effect-callback.larp",
+      "milestone": "M3",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-E001"
+      }
+    },
+    {
+      "id": "lazy-observation",
+      "path": "fail/lazy-observation.larp",
+      "milestone": "M6",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-E001"
+      }
+    },
+    {
+      "id": "scenario-alias",
+      "path": "fail/scenario-alias.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-S002"
+      }
+    },
+    {
+      "id": "scenario-escape",
+      "path": "fail/scenario-escape.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-S004"
+      }
+    },
+    {
+      "id": "scenario-nested",
+      "path": "fail/scenario-nested.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-S003"
+      }
+    },
+    {
+      "id": "scenario-return",
+      "path": "fail/scenario-return.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-S005"
+      }
+    },
+    {
+      "id": "scenario-reference-field",
+      "path": "fail/scenario-reference-field.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-S001"
+      }
+    },
+    {
+      "id": "canon-outside",
+      "path": "fail/canon-outside.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-S006"
+      }
+    },
+    {
+      "id": "scenario-hidden-allocation",
+      "path": "fail/scenario-hidden-allocation.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-E002"
+      }
+    },
+    {
+      "id": "overflow",
+      "path": "runtime/overflow.larp",
+      "milestone": "M2",
+      "status": "pending",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R001"
+      }
+    },
+    {
+      "id": "scenario-abort",
+      "path": "runtime/scenario-abort.larp",
+      "milestone": "M5",
+      "status": "pending",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R003"
+      }
+    },
+    {
+      "id": "callback-mutation",
+      "path": "runtime/callback-mutation.larp",
+      "milestone": "M3",
+      "status": "pending",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R005"
+      }
+    }
+  ]
+}

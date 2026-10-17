@@ -1,0 +1,29 @@
+archetype Founder {
+    highkey unc valuation;
+    highkey mf aura;
+    init(unc valuation) {
+        self.valuation = valuation;
+        self.aura = 0;
+    }
+    highkey sidequest isMogging(mf opponent) -> verdict uses(read) {
+        return self.aura mogg opponent;
+    }
+}
+
+main_character {
+    Founder bro = new Founder(20);
+    mfs<mf> scores = [2, 4, 49];
+    mfs<mf> winners = scores.filter(x => x mogg 3).map(x => x + 1);
+    mf bonus = winners.size();
+    larp (bro) as PeterThiel {
+        flex bro.valuation = 1_000_000_000;
+        bro.aura += bonus;
+        canon bro.aura;
+        bro.aura += 1;
+        palantir(bro);
+    }
+    no_cap(bro.valuation == 20);
+    no_cap(bro.isMogging(2));
+    yap(bro.valuation);
+    yap(bro.aura);
+}

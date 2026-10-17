@@ -1,0 +1,13 @@
+archetype Counter {
+    highkey mfs<mf> values;
+    init() {
+        self.values = [0];
+    }
+}
+
+main_character {
+    Counter real = new Counter();
+    larp (real) as Trial {
+        palantir(real);
+    }
+}

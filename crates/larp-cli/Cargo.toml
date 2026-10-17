@@ -1,0 +1,16 @@
+[package]
+name = "larp-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "larp"
+path = "src/main.rs"
+
+[dependencies]
+larp-diagnostics.workspace = true
+
+[lints]
+workspace = true

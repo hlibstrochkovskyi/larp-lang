@@ -1,0 +1,5 @@
+main_character {
+    mf small = 1;
+    unc large = 2;
+    yap(small + large);
+}

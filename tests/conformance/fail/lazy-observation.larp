@@ -1,0 +1,9 @@
+sidequest noisy() -> mf uses(observe) {
+    yap("evaluated");
+    return 1;
+}
+
+main_character {
+    nonchalant mf result = noisy();
+    yap(result);
+}

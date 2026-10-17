@@ -1,0 +1,10 @@
+sidequest factorial(mf n) -> mf {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+main_character {
+    yap(factorial(5));
+}

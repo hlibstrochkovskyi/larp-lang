@@ -1,0 +1,68 @@
+(* LARP v0.1 proposal. Repetition: { }, optional: [ ], alternatives: |.
+   Lexical tokens IDENT, INT, FLOAT, STRING follow v0.1.md.
+   Contextual type, access, effect, region, and place checks are specified there.
+   Keywords are quoted; built-in type names parse as IDENT. *)
+
+program       = { declaration }, "main_character", block, { declaration } ;
+declaration   = function | archetype | role ;
+function      = "sidequest", [ type, "." ], IDENT,
+                "(", [ parameters ], ")", "->", type, [ effects ], block ;
+parameters    = parameter, { ",", parameter } ;
+parameter     = type, IDENT ;
+effects       = "uses", "(", [ IDENT, { ",", IDENT } ], ")" ;
+type          = IDENT, [ "<", type_arg, { ",", type_arg }, ">" ]
+              | "fn", "(", [ types ], ")", "->", type, [ effects ] ;
+types         = type, { ",", type } ;
+type_arg      = type | INT ;
+
+archetype     = "archetype", IDENT, [ ":", IDENT, { ",", IDENT } ],
+                "{", { member }, "}" ;
+member        = [ visibility ], ( field | method ) | constructor ;
+visibility    = "highkey" | "lowkey" ;
+field         = type, IDENT, ";" ;
+method        = "sidequest", IDENT, "(", [ parameters ], ")",
+                "->", type, [ effects ], block ;
+constructor   = "init", "(", [ parameters ], ")", block ;
+role          = "role", IDENT, "{", { signature }, "}" ;
+signature     = "sidequest", IDENT, "(", [ parameters ], ")",
+                "->", type, [ effects ], ";" ;
+
+block         = "{", { statement }, "}" ;
+statement     = block | binding | lazy | assignment | expression, ";"
+              | if_stmt | while_stmt | range_loop | forever
+              | "return", [ expression ], ";" | "touch_grass", ";"
+              | scenario | flex | canon | "sybau", block ;
+binding       = ( type, IDENT | "let", IDENT ), "=", expression, ";" ;
+lazy          = "nonchalant", type, IDENT, "=", expression, ";" ;
+assignment    = place, ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ),
+                expression, ";" ;
+place         = ( IDENT | "self" ), { ".", IDENT | "[", expression, "]" } ;
+if_stmt       = "if", "(", expression, ")", block,
+                [ "else", ( block | if_stmt ) ] ;
+while_stmt    = "locked_in", "while", "(", expression, ")", block ;
+range_loop    = "npc", "loop", "(", type, IDENT, "in", expression,
+                "..", expression, ")", block ;
+forever       = "goon", block ;
+scenario      = "larp", "(", IDENT, ")", "as", IDENT, block ;
+flex          = "flex", IDENT, ".", IDENT, "=", expression, ";" ;
+canon         = "canon", IDENT, ".", IDENT, ";" ;
+
+expression    = lambda | disjunction ;
+lambda        = ( IDENT | "(", [ lambda_params ], ")" ), "=>",
+                ( expression | block ) ;
+lambda_params = lambda_param, { ",", lambda_param } ;
+lambda_param  = IDENT | type, IDENT ;
+disjunction   = conjunction, { "||", conjunction } ;
+conjunction   = equality, { "&&", equality } ;
+equality      = comparison, [ ( "==" | "!=" ), comparison ] ;
+comparison    = sum, [ ( "<" | "<=" | ">" | ">=" | "mogg" ), sum ] ;
+sum           = product, { ( "+" | "-" ), product } ;
+product       = unary, { ( "*" | "/" | "%" ), unary } ;
+unary         = ( "!" | "-" | "+" ), unary | postfix ;
+postfix       = primary, { call | ".", IDENT | "[", expression, "]" } ;
+call          = [ "<", types, ">" ], "(", [ arguments ], ")" ;
+arguments     = expression, { ",", expression } ;
+primary       = INT | FLOAT | STRING | "fr" | "cap" | "no_bitches"
+              | IDENT | "self" | "(", expression, ")"
+              | "[", [ arguments ], "]"
+              | "new", IDENT, "(", [ arguments ], ")" ;

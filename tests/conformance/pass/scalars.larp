@@ -1,0 +1,7 @@
+main_character {
+    unc money = fortnine;
+    mf aura = 2 + 3 * 4;
+    no_cap(aura == 14);
+    yap(money);
+    yap(aura mogg 10);
+}

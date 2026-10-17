@@ -1,0 +1,4 @@
+main_character {
+    unc netWorth = 49;
+    mf aura = netWorth;
+}

@@ -1,0 +1,19 @@
+archetype Counter {
+    highkey mf value;
+    init() {
+        self.value = 0;
+    }
+    highkey sidequest increment() -> unit uses(read, write, abort) {
+        self.value += 1;
+    }
+}
+
+main_character {
+    Counter real = new Counter();
+    Counter alias = real;
+    larp (real) as Trial {
+        real.increment();
+        canon real.value;
+    }
+    yap(alias.value);
+}

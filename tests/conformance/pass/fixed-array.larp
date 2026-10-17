@@ -1,0 +1,7 @@
+main_character {
+    hediJeans<mf, 3> scores = [2, 4, 49];
+    hediJeans<mf, 3> copy = scores;
+    copy[0] = 100;
+    yap(scores[0]);
+    yap(copy.size());
+}

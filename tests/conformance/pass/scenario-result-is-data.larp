@@ -1,0 +1,16 @@
+archetype Counter {
+    highkey mf value;
+    init() {
+        self.value = 0;
+    }
+}
+
+main_character {
+    Counter real = new Counter();
+    larp (real) as Trial {
+        result<mf, text> failed = fumble("expected failure");
+        real.value = failed.cope(err => 7);
+        canon real.value;
+    }
+    yap(real.value);
+}

@@ -1,0 +1,7 @@
+main_character {
+    baddie<unc> funding = no_bitches;
+    yap(funding.copium(20));
+    result<mf, text> parsed = parseScore("unc");
+    mf score = parsed.cope(err => 0);
+    yap(score);
+}

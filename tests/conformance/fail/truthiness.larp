@@ -1,0 +1,6 @@
+main_character {
+    mf aura = 500;
+    if (aura) {
+        yap("chad");
+    }
+}

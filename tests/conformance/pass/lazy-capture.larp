@@ -1,0 +1,7 @@
+main_character {
+    mf base = 2;
+    nonchalant mf doubled = base * 2;
+    base = 9;
+    yap(doubled);
+    yap(doubled);
+}

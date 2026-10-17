@@ -1,0 +1,12 @@
+main_character {
+    unc money = fortnine;
+    locked_in while (money < 1000) {
+        money += 10;
+    }
+    mf sum = 0;
+    npc loop (mf i in 0..5) {
+        sum += i;
+    }
+    yap(money);
+    yap(sum);
+}
