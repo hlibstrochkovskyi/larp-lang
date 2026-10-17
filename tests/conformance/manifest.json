@@ -45,7 +45,7 @@
       "id": "recovery",
       "path": "pass/recovery.larp",
       "milestone": "M2",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "20\n0\n"
@@ -145,7 +145,7 @@
       "id": "inference",
       "path": "fail/inference.larp",
       "milestone": "M3",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-T003"
@@ -165,7 +165,7 @@
       "id": "effect-callback",
       "path": "fail/effect-callback.larp",
       "milestone": "M3",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-E001"
@@ -319,6 +319,86 @@
       "expect": {
         "kind": "run",
         "stdout": "line\r\n🦀\t\"\n"
+      }
+    },
+    {
+      "id": "closures",
+      "path": "pass/closures.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "12\n23\n"
+      }
+    },
+    {
+      "id": "function-payloads",
+      "path": "pass/function-payloads.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "4\n8\n49\n0\n"
+      }
+    },
+    {
+      "id": "conversions",
+      "path": "pass/conversions.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "value does not fit mf\n49\n49\n20\n"
+      }
+    },
+    {
+      "id": "closure-gc",
+      "path": "pass/closure-gc.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "49\n"
+      }
+    },
+    {
+      "id": "capture-write",
+      "path": "fail/capture-write.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T008"
+      }
+    },
+    {
+      "id": "function-effect-erasure",
+      "path": "fail/function-effect-erasure.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T001"
+      }
+    },
+    {
+      "id": "unconstrained-lambda",
+      "path": "fail/unconstrained-lambda.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T003"
+      }
+    },
+    {
+      "id": "conversion",
+      "path": "runtime/conversion.larp",
+      "milestone": "M2",
+      "status": "active",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R008"
       }
     }
   ]

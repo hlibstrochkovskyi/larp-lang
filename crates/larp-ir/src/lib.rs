@@ -1,7 +1,7 @@
 //! Typed control-flow IR with explicit local slots and backend lowering.
 
 use larp_source::Span;
-use larp_types::{Binary, Effects, Scalar, Type, Unary};
+use larp_types::{Binary, Effects, Intrinsic, Scalar, Type, Unary};
 
 pub type Local = usize;
 pub type BlockId = usize;
@@ -16,6 +16,7 @@ pub struct Program {
 pub struct Function {
     pub name: String,
     pub parameters: Vec<Type>,
+    pub captures: Vec<Type>,
     pub result: Type,
     pub effects: Effects,
     pub locals: Vec<Type>,
@@ -25,6 +26,7 @@ pub struct Function {
 
 #[derive(Debug)]
 pub struct Block {
+    pub parameter: Option<Local>,
     pub instructions: Vec<Instruction>,
     pub terminator: Terminator,
     pub span: Span,
@@ -62,6 +64,21 @@ pub enum InstructionKind {
         function: usize,
         arguments: Vec<Local>,
     },
+    Closure {
+        destination: Local,
+        function: usize,
+        captures: Vec<Local>,
+    },
+    CallIndirect {
+        destination: Local,
+        callee: Local,
+        arguments: Vec<Local>,
+    },
+    Intrinsic {
+        destination: Local,
+        operation: Intrinsic,
+        arguments: Vec<Local>,
+    },
     Print(Local),
     Assert(Local),
 }
@@ -77,6 +94,11 @@ pub enum Terminator {
     },
     Return(Option<Local>),
     Crash(Local),
+    MatchResult {
+        value: Local,
+        success: BlockId,
+        error: BlockId,
+    },
 }
 
 impl Function {
@@ -97,6 +119,10 @@ impl Function {
                 } => {
                     pending.push(when_true);
                     pending.push(when_false);
+                }
+                Terminator::MatchResult { success, error, .. } => {
+                    pending.push(success);
+                    pending.push(error);
                 }
                 _ => {}
             }
@@ -120,6 +146,12 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                     continue;
                 }
                 offsets[id] = code.len();
+                if let Some(local) = block.parameter {
+                    code.push(ByteInstruction {
+                        op: Op::Store(local),
+                        span: block.span,
+                    });
+                }
                 for instruction in &block.instructions {
                     let span = instruction.span;
                     let mut emit = |op| code.push(ByteInstruction { op, span });
@@ -141,7 +173,7 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                             operand,
                         } => {
                             emit(Op::Load(*operand));
-                            emit(Op::Unary(*op, function.locals[*operand]));
+                            emit(Op::Unary(*op, function.locals[*operand].clone()));
                             emit(Op::Store(*destination));
                         }
                         InstructionKind::Binary {
@@ -152,7 +184,7 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                         } => {
                             emit(Op::Load(*left));
                             emit(Op::Load(*right));
-                            emit(Op::Binary(*op, function.locals[*left]));
+                            emit(Op::Binary(*op, function.locals[*left].clone()));
                             emit(Op::Store(*destination));
                         }
                         InstructionKind::Call {
@@ -170,6 +202,40 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                             emit(Op::Load(*value));
                             emit(Op::Print);
                         }
+                        InstructionKind::Closure {
+                            destination,
+                            function,
+                            captures,
+                        } => {
+                            for capture in captures {
+                                emit(Op::Load(*capture));
+                            }
+                            emit(Op::MakeClosure(*function));
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::CallIndirect {
+                            destination,
+                            callee,
+                            arguments,
+                        } => {
+                            emit(Op::Load(*callee));
+                            for argument in arguments {
+                                emit(Op::Load(*argument));
+                            }
+                            emit(Op::CallIndirect(function.locals[*callee].clone()));
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::Intrinsic {
+                            destination,
+                            operation,
+                            arguments,
+                        } => {
+                            for argument in arguments {
+                                emit(Op::Load(*argument));
+                            }
+                            emit(Op::Intrinsic(operation.clone()));
+                            emit(Op::Store(*destination));
+                        }
                         InstructionKind::Assert(value) => {
                             emit(Op::Load(*value));
                             emit(Op::Assert);
@@ -180,7 +246,7 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                 match block.terminator {
                     Terminator::Unreachable => {}
                     Terminator::Goto(target) => {
-                        patches.push((code.len(), target));
+                        patches.push((code.len(), target, false));
                         code.push(ByteInstruction {
                             op: Op::Jump(0),
                             span,
@@ -195,12 +261,12 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                             op: Op::Load(condition),
                             span,
                         });
-                        patches.push((code.len(), when_false));
+                        patches.push((code.len(), when_false, false));
                         code.push(ByteInstruction {
                             op: Op::JumpIfFalse(0),
                             span,
                         });
-                        patches.push((code.len(), when_true));
+                        patches.push((code.len(), when_true, false));
                         code.push(ByteInstruction {
                             op: Op::Jump(0),
                             span,
@@ -226,18 +292,46 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                             span,
                         });
                     }
+                    Terminator::MatchResult {
+                        value,
+                        success,
+                        error,
+                    } => {
+                        code.push(ByteInstruction {
+                            op: Op::Load(value),
+                            span,
+                        });
+                        patches.push((code.len(), success, false));
+                        patches.push((code.len(), error, true));
+                        code.push(ByteInstruction {
+                            op: Op::MatchResult {
+                                ty: function.locals[value].clone(),
+                                success: 0,
+                                error: 0,
+                            },
+                            span,
+                        });
+                    }
                 }
             }
-            for (pc, target) in patches {
+            for (pc, target, error_arm) in patches {
                 match &mut code[pc].op {
                     Op::Jump(offset) | Op::JumpIfFalse(offset) => *offset = offsets[target],
+                    Op::MatchResult { success, error, .. } => {
+                        if error_arm {
+                            *error = offsets[target];
+                        } else {
+                            *success = offsets[target];
+                        }
+                    }
                     _ => unreachable!("only jumps require block patches"),
                 }
             }
             ByteFunction {
                 name: function.name.clone(),
                 parameters: function.parameters.clone(),
-                result: function.result,
+                captures: function.captures.clone(),
+                result: function.result.clone(),
                 effects: function.effects,
                 locals: function.locals.clone(),
                 code,

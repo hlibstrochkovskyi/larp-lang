@@ -1,8 +1,12 @@
 //! Scalar types, effects, and checked operations shared across compiler backends.
 
 use std::fmt;
+use std::sync::Arc;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+mod intrinsic;
+pub use intrinsic::Intrinsic;
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Type {
     Mf,
     Unc,
@@ -10,6 +14,17 @@ pub enum Type {
     Verdict,
     Text,
     Unit,
+    Function(Arc<Signature>),
+    Baddie(Arc<Type>),
+    Result(Arc<(Type, Type)>),
+    ConversionError,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct Signature {
+    pub parameters: Vec<Type>,
+    pub result: Type,
+    pub effects: Effects,
 }
 
 impl Type {
@@ -21,29 +36,145 @@ impl Type {
             "verdict" => Self::Verdict,
             "text" => Self::Text,
             "unit" => Self::Unit,
+            "ConversionError" => Self::ConversionError,
             _ => return None,
         })
     }
 
-    pub fn is_numeric(self) -> bool {
+    pub fn is_numeric(&self) -> bool {
         matches!(self, Self::Mf | Self::Unc | Self::Geeked)
     }
 
-    pub fn is_integer(self) -> bool {
+    pub fn is_integer(&self) -> bool {
         matches!(self, Self::Mf | Self::Unc)
+    }
+
+    pub fn function(parameters: Vec<Type>, result: Type, effects: Effects) -> Self {
+        Self::Function(Arc::new(Signature {
+            parameters,
+            result,
+            effects,
+        }))
+    }
+
+    pub fn option(payload: Type) -> Self {
+        Self::Baddie(Arc::new(payload))
+    }
+    pub fn result(success: Type, error: Type) -> Self {
+        Self::Result(Arc::new((success, error)))
+    }
+
+    pub fn is_printable(&self) -> bool {
+        matches!(
+            self,
+            Self::Mf | Self::Unc | Self::Geeked | Self::Verdict | Self::Text
+        )
+    }
+
+    pub fn supports_equality(&self) -> bool {
+        match self {
+            Self::Unit | Self::Function(_) => false,
+            Self::Baddie(payload) => payload.supports_equality(),
+            Self::Result(payloads) => {
+                payloads.0.supports_equality() && payloads.1.supports_equality()
+            }
+            _ => true,
+        }
+    }
+
+    /// Bound expanded size as well as depth, including shared type DAGs. This
+    /// keeps later structural equality, formatting, and hashing bounded too.
+    pub fn within_limits(&self) -> bool {
+        let mut pending = vec![(self, 0)];
+        let mut visited = 0;
+        while let Some((ty, depth)) = pending.pop() {
+            visited += 1;
+            if depth > 128 || visited > 4096 {
+                return false;
+            }
+            match ty {
+                Self::Function(signature) => {
+                    if signature.parameters.len() > 4096 {
+                        return false;
+                    }
+                    pending.push((&signature.result, depth + 1));
+                    pending.extend(
+                        signature
+                            .parameters
+                            .iter()
+                            .map(|parameter| (parameter, depth + 1)),
+                    );
+                }
+                Self::Baddie(payload) => pending.push((payload, depth + 1)),
+                Self::Result(payloads) => {
+                    pending.push((&payloads.0, depth + 1));
+                    pending.push((&payloads.1, depth + 1));
+                }
+                _ => {}
+            }
+        }
+        true
+    }
+
+    pub fn is_well_formed(&self) -> bool {
+        if !self.within_limits() {
+            return false;
+        }
+        let mut pending = vec![self];
+        while let Some(ty) = pending.pop() {
+            match ty {
+                Self::Function(signature) => {
+                    if signature.parameters.contains(&Self::Unit) {
+                        return false;
+                    }
+                    pending.push(&signature.result);
+                    pending.extend(&signature.parameters);
+                }
+                Self::Baddie(payload) => pending.push(payload),
+                Self::Result(payloads) => {
+                    pending.push(&payloads.0);
+                    pending.push(&payloads.1);
+                }
+                _ => {}
+            }
+        }
+        true
+    }
+
+    /// Only a function's effect bound may widen implicitly; containers are invariant.
+    pub fn accepts(&self, found: &Self) -> bool {
+        self == found
+            || matches!((self, found), (Self::Function(expected), Self::Function(actual))
+            if expected.parameters == actual.parameters && expected.result == actual.result && expected.effects.contains(actual.effects))
     }
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::Mf => "mf",
-            Self::Unc => "unc",
-            Self::Geeked => "geeked",
-            Self::Verdict => "verdict",
-            Self::Text => "text",
-            Self::Unit => "unit",
-        })
+        match self {
+            Self::Function(signature) => {
+                f.write_str("fn(")?;
+                for (index, parameter) in signature.parameters.iter().enumerate() {
+                    if index != 0 {
+                        f.write_str(", ")?;
+                    }
+                    parameter.fmt(f)?;
+                }
+                write!(f, ") -> {} {}", signature.result, signature.effects)
+            }
+            Self::Baddie(payload) => write!(f, "baddie<{payload}>"),
+            Self::Result(payloads) => write!(f, "result<{}, {}>", payloads.0, payloads.1),
+            Self::ConversionError => f.write_str("ConversionError"),
+            _ => f.write_str(match self {
+                Self::Mf => "mf",
+                Self::Unc => "unc",
+                Self::Geeked => "geeked",
+                Self::Verdict => "verdict",
+                Self::Text => "text",
+                Self::Unit => "unit",
+                _ => unreachable!(),
+            }),
+        }
     }
 }
 
@@ -110,26 +241,26 @@ pub enum Binary {
     Or,
 }
 
-pub fn unary_type(op: Unary, ty: Type) -> Option<Type> {
+pub fn unary_type(op: Unary, ty: &Type) -> Option<Type> {
     match op {
-        Unary::Not if ty == Type::Verdict => Some(ty),
-        Unary::Negate | Unary::Positive if ty.is_numeric() => Some(ty),
+        Unary::Not if *ty == Type::Verdict => Some(ty.clone()),
+        Unary::Negate | Unary::Positive if ty.is_numeric() => Some(ty.clone()),
         _ => None,
     }
 }
 
-pub fn binary_type(op: Binary, left: Type, right: Type) -> Option<Type> {
+pub fn binary_type(op: Binary, left: &Type, right: &Type) -> Option<Type> {
     use Binary::*;
     if left != right {
         return None;
     }
     match op {
-        Add if left == Type::Text => Some(Type::Text),
-        Add | Subtract | Multiply | Divide if left.is_numeric() => Some(left),
-        Remainder if left.is_integer() => Some(left),
-        Equal | NotEqual if left != Type::Unit => Some(Type::Verdict),
+        Add if *left == Type::Text => Some(Type::Text),
+        Add | Subtract | Multiply | Divide if left.is_numeric() => Some(left.clone()),
+        Remainder if left.is_integer() => Some(left.clone()),
+        Equal | NotEqual if left.supports_equality() => Some(Type::Verdict),
         Less | LessEqual | Greater | GreaterEqual if left.is_numeric() => Some(Type::Verdict),
-        And | Or if left == Type::Verdict => Some(Type::Verdict),
+        And | Or if *left == Type::Verdict => Some(Type::Verdict),
         _ => None,
     }
 }
@@ -156,7 +287,7 @@ pub fn unary(op: Unary, value: &Scalar) -> Result<Scalar, ArithmeticError> {
 pub fn binary(op: Binary, left: &Scalar, right: &Scalar) -> Result<Scalar, ArithmeticError> {
     use ArithmeticError::*;
     use Binary::*;
-    if binary_type(op, left.ty(), right.ty()).is_none() {
+    if binary_type(op, &left.ty(), &right.ty()).is_none() {
         return Err(InvalidTypes);
     }
     macro_rules! numeric {
@@ -214,7 +345,7 @@ pub fn binary(op: Binary, left: &Scalar, right: &Scalar) -> Result<Scalar, Arith
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
 pub struct Effects(u8);
 
 impl Effects {

@@ -4,7 +4,9 @@ use larp_ir::{
 };
 use larp_source::Span;
 use larp_syntax::{self as ast, Expr, ExprKind, Name, StatementKind};
-use larp_types::{Binary, Effects, Scalar, Type, Unary, binary_type, unary_type};
+use larp_types::{Binary, Effects, Intrinsic, Scalar, Type, Unary, binary_type, unary_type};
+mod calls;
+mod closures;
 use std::collections::HashMap;
 
 type Result<T> = std::result::Result<T, Box<Diagnostic>>;
@@ -21,14 +23,69 @@ fn error(code: &str, span: Span, message: impl Into<String>) -> Box<Diagnostic> 
     Box::new(Diagnostic::error(code, span, message))
 }
 
-fn ty(name: &Name) -> Result<Type> {
-    Type::from_name(&name.text).ok_or_else(|| {
-        error(
-            "LARP-T005",
-            name.span,
-            format!("Unknown type '{}'", name.text),
-        )
-    })
+fn effects(declared: &Option<Vec<Name>>) -> Result<Effects> {
+    let Some(declared) = declared else {
+        return Ok(Effects::ABORT);
+    };
+    let mut effects = Effects::NONE;
+    for effect in declared {
+        effects = effects.union(Effects::from_name(&effect.text).ok_or_else(|| {
+            error(
+                "LARP-E003",
+                effect.span,
+                format!("Unknown effect '{}'", effect.text),
+            )
+        })?);
+    }
+    Ok(effects)
+}
+
+fn ty(expression: &ast::TypeExpr) -> Result<Type> {
+    match &expression.kind {
+        ast::TypeExprKind::Named { name, arguments } => match name.text.as_str() {
+            "baddie" if arguments.len() == 1 => Ok(Type::option(ty(&arguments[0])?)),
+            "result" if arguments.len() == 2 => {
+                Ok(Type::result(ty(&arguments[0])?, ty(&arguments[1])?))
+            }
+            "baddie" | "result" => Err(error(
+                "LARP-T001",
+                expression.span,
+                "Incorrect number of generic type arguments",
+            )),
+            "mfs" | "hediJeans" => Err(error(
+                "LARP-P002",
+                expression.span,
+                "Collection types are not implemented yet",
+            )),
+            _ if !arguments.is_empty() => Err(error(
+                "LARP-T005",
+                expression.span,
+                "This type does not accept generic arguments",
+            )),
+            _ => Type::from_name(&name.text).ok_or_else(|| {
+                error(
+                    "LARP-T005",
+                    name.span,
+                    format!("Unknown type '{}'", name.text),
+                )
+            }),
+        },
+        ast::TypeExprKind::Function {
+            parameters,
+            result,
+            effects: bound,
+        } => {
+            let parameters = parameters.iter().map(ty).collect::<Result<Vec<_>>>()?;
+            if parameters.contains(&Type::Unit) {
+                return Err(error(
+                    "LARP-T001",
+                    expression.span,
+                    "Function parameters cannot have type unit",
+                ));
+            }
+            Ok(Type::function(parameters, ty(result)?, effects(bound)?))
+        }
+    }
 }
 
 pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>> {
@@ -68,19 +125,7 @@ pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>
                 }
                 parameters.push(parameter_type);
             }
-            let mut effects = Effects::ABORT;
-            if let Some(declared) = &function.effects {
-                effects = Effects::NONE;
-                for effect in declared {
-                    effects = effects.union(Effects::from_name(&effect.text).ok_or_else(|| {
-                        error(
-                            "LARP-E003",
-                            effect.span,
-                            format!("Unknown effect '{}'", effect.text),
-                        )
-                    })?);
-                }
-            }
+            let effects = effects(&function.effects)?;
             Ok(Header {
                 name: function.name.clone(),
                 parameters,
@@ -110,20 +155,27 @@ pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>
         effects: Effects::ALL,
     });
     let mut functions = Vec::new();
+    let mut generated = Vec::new();
     for (index, header) in headers.iter().enumerate() {
         let body = if index == entry {
             &ast.main
         } else {
             &ast.functions[index].body
         };
-        let mut builder = Builder::new(header, &headers, &names, body.span);
+        let mut builder = Builder::new(
+            header,
+            &headers,
+            &names,
+            body.span,
+            headers.len() + generated.len(),
+        );
         if index != entry {
             for (slot, (_, name)) in ast.functions[index].parameters.iter().enumerate() {
                 if let Err(error) = builder.declare(
                     name,
                     Binding {
                         slot,
-                        ty: header.parameters[slot],
+                        ty: header.parameters[slot].clone(),
                         writable: true,
                         span: name.span,
                     },
@@ -133,37 +185,20 @@ pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>
             }
         }
         builder.block(body, false);
-        let reachable = builder.function.reachable();
-        if builder.errors.is_empty() {
-            for (block, is_reachable) in builder.function.blocks.iter_mut().zip(reachable) {
-                if is_reachable && matches!(block.terminator, Terminator::Unreachable) {
-                    if header.result == Type::Unit {
-                        block.terminator = Terminator::Return(None);
-                    } else {
-                        builder.errors.push(Diagnostic::error(
-                            "LARP-T007",
-                            body.span,
-                            format!(
-                                "Function '{}' can finish without returning {}",
-                                header.name.text, header.result
-                            ),
-                        ));
-                        break;
-                    }
-                }
-            }
-        }
+        builder.finish();
+        generated.extend(builder.generated);
         functions.push(builder.function);
         errors.extend(builder.errors);
     }
     if errors.is_empty() {
+        functions.extend(generated);
         Ok(Program { functions, entry })
     } else {
         Err(errors)
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Binding {
     slot: Local,
     ty: Type,
@@ -185,6 +220,10 @@ struct Builder<'a> {
     headers: &'a [Header],
     names: &'a HashMap<String, usize>,
     errors: Vec<Diagnostic>,
+    generated: Vec<Function>,
+    generated_base: usize,
+    required: Effects,
+    inferred_result: Option<Option<Type>>,
 }
 
 impl<'a> Builder<'a> {
@@ -193,15 +232,18 @@ impl<'a> Builder<'a> {
         headers: &'a [Header],
         names: &'a HashMap<String, usize>,
         span: Span,
+        generated_base: usize,
     ) -> Self {
         Self {
             function: Function {
                 name: header.name.text.clone(),
                 parameters: header.parameters.clone(),
-                result: header.result,
+                captures: Vec::new(),
+                result: header.result.clone(),
                 effects: header.effects,
                 locals: header.parameters.clone(),
                 blocks: vec![Block {
+                    parameter: None,
                     instructions: Vec::new(),
                     terminator: Terminator::Unreachable,
                     span,
@@ -214,6 +256,33 @@ impl<'a> Builder<'a> {
             headers,
             names,
             errors: Vec::new(),
+            generated: Vec::new(),
+            generated_base,
+            required: Effects::NONE,
+            inferred_result: None,
+        }
+    }
+    fn finish(&mut self) {
+        if !self.errors.is_empty() {
+            return;
+        }
+        let reachable = self.function.reachable();
+        for (block, live) in self.function.blocks.iter_mut().zip(reachable) {
+            if live && matches!(block.terminator, Terminator::Unreachable) {
+                if self.function.result == Type::Unit {
+                    block.terminator = Terminator::Return(None);
+                } else {
+                    self.errors.push(Diagnostic::error(
+                        "LARP-T007",
+                        self.function.span,
+                        format!(
+                            "Function '{}' can finish without returning {}",
+                            self.function.name, self.function.result
+                        ),
+                    ));
+                    break;
+                }
+            }
         }
     }
     fn local(&mut self, ty: Type) -> Local {
@@ -229,6 +298,7 @@ impl<'a> Builder<'a> {
     fn new_block(&mut self, span: Span) -> BlockId {
         let id = self.function.blocks.len();
         self.function.blocks.push(Block {
+            parameter: None,
             instructions: Vec::new(),
             terminator: Terminator::Unreachable,
             span,
@@ -241,7 +311,7 @@ impl<'a> Builder<'a> {
     }
     fn literal(&mut self, value: Scalar, span: Span) -> Value {
         let ty = value.ty();
-        let slot = self.local(ty);
+        let slot = self.local(ty.clone());
         self.emit(
             Inst::Constant {
                 destination: slot,
@@ -259,7 +329,7 @@ impl<'a> Builder<'a> {
         self.scopes
             .iter()
             .rev()
-            .find_map(|scope| scope.get(name).copied())
+            .find_map(|scope| scope.get(name).cloned())
     }
     fn declare(&mut self, name: &Name, binding: Binding) -> Result<()> {
         let scope = self.scopes.last_mut().unwrap();
@@ -278,7 +348,8 @@ impl<'a> Builder<'a> {
         scope.insert(name.text.clone(), binding);
         Ok(())
     }
-    fn require(&self, effects: Effects, span: Span) -> Result<()> {
+    fn require(&mut self, effects: Effects, span: Span) -> Result<()> {
+        self.required = self.required.union(effects);
         if self.function.effects.contains(effects) {
             Ok(())
         } else {
@@ -295,7 +366,7 @@ impl<'a> Builder<'a> {
         }
     }
     fn matches(&self, expected: Type, found: Type, span: Span) -> Result<()> {
-        if expected == found {
+        if expected.accepts(&found) {
             return Ok(());
         }
         let narrowing = expected == Type::Mf && found == Type::Unc;
@@ -307,7 +378,7 @@ impl<'a> Builder<'a> {
         diagnostic.expected_type = Some(expected.to_string());
         diagnostic.found_type = Some(found.to_string());
         if narrowing {
-            diagnostic.help = Some("Use a matching integer type; checked conversions will be available with result<T,E> support".into());
+            diagnostic.help = Some("Use a matching integer type, or ascend<mf>(value) and handle the result with .cope(handler)".into());
         }
         Err(diagnostic)
     }
@@ -325,7 +396,7 @@ impl<'a> Builder<'a> {
         }
     }
     fn condition(&mut self, expression: &Expr) -> Result<Value> {
-        let value = self.expression(expression, None, true)?;
+        let value = self.expression_value(expression, Some(Type::Verdict), true)?;
         if value.ty != Type::Verdict {
             let mut diagnostic = error(
                 "LARP-T002",
@@ -348,7 +419,7 @@ impl<'a> Builder<'a> {
                 value,
             } => {
                 let declared = declared.as_ref().map(ty).transpose()?;
-                let value = self.expression(value, declared, true)?;
+                let value = self.expression(value, declared.clone(), true)?;
                 if value.ty == Type::Unit {
                     return Err(error(
                         "LARP-T001",
@@ -356,7 +427,8 @@ impl<'a> Builder<'a> {
                         "A local binding cannot have type unit",
                     ));
                 }
-                let slot = self.local(value.ty);
+                let binding_type = declared.unwrap_or(value.ty.clone());
+                let slot = self.local(binding_type.clone());
                 self.emit(
                     Inst::Copy {
                         destination: slot,
@@ -368,7 +440,7 @@ impl<'a> Builder<'a> {
                     name,
                     Binding {
                         slot,
-                        ty: value.ty,
+                        ty: binding_type,
                         writable: true,
                         span: name.span,
                     },
@@ -386,15 +458,15 @@ impl<'a> Builder<'a> {
                     return Err(error(
                         "LARP-T008",
                         name.span,
-                        "A range-loop index is read-only",
+                        "Captured bindings and range-loop indices are read-only",
                     ));
                 }
                 let previous = if op.is_some() {
-                    Some(self.read(binding, name.span))
+                    Some(self.read(&binding, name.span))
                 } else {
                     None
                 };
-                let value = self.expression(value, Some(binding.ty), true)?;
+                let value = self.expression(value, Some(binding.ty.clone()), true)?;
                 let value = if let Some(op) = op {
                     self.binary(*op, previous.unwrap(), value, span, true)?
                 } else {
@@ -476,10 +548,10 @@ impl<'a> Builder<'a> {
                         "Range-loop index must be mf or unc",
                     ));
                 }
-                let start = self.expression(start, Some(index_type), true)?;
-                let end = self.expression(end, Some(index_type), true)?;
+                let start = self.expression(start, Some(index_type.clone()), true)?;
+                let end = self.expression(end, Some(index_type.clone()), true)?;
                 self.scopes.push(HashMap::new());
-                let slot = self.local(index_type);
+                let slot = self.local(index_type.clone());
                 self.emit(
                     Inst::Copy {
                         destination: slot,
@@ -489,18 +561,18 @@ impl<'a> Builder<'a> {
                 );
                 let binding = Binding {
                     slot,
-                    ty: index_type,
+                    ty: index_type.clone(),
                     writable: false,
                     span: name.span,
                 };
-                self.declare(name, binding)?;
+                self.declare(name, binding.clone())?;
                 let test = self.new_block(span);
                 let run = self.new_block(body.span);
                 let step = self.new_block(span);
                 let done = self.new_block(span);
                 self.terminate(Terminator::Goto(test), span);
                 self.current = test;
-                let current = self.read(binding, span);
+                let current = self.read(&binding, span);
                 let condition = self.binary(Binary::Less, current, end, span, true)?;
                 self.terminate(
                     Terminator::Branch {
@@ -516,7 +588,7 @@ impl<'a> Builder<'a> {
                 self.breaks.pop();
                 self.terminate(Terminator::Goto(step), span);
                 self.current = step;
-                let current = self.read(binding, span);
+                let current = self.read(&binding, span);
                 let one = self.literal(
                     if index_type == Type::Mf {
                         Scalar::Mf(1)
@@ -549,16 +621,26 @@ impl<'a> Builder<'a> {
                 self.current = done;
             }
             StatementKind::Return(expression) => {
-                let value = if let Some(expression) = expression {
-                    Some(
-                        self.expression(expression, Some(self.function.result), true)?
-                            .slot,
-                    )
-                } else {
-                    self.matches(self.function.result, Type::Unit, span)?;
-                    None
+                let expected = match &self.inferred_result {
+                    None => Some(self.function.result.clone()),
+                    Some(inferred) => inferred.clone(),
                 };
-                self.terminate(Terminator::Return(value), span);
+                let (slot, result_type) = if let Some(expression) = expression {
+                    let value = self.expression(expression, expected.clone(), true)?;
+                    (Some(value.slot), value.ty)
+                } else {
+                    (None, Type::Unit)
+                };
+                if let Some(expected) = expected {
+                    self.matches(expected, result_type.clone(), span)?;
+                }
+                if matches!(self.inferred_result, Some(None))
+                    && self.function.reachable()[self.current]
+                {
+                    self.function.result = result_type.clone();
+                    self.inferred_result = Some(Some(result_type));
+                }
+                self.terminate(Terminator::Return(slot), span);
                 self.current = self.new_block(span);
             }
             StatementKind::Break => {
@@ -571,8 +653,8 @@ impl<'a> Builder<'a> {
         }
         Ok(())
     }
-    fn read(&mut self, binding: Binding, span: Span) -> Value {
-        let slot = self.local(binding.ty);
+    fn read(&mut self, binding: &Binding, span: Span) -> Value {
+        let slot = self.local(binding.ty.clone());
         self.emit(
             Inst::Copy {
                 destination: slot,
@@ -582,7 +664,7 @@ impl<'a> Builder<'a> {
         );
         Value {
             slot,
-            ty: binding.ty,
+            ty: binding.ty.clone(),
             constant: None,
         }
     }
@@ -592,8 +674,27 @@ impl<'a> Builder<'a> {
                 self.resolve(&name.text)
                     .map(|binding| binding.ty)
                     .or_else(|| {
-                        if name.text == "fortnine" {
+                        if let Some(index) = self.names.get(&name.text) {
+                            let header = &self.headers[*index];
+                            Some(Type::function(
+                                header.parameters.clone(),
+                                header.result.clone(),
+                                header.effects,
+                            ))
+                        } else if name.text == "fortnine" {
                             Some(Type::Unc)
+                        } else if name.text == "parseScore" {
+                            Some(Type::function(
+                                vec![Type::Text],
+                                Type::result(Type::Mf, Type::Text),
+                                Effects::NONE,
+                            ))
+                        } else if name.text == "no_cap" {
+                            Some(Type::function(
+                                vec![Type::Verdict],
+                                Type::Unit,
+                                Effects::ABORT,
+                            ))
                         } else {
                             None
                         }
@@ -621,13 +722,23 @@ impl<'a> Builder<'a> {
                 }
             }
             ExprKind::Call { callee, .. } => {
-                if let ExprKind::Name(name) = &callee.kind {
-                    self.names
-                        .get(&name.text)
-                        .map(|index| self.headers[*index].result)
+                if let ExprKind::Member { receiver, name } = &callee.kind {
+                    match (self.hint(receiver), name.text.as_str()) {
+                        (Some(Type::Baddie(payload)), "copium") => Some(payload.as_ref().clone()),
+                        (Some(Type::Result(payloads)), "cope") => Some(payloads.0.clone()),
+                        (_, "isSome" | "isOk") => Some(Type::Verdict),
+                        _ => None,
+                    }
+                } else if let Some(Type::Function(signature)) = self.hint(callee) {
+                    Some(signature.result.clone())
                 } else {
                     None
                 }
+            }
+            ExprKind::Member { receiver, name }
+                if name.text == "message" && self.hint(receiver) == Some(Type::ConversionError) =>
+            {
+                Some(Type::Text)
             }
             _ => None,
         }
@@ -638,9 +749,21 @@ impl<'a> Builder<'a> {
         expected: Option<Type>,
         evaluate: bool,
     ) -> Result<Value> {
+        let value = self.expression_value(expression, expected.clone(), evaluate)?;
+        if let Some(expected) = expected {
+            self.matches(expected, value.ty.clone(), expression.span)?;
+        }
+        Ok(value)
+    }
+    fn expression_value(
+        &mut self,
+        expression: &Expr,
+        expected: Option<Type>,
+        evaluate: bool,
+    ) -> Result<Value> {
         let span = expression.span;
         let value = match &expression.kind {
-            ExprKind::Integer(digits) => self.integer(digits, false, expected, span)?,
+            ExprKind::Integer(digits) => self.integer(digits, false, expected.clone(), span)?,
             ExprKind::Float(raw) => {
                 let value = raw
                     .parse::<f64>()
@@ -658,15 +781,32 @@ impl<'a> Builder<'a> {
             ExprKind::Verdict(value) => self.literal(Scalar::Verdict(*value), span),
             ExprKind::Name(name) => {
                 if let Some(binding) = self.resolve(&name.text) {
-                    self.read(binding, span)
+                    self.read(&binding, span)
                 } else if name.text == "fortnine" && !self.names.contains_key(&name.text) {
                     self.literal(Scalar::Unc(49), span)
-                } else if self.names.contains_key(&name.text) {
-                    return Err(error(
-                        "LARP-P002",
+                } else if let Some(index) = self.names.get(&name.text).copied() {
+                    let header = &self.headers[index];
+                    let function_type = Type::function(
+                        header.parameters.clone(),
+                        header.result.clone(),
+                        header.effects,
+                    );
+                    let slot = self.local(function_type.clone());
+                    self.emit(
+                        Inst::Closure {
+                            destination: slot,
+                            function: index,
+                            captures: Vec::new(),
+                        },
                         span,
-                        "Functions as values are not implemented yet; call the function directly",
-                    ));
+                    );
+                    Value {
+                        slot,
+                        ty: function_type,
+                        constant: None,
+                    }
+                } else if calls::is_builtin(&name.text) {
+                    self.builtin_reference(name, expected.clone(), span)?
                 } else {
                     return Err(error(
                         "LARP-N001",
@@ -682,18 +822,19 @@ impl<'a> Builder<'a> {
                 let ExprKind::Integer(digits) = &operand.kind else {
                     unreachable!()
                 };
-                self.integer(digits, true, expected, span)?
+                self.integer(digits, true, expected.clone(), span)?
             }
             ExprKind::Unary { op, operand } => {
                 let context = if *op == Unary::Not {
                     Some(Type::Verdict)
                 } else {
                     expected
+                        .clone()
                         .filter(|ty| ty.is_numeric())
                         .or_else(|| self.hint(operand))
                 };
                 let operand = self.expression(operand, context, evaluate)?;
-                let result = unary_type(*op, operand.ty).ok_or_else(|| {
+                let result = unary_type(*op, &operand.ty).ok_or_else(|| {
                     error(
                         "LARP-T001",
                         span,
@@ -709,7 +850,7 @@ impl<'a> Builder<'a> {
                     if *op == Unary::Negate && operand.ty.is_integer() {
                         self.require(Effects::ABORT, span)?;
                     }
-                    let slot = self.local(result);
+                    let slot = self.local(result.clone());
                     self.emit(
                         Inst::Unary {
                             destination: slot,
@@ -759,22 +900,55 @@ impl<'a> Builder<'a> {
                 let context = if comparisons {
                     None
                 } else {
-                    expected.filter(|ty| ty.is_numeric() || *ty == Type::Text)
+                    expected
+                        .clone()
+                        .filter(|ty| ty.is_numeric() || *ty == Type::Text)
                 };
                 let context = context
                     .or_else(|| self.hint(left))
                     .or_else(|| self.hint(right));
                 let left = self.expression(left, context, evaluate)?;
-                let right = self.expression(right, Some(left.ty), evaluate)?;
+                let right = self.expression(right, Some(left.ty.clone()), evaluate)?;
                 self.binary(*op, left, right, span, evaluate)?
             }
-            ExprKind::Call { callee, arguments } => {
-                self.call(callee, arguments, expected, span, evaluate)?
+            ExprKind::Call {
+                callee,
+                arguments,
+                type_arguments,
+            } => self.call(
+                callee,
+                arguments,
+                type_arguments,
+                expected.clone(),
+                span,
+                evaluate,
+            )?,
+            ExprKind::None => {
+                let Some(option @ Type::Baddie(_)) = expected.clone() else {
+                    return Err(error(
+                        "LARP-T003",
+                        span,
+                        "no_bitches requires an expected baddie<T> type",
+                    ));
+                };
+                self.intrinsic(Intrinsic::None(option), Vec::new(), span)?
+            }
+            ExprKind::Member { receiver, name } => {
+                let receiver = self.expression(receiver, None, evaluate)?;
+                if receiver.ty == Type::ConversionError && name.text == "message" {
+                    self.intrinsic(Intrinsic::ConversionMessage, vec![receiver.slot], span)?
+                } else {
+                    return Err(error(
+                        "LARP-T001",
+                        name.span,
+                        format!("Unknown field '{}' on {}", name.text, receiver.ty),
+                    ));
+                }
+            }
+            ExprKind::Lambda { parameters, body } => {
+                self.lambda(parameters, body, expected.clone(), span)?
             }
         };
-        if let Some(expected) = expected {
-            self.matches(expected, value.ty, span)?;
-        }
         Ok(value)
     }
     fn integer(
@@ -784,7 +958,10 @@ impl<'a> Builder<'a> {
         expected: Option<Type>,
         span: Span,
     ) -> Result<Value> {
-        let ty = expected.filter(|ty| ty.is_integer()).unwrap_or(Type::Mf);
+        let ty = expected
+            .clone()
+            .filter(|ty| ty.is_integer())
+            .unwrap_or(Type::Mf);
         let invalid = || {
             error(
                 "LARP-T004",
@@ -809,7 +986,7 @@ impl<'a> Builder<'a> {
         span: Span,
         evaluate: bool,
     ) -> Result<Value> {
-        let result = binary_type(op, left.ty, right.ty).ok_or_else(|| {
+        let result = binary_type(op, &left.ty, &right.ty).ok_or_else(|| {
             error(
                 "LARP-T001",
                 span,
@@ -841,7 +1018,7 @@ impl<'a> Builder<'a> {
         {
             self.require(Effects::ABORT, span)?;
         }
-        let slot = self.local(result);
+        let slot = self.local(result.clone());
         self.emit(
             Inst::Binary {
                 destination: slot,
@@ -919,117 +1096,5 @@ impl<'a> Builder<'a> {
             ty: Type::Verdict,
             constant,
         })
-    }
-    fn call(
-        &mut self,
-        callee: &Expr,
-        arguments: &[Expr],
-        expected: Option<Type>,
-        span: Span,
-        evaluate: bool,
-    ) -> Result<Value> {
-        let ExprKind::Name(name) = &callee.kind else {
-            return Err(error(
-                "LARP-P002",
-                callee.span,
-                "Indirect function calls are not implemented yet",
-            ));
-        };
-        if let Some(binding) = self.resolve(&name.text) {
-            return Err(error(
-                "LARP-T001",
-                name.span,
-                format!("{} is not callable", binding.ty),
-            ));
-        }
-        if let Some(index) = self.names.get(&name.text).copied() {
-            let header = self.headers[index].clone();
-            if arguments.len() != header.parameters.len() {
-                return Err(error(
-                    "LARP-T006",
-                    span,
-                    format!(
-                        "Expected {} arguments, found {}",
-                        header.parameters.len(),
-                        arguments.len()
-                    ),
-                ));
-            }
-            self.require(header.effects, span)?;
-            let arguments = arguments
-                .iter()
-                .zip(&header.parameters)
-                .map(|(expression, ty)| {
-                    self.expression(expression, Some(*ty), evaluate)
-                        .map(|value| value.slot)
-                })
-                .collect::<Result<Vec<_>>>()?;
-            let slot = self.local(header.result);
-            self.emit(
-                Inst::Call {
-                    destination: slot,
-                    function: index,
-                    arguments,
-                },
-                span,
-            );
-            return Ok(Value {
-                slot,
-                ty: header.result,
-                constant: None,
-            });
-        }
-        if !matches!(name.text.as_str(), "yap" | "no_cap" | "crashout") {
-            return Err(error(
-                "LARP-N001",
-                name.span,
-                format!("Unknown function '{}'", name.text),
-            ));
-        }
-        if arguments.len() != 1 {
-            return Err(error(
-                "LARP-T006",
-                span,
-                format!("{} requires exactly one argument", name.text),
-            ));
-        }
-        let context = match name.text.as_str() {
-            "no_cap" => Some(Type::Verdict),
-            "crashout" => Some(Type::Text),
-            _ => None,
-        };
-        let value = self.expression(&arguments[0], context, evaluate)?;
-        match name.text.as_str() {
-            "yap" => {
-                if value.ty == Type::Unit {
-                    return Err(error("LARP-T001", span, "yap cannot print unit"));
-                }
-                self.require(Effects::OBSERVE, span)?;
-                self.emit(Inst::Print(value.slot), span);
-            }
-            "no_cap" => {
-                self.require(Effects::ABORT, span)?;
-                self.emit(Inst::Assert(value.slot), span);
-            }
-            "crashout" => {
-                self.require(Effects::ABORT, span)?;
-                self.terminate(Terminator::Crash(value.slot), span);
-                self.current = self.new_block(span);
-                let ty = expected.unwrap_or(Type::Unit);
-                let dummy = match ty {
-                    Type::Mf => Scalar::Mf(0),
-                    Type::Unc => Scalar::Unc(0),
-                    Type::Geeked => Scalar::Geeked(0.0),
-                    Type::Verdict => Scalar::Verdict(false),
-                    Type::Text => Scalar::Text(String::new()),
-                    Type::Unit => Scalar::Unit,
-                };
-                let mut value = self.literal(dummy, span);
-                value.constant = None;
-                return Ok(value);
-            }
-            _ => unreachable!(),
-        }
-        Ok(self.literal(Scalar::Unit, span))
     }
 }

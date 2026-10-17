@@ -12,9 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "tests" / "conformance"
 
 
-def invoke(binary: Path, command: str, path: Path) -> subprocess.CompletedProcess[str]:
+def invoke(binary: Path, command: str, path: Path, gc_stress: bool = False) -> subprocess.CompletedProcess[str]:
     # Decode explicitly: text=True would normalize CR/CRLF and hide stdout errors.
-    result = subprocess.run([str(binary), command, str(path)], capture_output=True, timeout=10)
+    options = ["--gc-stress"] if command == "run" and gc_stress else []
+    result = subprocess.run([str(binary), command, str(path), *options], capture_output=True, timeout=10)
     return subprocess.CompletedProcess(result.args, result.returncode,
                                        result.stdout.decode("utf-8"), result.stderr.decode("utf-8"))
 
@@ -23,6 +24,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin", type=Path, help="Use an already built larp binary")
     parser.add_argument("--all", action="store_true", help="Also attempt pending cases; failures are expected")
+    parser.add_argument("--gc-stress", action="store_true", help="Collect before every closure allocation")
     args = parser.parse_args()
     subprocess.run([sys.executable, str(ROOT / "tools/check_corpus.py")], cwd=ROOT, check=True)
     binary = args.bin
@@ -42,7 +44,7 @@ def main() -> int:
         expectation = case["expect"]
         try:
             checked = invoke(binary, "check", path)
-            output = invoke(binary, "run", path)
+            output = invoke(binary, "run", path, args.gc_stress)
             kind = expectation["kind"]
             errors = []
             if kind == "compile_error":

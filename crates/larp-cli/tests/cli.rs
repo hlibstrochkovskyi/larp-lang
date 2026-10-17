@@ -105,3 +105,35 @@ fn dumps_expose_the_compiler_artifacts() {
     assert!(ir.status.success());
     assert!(String::from_utf8(ir.stdout).unwrap().contains("Branch"));
 }
+
+#[test]
+fn gc_stress_runs_real_closures_and_composes_with_instruction_limits() {
+    let file = fixture("pass/closure-gc.larp");
+    for options in [
+        vec!["--gc-stress"],
+        vec!["--gc-stress", "--fuel", "100000"],
+        vec!["--fuel", "100000", "--gc-stress"],
+    ] {
+        let mut args = vec!["run", &file];
+        args.extend(options);
+        let output = larp(&args);
+        assert!(
+            output.status.success(),
+            "{:?}",
+            String::from_utf8(output.stderr)
+        );
+        assert_eq!(output.stdout, b"49\n");
+    }
+    for options in [
+        vec!["--gc-stress", "--gc-stress"],
+        vec!["--fuel", "1", "--fuel", "2"],
+        vec!["--fuel"],
+        vec!["--gc-stress", "--unknown"],
+    ] {
+        let mut args = vec!["run", &file];
+        args.extend(options);
+        let output = larp(&args);
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+    }
+}

@@ -1,0 +1,11 @@
+sidequest make(mf value) -> fn() -> mf uses() uses() {
+    return () => value;
+}
+
+main_character {
+    let live = make(49);
+    npc loop (mf i in 0..2000) {
+        let garbage = make(i);
+    }
+    yap(live());
+}

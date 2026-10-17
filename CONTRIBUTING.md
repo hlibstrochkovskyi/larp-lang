@@ -1,7 +1,8 @@
 # Development
 
 Use Rust 1.99.0 or newer with Cargo, rustfmt, and Clippy. Python 3.11+ runs the
-corpus inventory check. A system Rust installation works; rustup is optional.
+corpus inventory and CLI conformance checks. A system Rust installation works;
+rustup is optional.
 The minimum Rust version matches the toolchain used for the initial validation.
 Reassess it when external dependencies are introduced.
 
@@ -16,6 +17,7 @@ cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 cargo test --workspace --locked --offline
 python3 tools/check_corpus.py
 python3 tools/run_conformance.py
+python3 tools/run_conformance.py --gc-stress
 git diff --check
 ```
 
@@ -24,11 +26,21 @@ toolchain download is needed for a compatible system compiler. New dependencies
 require a concrete need, license review, and a lockfile update; offline builds
 will then require a populated Cargo cache.
 
-The real scalar compiler runs through syntax, semantics, typed IR, bytecode
-verification, and the VM. `tools/run_conformance.py` tests active cases through
-the CLI; `--all` also attempts pending features and is expected to fail until
+The compiler runs scalars, closures, and option/result recovery through syntax,
+semantics, typed IR, bytecode verification, and the VM.
+`tools/run_conformance.py` tests active cases through the CLI. `--gc-stress`
+repeats runtime cases with collection before every closure allocation; CI runs
+both modes. `--all` also attempts pending features and is expected to fail until
 the full specification is implemented. Do not change a fixture to active without
 running it and keeping it in CI.
+
+Run `cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress` for a
+returned closure, option fallback, parsing recovery, and checked conversion.
+The compiler integration tests execute closure and recovery programs with normal
+collection and collection at every closure-allocation safepoint. The VM API
+exposes `Limits::gc_stress` and `execute_with_stats` for tests of allocation,
+reclamation, and roots. Heap tests include generation reuse, transitive roots,
+and synthetic unreachable cycles; object and array GC coverage is still pending.
 
 `experiments/scenario-model` tests a state transition model in Rust. It does not
 validate LARP region typing, scenario effects, GC, or scenario bytecode.

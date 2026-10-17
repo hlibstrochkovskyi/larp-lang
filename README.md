@@ -16,11 +16,13 @@ main_character {
 }
 ```
 
-**Status: executable scalar core.** The example above compiles to verified
-in-memory bytecode and runs on the LARP VM, printing `1009`. Functions, recursion,
-branches, loops, scalar types, checked arithmetic, and effect bounds work today.
-Collections, closures, objects, and language-level scenarios remain in development;
-the separate scenario model is still an experiment.
+**Status: executable algorithmic core with closures and recovery.** The example
+above compiles to verified in-memory bytecode and runs on the LARP VM, printing
+`1009`. Functions, recursion, loops, checked arithmetic, effect bounds, first-class
+functions, snapshot captures, options/results, and checked conversions work today.
+Closures use a tracing collector. Collections, objects, and language-level
+scenarios remain in development; the separate scenario model is still an
+experiment.
 
 ## Start here
 
@@ -45,13 +47,15 @@ The workspace currently has no third-party Rust dependencies and builds offline.
 cargo run -p larp-cli -- --help
 cargo run -p larp-cli -- explain LARP-T041
 cargo run -p larp-cli -- run examples/primes.larp
+cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo test --workspace --locked --offline
 python3 tools/run_conformance.py
+python3 tools/run_conformance.py --gc-stress
 ```
 
 The implemented CLI commands are `--help`, `--version`, `explain CODE`,
-`check FILE`, `run FILE [--fuel N]`, and `dump FILE [--ir]`.
+`check FILE`, `run FILE [--fuel N] [--gc-stress]`, and `dump FILE [--ir]`.
 `build` and `fmt` report that they are unavailable. Bytecode currently lives
 in memory; there is no persisted `.larpbc` format yet.
 

@@ -1,0 +1,16 @@
+sidequest multiplier(mf factor) -> fn(mf) -> mf {
+    return value => value * factor;
+}
+
+main_character {
+    let double = multiplier(2);
+    baddie<unc> funding = no_bitches;
+    yap(funding.copium(20));
+    mf aura = parseScore("49").cope(err => 0);
+    yap(double(aura));
+    unc large = 3_000_000_000;
+    yap(ascend<mf>(large).cope(err => {
+        yap(err.message);
+        return 0;
+    }));
+}

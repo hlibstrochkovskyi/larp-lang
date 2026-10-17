@@ -19,6 +19,7 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked --offline -- -D warnings
       - run: cargo test --workspace --locked --offline
-      - run: cargo test -p larp-compiler --release --test core --locked --offline
+      - run: cargo test -p larp-compiler --release --locked --offline
       - run: python3 tools/check_corpus.py
       - run: python3 tools/run_conformance.py
+      - run: python3 tools/run_conformance.py --gc-stress

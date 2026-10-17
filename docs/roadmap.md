@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Status: M1 is implemented; M2 is in progress. This is a
+Status: M1 and the M2 feature set are implemented; M3 is in progress. This is a
 sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -31,24 +31,29 @@ Acceptance scope: `mf`, `unc`, `verdict`, `text`, literal/local expressions,
 diagnose syntax outside this subset. This issue can start after design review;
 it is now implemented with active CLI conformance tests.
 
-## M2 — Usable algorithmic core (in progress)
+## M2 — Usable algorithmic core (implemented feature set)
 
-Implemented: functions, forward/mutual recursion, scopes, branches, all three loop
-forms, return checks, all scalar arithmetic, fatal errors, and finite effect bounds.
-Remaining: option/result, recovery callbacks, checked conversions, and parseScore.
-Recovery callbacks share the closure machinery planned in M3.
-
-Functions, recursion, lexical scopes, branches, all loop forms, return checks,
-exact numeric semantics, option/result, checked conversions, and fatal errors.
+Functions, forward/mutual recursion, lexical scopes, branches, all loop forms,
+return checks, exact scalar arithmetic, fatal errors, and finite effect bounds.
+Options/results, recovery callbacks, checked integer conversions, and
+`parseScore` now execute through typed IR, verified bytecode, and the VM. Recovery
+uses the first-class functions and closure machinery introduced ahead of M3.
 
 Gate: execute loop/factorial/error fixtures; test recursion bounds, division
 edge cases, short-circuiting, invalid return paths, and multiple diagnostics
 without cascades. `parseScore` and recovery behave as specified.
 
-## M3 — Collections and functions as values
+## M3 — Collections and functions as values (in progress)
 
-Built-in generic types, arrays, closures, eager collection operations, dot calls,
-local inference, explicit function types, and effect-bound preservation.
+Implemented: first-class named/prelude functions, explicit function types,
+contextual and annotated lambdas, immutable snapshot captures, nested/returned
+closures, and effect-bound preservation through indirect calls. Built-in generic
+option/result types and their recovery dot calls are available. Closure memory
+is managed by a non-moving tracing collector with stress mode.
+
+Remaining: dynamic/fixed arrays, indexing, eager collection operations, collection
+dot calls, callback mutation checks, and the collection pipeline fixture. No
+user-defined generic declarations are required for this milestone.
 
 Gate: the collection pipeline produces `5\n50\n`; callback mutation through an
 alias aborts; captured local bindings are snapshots; higher-order calls cannot
@@ -89,7 +94,7 @@ financial safety or invariant preservation from field-level type safety.
 Persisted versioned bytecode with a bounded loader/verifier; useful source maps,
 CLI integration tests, formatter, examples, reference docs, reproducible builds,
 and minimal host APIs with declared effects. Introduce lazy bindings only once
-effect and capture restrictions are enforced.
+effect and capture restrictions are enforced for lazy values.
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in
 the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource

@@ -11,6 +11,11 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-R008",
+        title: "Checked conversion failed",
+        explanation: "fraud<T>(value) could not represent the integer in its target type. Use ascend<T>(value) and handle the result with cope for recoverable range errors.",
+    },
+    DiagnosticCode {
         id: "LARP-B001",
         title: "Invalid bytecode",
         explanation: "Bytecode verification failed. The VM only accepts modules whose control flow, operand types, local initialization, call signatures, and effect bounds have been validated. Compiler-generated verification failures are compiler bugs.",
@@ -73,7 +78,7 @@ pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
         id: "LARP-T008",
         title: "Read-only binding",
-        explanation: "This binding cannot be assigned. Range-loop indices are read-only. Use a separate mutable local to maintain independent loop state.",
+        explanation: "This binding cannot be assigned. Range-loop indices and captured bindings are read-only. Captures copy values when a closure is created. Use a separate mutable local for independent state.",
     },
     DiagnosticCode {
         id: "LARP-E003",
@@ -103,7 +108,7 @@ pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
         id: "LARP-T041",
         title: "MOGGED: implicit integer narrowing",
-        explanation: "An unc (i64) value cannot be assigned implicitly to mf (i32). Use matching integer types in the executable core. The full language design adds ascend<mf>(value) returning result<mf, ConversionError> and fraud<mf>(value) for a fatal range check; these conversion APIs are not implemented yet.",
+        explanation: "An unc (i64) value cannot be assigned implicitly to mf (i32). Use matching integer types, or ascend<mf>(value) returning result<mf, ConversionError> and handle failure with .cope(handler). fraud<mf>(value) performs the same range check but aborts on failure.",
     },
     DiagnosticCode {
         id: "LARP-E001",

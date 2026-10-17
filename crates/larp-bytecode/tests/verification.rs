@@ -8,6 +8,7 @@ fn function(code: Vec<Op>, locals: Vec<Type>, effects: Effects) -> Function {
     Function {
         name: "test".into(),
         parameters: Vec::new(),
+        captures: Vec::new(),
         result: Type::Unit,
         effects,
         locals,
@@ -53,7 +54,7 @@ fn malformed_operands_indices_and_fallthrough_are_rejected() {
             Op::Return,
         ],
         vec![],
-        "Cannot print",
+        "Print requires a scalar value",
     );
 }
 

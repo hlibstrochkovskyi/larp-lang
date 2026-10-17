@@ -16,6 +16,8 @@ inventory completeness. It does not parse, type-check, compile, or run LARP.
 through both `check` and `run`. It checks exit codes, exact stdout, primary error
 codes, and presence of source locations. `--all` also attempts pending cases and
 currently fails as expected. An optional `--bin PATH` selects an existing binary.
+`--gc-stress` requests collection before every closure allocation; CI executes
+the active corpus both with normal collection and this stress mode.
 
 The harness must fail if an unsupported case is silently skipped within a release's
 declared subset. Stderr report layout

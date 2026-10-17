@@ -275,6 +275,7 @@ fn runtime_limits_bound_infinite_loops_and_recursion_without_rust_recursion() {
             larp_vm::Limits {
                 instructions: 10_000,
                 call_frames: 32,
+                ..Default::default()
             },
         )
         .unwrap_err();

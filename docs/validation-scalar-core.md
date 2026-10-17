@@ -1,5 +1,8 @@
 # Executable scalar core validation
 
+Historical validation snapshot before closures and option/result recovery. See
+[implementation status](implementation-status.md) for current coverage.
+
 Date: 2026-10-17. Environment: Linux, rustc/Cargo 1.99.0. No third-party Rust
 dependencies, external compiler backend, or host language evaluation.
 
@@ -34,10 +37,11 @@ fuel, and recursion limits.
 
 ## Scope
 
-M1's scalar compiler-to-VM gate is implemented. M2's algorithmic features work,
-but options/results, recovery callbacks, checked conversions, and parseScore
-remain unimplemented. Collections, OOP, GC, and language-level scenarios are
-still pending. The full v0.1 goal is not complete.
+At this snapshot, M1's scalar compiler-to-VM gate was implemented and M2's
+algorithmic features worked. Options/results, recovery callbacks, checked
+conversions, parseScore, collections, OOP, GC, and language-level scenarios were
+still pending. Subsequent work implements some of those features; this document
+records only the checks executed at the scalar milestone.
 
 Hosted CI is configured to run workspace checks and the active conformance
 suite, but no remote has been configured and no hosted run is claimed.

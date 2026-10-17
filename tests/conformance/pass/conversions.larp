@@ -1,0 +1,8 @@
+main_character {
+    unc large = 3_000_000_000;
+    result<mf, ConversionError> converted = ascend<mf>(large);
+    yap(converted.cope(err => { yap(err.message); return 49; }));
+    yap(ascend<unc>(49).cope(err => 0));
+    unc small = 20;
+    yap(fraud<mf>(small));
+}

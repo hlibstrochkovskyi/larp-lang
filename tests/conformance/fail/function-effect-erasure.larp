@@ -1,0 +1,8 @@
+sidequest observe() -> mf uses(observe) {
+    yap(1);
+    return 0;
+}
+
+main_character {
+    fn() -> mf uses() hidden = observe;
+}

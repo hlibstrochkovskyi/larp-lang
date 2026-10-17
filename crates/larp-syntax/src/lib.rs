@@ -22,10 +22,41 @@ pub struct Program {
 #[derive(Debug)]
 pub struct Function {
     pub name: Name,
-    pub parameters: Vec<(Name, Name)>,
-    pub result: Name,
+    pub parameters: Vec<(TypeExpr, Name)>,
+    pub result: TypeExpr,
     pub effects: Option<Vec<Name>>,
     pub body: Block,
+}
+
+#[derive(Clone, Debug)]
+pub struct TypeExpr {
+    pub kind: TypeExprKind,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug)]
+pub enum TypeExprKind {
+    Named {
+        name: Name,
+        arguments: Vec<TypeExpr>,
+    },
+    Function {
+        parameters: Vec<TypeExpr>,
+        result: Box<TypeExpr>,
+        effects: Option<Vec<Name>>,
+    },
+}
+
+#[derive(Debug)]
+pub struct LambdaParameter {
+    pub ty: Option<TypeExpr>,
+    pub name: Name,
+}
+
+#[derive(Debug)]
+pub enum LambdaBody {
+    Expression(Box<Expr>),
+    Block(Block),
 }
 
 #[derive(Debug)]
@@ -43,7 +74,7 @@ pub struct Statement {
 #[derive(Debug)]
 pub enum StatementKind {
     Binding {
-        ty: Option<Name>,
+        ty: Option<TypeExpr>,
         name: Name,
         value: Expr,
     },
@@ -64,7 +95,7 @@ pub enum StatementKind {
         body: Block,
     },
     Range {
-        ty: Name,
+        ty: TypeExpr,
         name: Name,
         start: Expr,
         end: Expr,
@@ -87,6 +118,7 @@ pub enum ExprKind {
     Float(String),
     Text(String),
     Verdict(bool),
+    None,
     Name(Name),
     Unary {
         op: Unary,
@@ -100,5 +132,14 @@ pub enum ExprKind {
     Call {
         callee: Box<Expr>,
         arguments: Vec<Expr>,
+        type_arguments: Vec<TypeExpr>,
+    },
+    Member {
+        receiver: Box<Expr>,
+        name: Name,
+    },
+    Lambda {
+        parameters: Vec<LambdaParameter>,
+        body: LambdaBody,
     },
 }

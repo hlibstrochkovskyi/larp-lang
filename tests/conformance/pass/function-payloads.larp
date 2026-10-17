@@ -1,0 +1,14 @@
+sidequest parse(text input) -> mf uses() {
+    return parseScore(input).cope(err => 0);
+}
+
+main_character {
+    baddie<fn(mf) -> mf> optional = some((mf x) => x + 1);
+    let chosen = optional.copium((mf x) => x * 2);
+    yap(chosen(3));
+    result<fn(mf) -> mf, text> saved = win((mf x) => x * 2);
+    let recovered = saved.cope(err => (mf x) => x + 100);
+    yap(recovered(4));
+    yap(parse("49"));
+    yap(parse("bad"));
+}

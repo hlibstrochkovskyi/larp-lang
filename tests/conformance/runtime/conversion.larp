@@ -1,0 +1,4 @@
+main_character {
+    unc large = 3_000_000_000;
+    yap(fraud<mf>(large));
+}

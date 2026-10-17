@@ -188,15 +188,64 @@ impl Parser<'_> {
         self.advance();
         Ok(result)
     }
-    fn ty(&mut self) -> Result<Name> {
-        if self.word("fn") {
-            return Err(self.error("LARP-P002", "Function types are not implemented yet"));
+    fn ty(&mut self) -> Result<TypeExpr> {
+        self.guarded(|parser| {
+            let start = parser.current().span;
+            let kind = if parser.eat_word("fn") {
+                parser.expect("(")?;
+                let mut parameters = Vec::new();
+                if !parser.punct(")") {
+                    loop {
+                        parameters.push(parser.ty()?);
+                        if !parser.eat(",") {
+                            break;
+                        }
+                    }
+                }
+                parser.expect(")")?;
+                parser.expect("->")?;
+                let result = Box::new(parser.ty()?);
+                TypeExprKind::Function {
+                    parameters,
+                    result,
+                    effects: parser.effects()?,
+                }
+            } else {
+                let name = parser.name()?;
+                let mut arguments = Vec::new();
+                if parser.eat("<") {
+                    loop {
+                        arguments.push(parser.ty()?);
+                        if !parser.eat(",") {
+                            break;
+                        }
+                    }
+                    parser.expect(">")?;
+                }
+                TypeExprKind::Named { name, arguments }
+            };
+            Ok(TypeExpr {
+                kind,
+                span: parser.joined(start),
+            })
+        })
+    }
+    fn effects(&mut self) -> Result<Option<Vec<Name>>> {
+        if !self.eat_word("uses") {
+            return Ok(None);
         }
-        let name = self.name()?;
-        if self.punct("<") {
-            return Err(self.error("LARP-P002", "Generic types are not implemented yet"));
+        self.expect("(")?;
+        let mut effects = Vec::new();
+        if !self.punct(")") {
+            loop {
+                effects.push(self.name()?);
+                if !self.eat(",") {
+                    break;
+                }
+            }
         }
-        Ok(name)
+        self.expect(")")?;
+        Ok(Some(effects))
     }
     fn function(&mut self) -> Result<Function> {
         self.expect_word("sidequest")?;
@@ -220,22 +269,7 @@ impl Parser<'_> {
         self.expect(")")?;
         self.expect("->")?;
         let result = self.ty()?;
-        let effects = if self.eat_word("uses") {
-            self.expect("(")?;
-            let mut effects = Vec::new();
-            if !self.punct(")") {
-                loop {
-                    effects.push(self.name()?);
-                    if !self.eat(",") {
-                        break;
-                    }
-                }
-            }
-            self.expect(")")?;
-            Some(effects)
-        } else {
-            None
-        };
+        let effects = self.effects()?;
         let body = self.block()?;
         Ok(Function {
             name,
@@ -299,18 +333,6 @@ impl Parser<'_> {
     }
     fn statement_inner(&mut self) -> Result<Statement> {
         let start = self.current().span;
-        if matches!(&self.current().kind, Kind::Word(name) if matches!(name.as_str(),
-            "mfs" | "baddie" | "result" | "hediJeans" | "ascend" | "fraud"))
-            && self
-                .tokens
-                .get(self.pos + 1)
-                .is_some_and(|token| token.kind == Kind::Punctuation("<"))
-        {
-            return Err(self.error(
-                "LARP-P002",
-                "Generic types and checked conversions are not implemented yet",
-            ));
-        }
         let kind = if self.punct("{") {
             StatementKind::Block(self.block()?)
         } else if self.eat_word("if") {
@@ -387,11 +409,17 @@ impl Parser<'_> {
                 "LARP-P002",
                 "This statement is not implemented in the executable core yet",
             ));
-        } else if matches!(&self.current().kind, Kind::Word(_))
-            && matches!(
-                self.tokens.get(self.pos + 1).map(|t| &t.kind),
-                Some(Kind::Word(_))
-            )
+        } else if self.word("fn")
+            || (matches!(&self.current().kind, Kind::Word(_))
+                && matches!(
+                    self.tokens.get(self.pos + 1).map(|t| &t.kind),
+                    Some(Kind::Word(_))
+                ))
+            || (matches!(&self.current().kind, Kind::Word(name) if matches!(name.as_str(), "baddie" | "result" | "mfs" | "hediJeans"))
+                && self
+                    .tokens
+                    .get(self.pos + 1)
+                    .is_some_and(|t| t.kind == Kind::Punctuation("<")))
         {
             let ty = self.ty()?;
             let name = self.name()?;
@@ -438,6 +466,9 @@ impl Parser<'_> {
     fn expr_inner(&mut self, minimum: u8) -> Result<Expr> {
         let token_start = self.pos;
         let start = self.current().span;
+        if minimum == 0 && self.looks_like_lambda() {
+            return self.lambda();
+        }
         let token = self.current().clone();
         self.advance();
         let kind = match token.kind {
@@ -447,13 +478,14 @@ impl Parser<'_> {
             Kind::Word(ref word) if word == "fr" || word == "cap" => {
                 ExprKind::Verdict(word == "fr")
             }
-            Kind::Word(ref word) if word == "new" || word == "no_bitches" || word == "self" => {
+            Kind::Word(ref word) if word == "new" || word == "self" => {
                 return Err(Box::new(Diagnostic::error(
                     "LARP-P002",
                     token.span,
                     "This value form is not implemented yet",
                 )));
             }
+            Kind::Word(ref word) if word == "no_bitches" => ExprKind::None,
             Kind::Word(_) => {
                 self.pos -= 1;
                 ExprKind::Name(self.name()?)
@@ -498,7 +530,12 @@ impl Parser<'_> {
                     "An expression exceeds the current 256-token limit",
                 ));
             }
-            if self.punct("(") && minimum <= 15 {
+            let type_arguments = if minimum <= 15 {
+                self.try_type_arguments()
+            } else {
+                None
+            };
+            if (self.punct("(") || type_arguments.is_some()) && minimum <= 15 {
                 self.advance();
                 let mut arguments = Vec::new();
                 if !self.punct(")") {
@@ -514,15 +551,27 @@ impl Parser<'_> {
                     kind: ExprKind::Call {
                         callee: Box::new(left),
                         arguments,
+                        type_arguments: type_arguments.unwrap_or_default(),
                     },
                     span: self.joined(start),
                 };
                 continue;
             }
-            if self.punct(".") || self.punct("[") || self.punct("=>") {
+            if self.eat(".") {
+                let name = self.name()?;
+                left = Expr {
+                    kind: ExprKind::Member {
+                        receiver: Box::new(left),
+                        name,
+                    },
+                    span: self.joined(start),
+                };
+                continue;
+            }
+            if self.punct("[") || self.punct("=>") {
                 return Err(self.error(
                     "LARP-P002",
-                    "Methods, indexing, and lambdas are not implemented yet",
+                    "Indexing is not implemented yet, or lambda parameters need parentheses",
                 ));
             }
             let Some((op, precedence)) = self.operator() else {
@@ -550,6 +599,98 @@ impl Parser<'_> {
             non_associative = Some(precedence);
         }
         Ok(left)
+    }
+    fn try_type_arguments(&mut self) -> Option<Vec<TypeExpr>> {
+        if !self.punct("<") {
+            return None;
+        }
+        let saved = self.pos;
+        let result = (|| -> Result<Vec<TypeExpr>> {
+            self.expect("<")?;
+            let mut arguments = vec![self.ty()?];
+            while self.eat(",") {
+                arguments.push(self.ty()?);
+            }
+            self.expect(">")?;
+            if !self.punct("(") {
+                return Err(self.error("LARP-P001", "Expected call after type arguments"));
+            }
+            Ok(arguments)
+        })();
+        match result {
+            Ok(arguments) => Some(arguments),
+            Err(_) => {
+                self.pos = saved;
+                None
+            }
+        }
+    }
+    fn looks_like_lambda(&self) -> bool {
+        if matches!(self.current().kind, Kind::Word(_))
+            && self
+                .tokens
+                .get(self.pos + 1)
+                .is_some_and(|t| t.kind == Kind::Punctuation("=>"))
+        {
+            return true;
+        }
+        if !self.punct("(") {
+            return false;
+        }
+        let mut depth = 0;
+        for (index, token) in self.tokens.iter().enumerate().skip(self.pos).take(257) {
+            if token.kind == Kind::Punctuation("(") {
+                depth += 1;
+            } else if token.kind == Kind::Punctuation(")") {
+                depth -= 1;
+                if depth == 0 {
+                    return self
+                        .tokens
+                        .get(index + 1)
+                        .is_some_and(|t| t.kind == Kind::Punctuation("=>"));
+                }
+            }
+        }
+        false
+    }
+    fn lambda(&mut self) -> Result<Expr> {
+        let start = self.current().span;
+        let mut parameters = Vec::new();
+        if self.eat("(") {
+            if !self.punct(")") {
+                loop {
+                    let untyped = matches!(self.current().kind, Kind::Word(_))
+                        && self
+                            .tokens
+                            .get(self.pos + 1)
+                            .is_some_and(|t| matches!(t.kind, Kind::Punctuation("," | ")")));
+                    let ty = if untyped { None } else { Some(self.ty()?) };
+                    parameters.push(LambdaParameter {
+                        ty,
+                        name: self.name()?,
+                    });
+                    if !self.eat(",") {
+                        break;
+                    }
+                }
+            }
+            self.expect(")")?;
+        } else {
+            parameters.push(LambdaParameter {
+                ty: None,
+                name: self.name()?,
+            });
+        }
+        self.expect("=>")?;
+        let body = if self.punct("{") {
+            LambdaBody::Block(self.block()?)
+        } else {
+            LambdaBody::Expression(Box::new(self.expr(0)?))
+        };
+        Ok(Expr {
+            kind: ExprKind::Lambda { parameters, body },
+            span: self.joined(start),
+        })
     }
     fn operator(&self) -> Option<(Binary, u8)> {
         Some(match &self.current().kind {

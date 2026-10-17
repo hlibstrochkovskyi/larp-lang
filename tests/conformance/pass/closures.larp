@@ -1,0 +1,13 @@
+sidequest make(mf base) -> fn(mf) -> fn() -> mf {
+    return extra => () => base + extra;
+}
+
+main_character {
+    mf aura = 10;
+    let saved = (mf bonus) => aura + bonus;
+    aura = 100;
+    yap(saved(2));
+    let middle = make(20);
+    let leaf = middle(3);
+    yap(leaf());
+}

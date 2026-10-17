@@ -1,8 +1,10 @@
 # Compiler and runtime architecture
 
-Status: the scalar pipeline below is implemented from source through verified
-in-memory bytecode and VM execution. Object memory management and scenarios
-remain the implementation direction; see [status](implementation-status.md).
+Status: scalar, closure, and option/result programs compile through typed IR
+and verified in-memory bytecode to VM execution. Closure tracing is implemented;
+objects, arrays, scenario regions, and persisted artifacts remain planned.
+The pipeline below includes both current contracts and their intended extensions;
+see [implementation status](implementation-status.md) for the supported subset.
 
 ## Pipeline and contracts
 
@@ -11,13 +13,13 @@ flowchart LR
     Source[UTF-8 source] --> Lex[Lexer with spans]
     Lex --> Parse[Recursive descent + Pratt parser]
     Parse --> AST[AST]
-    AST --> Names[Scopes and nominal symbols]
-    Names --> Types[Types, effects, scenario regions]
+    AST --> Names[Scopes and function symbols]
+    Names --> Types[Types and finite effects]
     Types --> IR[Typed control-flow IR]
     IR --> Lower[Bytecode lowering]
     Lower --> Verify[Bytecode verifier]
     Verify --> VM[LARP stack VM]
-    VM --> Host[Explicit host capabilities]
+    VM --> Host[Observation sink]
 ```
 
 1. **Source:** assign file identities; retain original bytes, line starts, and
@@ -28,22 +30,31 @@ flowchart LR
    so one typo does not produce dozens of false errors. AST nodes retain spans.
 3. **Resolution:** collect declaration headers first, then bind bodies to stable
    symbol IDs and lexical scopes. Separate namespaces for types and values.
-4. **Semantic analysis:** bidirectional local inference, nominal types, definite
-   initialization, return-path checks, access checks, finite effect bounds,
-   call summaries, and scenario region restrictions. Reject before lowering.
+4. **Semantic analysis:** bidirectional local inference, lexical capture analysis,
+   return-path checks, exact payload types, and finite effect bounds through
+   direct and indirect calls. Reject before lowering. Nominal object/access
+   checks, scenario eligibility summaries, and region restrictions are planned.
 5. **Typed IR:** explicit basic blocks, typed local slots, temporaries, calls,
    branch targets, and terminators. Initially use mutable slots rather than SSA.
-   Preserve source locations, effects, and regions until all relevant checks run.
+   Preserve source locations and effect signatures; future region qualifiers
+   must survive until all relevant checks run.
    A later SSA optimization pass must not redefine language semantics.
 6. **Lowering:** emit typed instructions for numeric widths, locals, branches,
-   closures, field access, calls, arrays, observations, and scenarios. Encode
-   resolved field/method IDs, never repeat source-name lookup in the VM.
-7. **Verification:** check instruction boundaries, indices, stack types at joins,
-   initialized locals, branch targets, call signatures, effect bounds, scenario
-   nesting, region escape, and host capability use. Reject invalid artifacts.
-8. **VM:** explicit value stack and call frames, checked arithmetic, a traced heap,
-   and explicit scenario frames. A LARP runtime trap is structured data, not a
-   Rust panic. Propagate it through the VM loop while discarding scenario frames.
+   closures, direct/indirect calls, intrinsics, total result-tag dispatch, and
+   observations. Object/array/scenario instructions are future extensions; those
+   must encode resolved field/method IDs instead of VM source-name lookup.
+7. **Verification:** check instruction indices, stack types at joins, initialized
+   locals, branch targets, closure capture layouts, immutable capture slots,
+   intrinsic types, call signatures, and effect bounds. Check unreachable code
+   structurally as well. Before dataflow, preflight every type in the module,
+   including forward-call targets. Bound depth to 128 edges and expanded size
+   to 4096 nodes per type, counting shared subtrees repeatedly, so structural
+   comparisons and diagnostic formatting remain bounded. Scenario nesting/escape
+   and host capability validation must be added alongside those features.
+8. **VM:** explicit value stack and call frames, checked arithmetic, tagged
+   option/result values, and a traced closure heap. A LARP runtime trap is
+   structured data, not a Rust panic. Future scenario frames must be discarded
+   when a trap propagates through the VM loop.
 
 The parser may be temporarily exercised without a backend, but the first
 executable language slice must go all the way through typed IR and bytecode.
@@ -57,12 +68,12 @@ Current crates:
 | --- | --- |
 | `larp-source` | Immutable source text, validated spans, locations |
 | `larp-diagnostics` | Structured diagnostic data and stable code explanations |
-| `larp-types` | Scalar types, checked operations, and effect bounds |
+| `larp-types` | Scalar/composite types, typed intrinsics, checked operations, effect bounds |
 | `larp-syntax` | Lexer, AST, recovering recursive-descent / Pratt parser |
 | `larp-compiler` | Name, type, control-flow, and effect checking |
 | `larp-ir` | Typed basic blocks and bytecode lowering |
 | `larp-bytecode` | In-memory instructions, dataflow verifier, disassembly |
-| `larp-vm` | Iterative call frames, checked execution, observation sinks |
+| `larp-vm` | Iterative frames, tagged values, closure GC, checked execution, observations |
 | `larp-cli` | `check`, `run`, `dump`, and `explain` |
 | `larp-scenario-model` | Isolated experiment, not linked into the CLI |
 
@@ -76,25 +87,64 @@ diagnostic rendering, serialization, property tests, and fuzzing when needed.
 A custom source location abstraction is small; a custom terminal layout engine
 or cryptographic artifact format is not a good use of engineering time.
 
+## Closures, effects, and result dispatch
+
+Named functions become capture-free closures when used as values. Lambdas are
+compiled to generated functions after lexical free-name analysis; capture slots
+and generated code identities are explicit in typed IR and bytecode. Polymorphic
+prelude references need an expected concrete function type and compile to typed
+wrappers. Direct named calls remain direct instructions.
+
+A function type contains invariant parameter/result types and a finite effect
+bound. Assignment can widen that bound, while all later indirect calls check the
+stored bound against the caller. Container payloads remain invariant. The
+verifier checks the same relation; neither wrapping a callback nor storing a
+function value removes its effects.
+
+Recovery evaluates the result and handler expression before branching. A typed
+`MatchResult` terminator lowers to two verified successors: one receives the
+success payload, the other the error payload. Only the latter invokes the
+handler. This avoids an unsafe unwrap operation or an artificial abort effect in
+pure recovery. IR block parameters become typed stores at branch entry.
+
 ## Runtime representation and memory
 
-Use tagged Rust `Value` variants initially: exact-width integers, float, verdict,
-unit, and heap handles. Avoid NaN boxing until profiling proves a need. Objects
-store class/layout identity and a field vector. Role values contain a receiver
-handle and a dispatch-table ID. Closures contain code identity and captured
-values, never Rust references into a moving VM stack.
+The current VM uses tagged Rust `Value` variants: scalar values, tagged
+option/result payloads, nominal conversion errors, and closure handles. Options
+and results own their payloads; tracing walks through those wrappers to find
+contained handles. Text currently uses owned immutable storage. Avoid NaN boxing
+until profiling proves a need.
 
-A non-moving tracing collector using an arena of optional heap entries permits
-safe Rust and stable integer handles. Include a generation in reusable handles
-to detect stale references and make generation overflow a checked host failure.
-Trace object fields, container elements, closure captures, lazy cells, and all VM
-roots. Unreachable cycles are collectible. Start with stop-the-world mark/sweep;
-do not promise bounded pause times.
+Closures contain a generated function identity and copied captured values, never
+Rust references into a VM stack. Ordinary parameters occupy the first frame
+slots, followed by immutable capture slots and mutable locals/temporaries.
+Nested and returned closures retain their captured values after the creating
+frame exits. Capture bindings are snapshots; no source-level capture reassignment
+is allowed. Future reference values will retain shared identity when copied.
 
-Collect only at defined safepoints. VM stacks, call frames, temporary operand
-buffers, constants, and active scenario snapshots must be roots at those points.
-Stress mode collects at every allowed allocation. Object identity remains stable
-across collection. A future collector replacement must preserve those contracts.
+Closure storage is a non-moving arena of optional entries with a generation in
+each reusable handle. Stale generations cannot resolve to a newly allocated
+closure; generation overflow is a checked resource failure. The collector uses
+iterative marking and sweeping, including transitive handles in captured
+options/results. Synthetic heap tests exercise long capture chains and cycles;
+current source closures cannot construct mutable capture cycles.
+
+Collection occurs immediately before `MakeClosure`, while its captured operands
+are still on the VM value stack. The complete stack and initialized locals of
+all active frames are roots. Stress mode collects at every such safepoint; the
+normal threshold adapts to the live heap. CLI `run --gc-stress` and the Rust
+`Limits::gc_stress` option select stress mode. `execute_with_stats` exposes allocation,
+collection, reclamation, and peak-live counts for tests. A final collection after
+successful program exit reclaims the remaining closure heap. Trap paths release
+the owning Rust heap as execution unwinds.
+
+Arrays, object layouts, role dispatch tables, lazy cells, and scenario snapshots
+are planned. Their fields and temporary allocation buffers must become roots or
+traced edges before their allocation instructions can run. Objects will contain
+class/layout identity and field values; role values will contain a receiver and
+dispatch identity. Preserve stable language identity across collection and allow
+unreachable cycles to be reclaimed. Reclamation timing is unobservable; bounded
+pause times are not promised.
 
 ## Scenario implementation
 

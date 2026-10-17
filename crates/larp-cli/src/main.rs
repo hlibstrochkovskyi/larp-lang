@@ -8,12 +8,14 @@ Usage:
   larp --version
   larp explain CODE
   larp check FILE.larp
-  larp run FILE.larp [--fuel INSTRUCTIONS]
+  larp run FILE.larp [--fuel INSTRUCTIONS] [--gc-stress]
   larp dump FILE.larp [--ir]
 
-Implemented: scalar types, functions, branches, loops, checked arithmetic,
-effect bounds, typed IR, verified in-memory bytecode, and a stack VM.
-Planned: collections, closures, objects, scenarios, persisted build artifacts, fmt.";
+Implemented: scalar types, first-class functions, closures, options/results,
+branches, loops, checked conversions, effect bounds, typed IR,
+verified in-memory bytecode, and a stack VM with tracing closure GC.
+Planned: collections, objects, scenarios, persisted build artifacts, fmt.
+--gc-stress collects before every closure allocation to check VM roots.";
 
 fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
@@ -32,7 +34,7 @@ fn main() -> ExitCode {
         }
         ["--version"] | ["-V"] => {
             println!(
-                "larp {} (executable scalar core)",
+                "larp {} (functions and recovery core)",
                 env!("CARGO_PKG_VERSION")
             );
             ExitCode::SUCCESS
@@ -48,17 +50,10 @@ fn main() -> ExitCode {
             }
         },
         ["check", path] => process(path, Mode::Check),
-        ["run", path] => process(path, Mode::Run(larp_vm::Limits::default())),
-        ["run", path, "--fuel", fuel] => match fuel.parse::<u64>() {
-            Ok(instructions) => process(
-                path,
-                Mode::Run(larp_vm::Limits {
-                    instructions,
-                    ..Default::default()
-                }),
-            ),
-            Err(_) => {
-                eprintln!("error: --fuel requires a nonnegative u64 instruction count");
+        ["run", path, options @ ..] => match run_limits(options) {
+            Ok(limits) => process(path, Mode::Run(limits)),
+            Err(message) => {
+                eprintln!("error: {message}");
                 ExitCode::from(2)
             }
         },
@@ -75,6 +70,28 @@ fn main() -> ExitCode {
             ExitCode::from(2)
         }
     }
+}
+
+fn run_limits(mut options: &[&str]) -> Result<larp_vm::Limits, &'static str> {
+    let mut limits = larp_vm::Limits::default();
+    let mut fuel_seen = false;
+    while !options.is_empty() {
+        options = match options {
+            ["--gc-stress", rest @ ..] if !limits.gc_stress => {
+                limits.gc_stress = true;
+                rest
+            }
+            ["--fuel", value, rest @ ..] if !fuel_seen => {
+                limits.instructions = value
+                    .parse()
+                    .map_err(|_| "--fuel requires a nonnegative u64 instruction count")?;
+                fuel_seen = true;
+                rest
+            }
+            _ => return Err("unknown, duplicate, or incomplete run option; see larp --help"),
+        };
+    }
+    Ok(limits)
 }
 
 enum Mode {
