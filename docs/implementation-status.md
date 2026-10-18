@@ -24,8 +24,10 @@ No host `eval`, source-to-Python/JavaScript translation, or AST execution is use
 - Contextual or inferred `mfs<T>` literals; contextual `hediJeans<T,N>` literals,
   checked `mf` indexing, indexed assignment, and `size()`. Dynamic arrays share
   identity; fixed arrays copy elements by value and support recursive equality
-  when their element types do. Dynamic array equality is rejected. Indexed
-  assignment validates its place before evaluating the right side.
+  when their element types do. Equality context types an array literal from
+  either typed operand, including nested fixed literals. Dynamic array equality
+  is rejected. Indexed assignment validates its place before evaluating the right side.
+  See the [contextual equality regression](validation-contextual-equality.md).
 - Dynamic array `push`, stable integer/text `sorted`, and eager `filter`, `map`,
   and `forEach`; callback effects propagate through typed built-in operations.
   Runtime guards reject structural mutation of an iterated receiver through any
@@ -313,7 +315,7 @@ allocation failure; fuel and traced-object counters are not a memory sandbox.
 `python3 tools/run_conformance.py` executes every active fixture through `check`
 and `run`, comparing stdout, explicitly declared inspection output, or primary diagnostic codes and source locations.
 `--gc-stress` repeats execution with collection at every object, array, closure,
-and lazy-cell allocation safepoint. All 84 current fixtures are active; `--all`
+and lazy-cell allocation safepoint. All 85 current fixtures are active; `--all`
 selects the same complete inventory and passes. `--artifacts` also builds valid
 programs, loads/verifies them, and compares execution with source; invalid source
 must fail build without producing output. `--formatted` formats temporary copies,

@@ -1016,7 +1016,15 @@ impl<'a> Builder<'a> {
                         "A scenario view is not a first-class comparison operand",
                     ));
                 }
-                if let (Some(left_type), Some(right_type)) = (self.hint(left), self.hint(right))
+                // Array literals acquire their container type from context. Their
+                // default dynamic-array hints must not override a typed operand.
+                let left_hint = self
+                    .hint(left)
+                    .filter(|_| !matches!(left.kind, ExprKind::Array(_)));
+                let right_hint = self
+                    .hint(right)
+                    .filter(|_| !matches!(right.kind, ExprKind::Array(_)));
+                if let (Some(left_type), Some(right_type)) = (&left_hint, &right_hint)
                     && left_type != right_type
                 {
                     return Err(error(
@@ -1044,6 +1052,8 @@ impl<'a> Builder<'a> {
                         .filter(|ty| ty.is_numeric() || *ty == Type::Text)
                 };
                 let context = context
+                    .or(left_hint)
+                    .or(right_hint)
                     .or_else(|| self.hint(left))
                     .or_else(|| self.hint(right));
                 let left = self.expression(left, context, evaluate)?;

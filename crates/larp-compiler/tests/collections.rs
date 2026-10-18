@@ -417,6 +417,52 @@ fn fixed_equality_recurses_but_keeps_nested_reference_and_function_restrictions(
 }
 
 #[test]
+fn fixed_equality_context_types_array_literals_on_either_side() {
+    run(
+        r#"
+        sidequest mark(mf tag) -> mf uses(observe) { yap(tag); return 7; }
+        sidequest fixed(mf value) -> hediJeans<mf, 1> uses() { return [value]; }
+        main_character {
+            mf value = 7;
+            hediJeans<mf, 1> expected = [value];
+            no_cap([value] == expected);
+            no_cap(expected == [value]);
+            no_cap([value + 1] != expected);
+            no_cap(expected != [value + 1]);
+            hediJeans<hediJeans<mf, 1>, 1> nested = [[value]];
+            no_cap([[value]] == nested);
+            no_cap(nested == [[value]]);
+            hediJeans<text, 1> words = ["hello"];
+            no_cap(["hello"] == words);
+            no_cap(words == ["hello"]);
+            hediJeans<mf, 0> empty = [];
+            no_cap([] == empty);
+            no_cap(empty == []);
+            yap([mark(1)] == fixed(mark(2)));
+            yap(fixed(mark(3)) == [mark(4)]);
+        }
+    "#,
+        "1\n2\nfr\n3\n4\nfr\n",
+    );
+}
+
+#[test]
+fn fixed_literal_equality_preserves_length_element_and_identity_restrictions() {
+    for text in [
+        "main_character { hediJeans<mf, 1> x = [1]; no_cap([1, 2] == x); }",
+        "main_character { hediJeans<mf, 1> x = [1]; no_cap(x == [1, 2]); }",
+        "main_character { mf value = 1; hediJeans<unc, 1> x = [1]; no_cap([value] == x); }",
+        "main_character { mf value = 1; hediJeans<unc, 1> x = [1]; no_cap(x == [value]); }",
+        "main_character { let x = [1]; no_cap([1] == x); }",
+        "main_character { no_cap([1] == [1]); }",
+        "main_character { let x = [1]; hediJeans<mf, 1> y = [1]; no_cap(x == y); }",
+        "main_character { hediJeans<mfs<mf>, 1> x = [[1]]; no_cap([[1]] == x); }",
+    ] {
+        rejects(text, "LARP-T001");
+    }
+}
+
+#[test]
 fn source_array_closure_cycles_are_collectible_and_live_map_outputs_survive() {
     let source = source(
         r#"

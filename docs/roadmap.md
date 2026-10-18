@@ -128,7 +128,7 @@ value immediately. `sybau` dynamically suppresses ordinary `yap` across calls
 without removing observation effects or muting inspection/diagnostics. Source
 return/break lowering and verified control-flow joins preserve nesting.
 
-All 84 current corpus cases are active and executable. This closes the current
+All 85 current corpus cases are active and executable. This closes the current
 fixture inventory, not the developer-preview release gate or every normative
 rule. See [lazy and suppression validation](validation-lazy-and-suppression.md).
 

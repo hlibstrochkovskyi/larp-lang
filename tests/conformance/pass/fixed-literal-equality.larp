@@ -1,0 +1,28 @@
+sidequest mark(mf tag) -> mf uses(observe) {
+    yap(tag);
+    return 7;
+}
+
+sidequest fixed(mf value) -> hediJeans<mf, 1> uses() {
+    return [value];
+}
+
+main_character {
+    mf value = 7;
+    hediJeans<mf, 1> expected = [value];
+    no_cap([value] == expected);
+    no_cap(expected == [value]);
+    no_cap([value + 1] != expected);
+    no_cap(expected != [value + 1]);
+
+    hediJeans<hediJeans<mf, 1>, 1> nested = [[value]];
+    no_cap([[value]] == nested);
+    no_cap(nested == [[value]]);
+
+    hediJeans<text, 1> words = ["hello"];
+    no_cap(["hello"] == words);
+    no_cap(words == ["hello"]);
+
+    yap([mark(1)] == fixed(mark(2)));
+    yap(fixed(mark(3)) == [mark(4)]);
+}

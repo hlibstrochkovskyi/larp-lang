@@ -2,6 +2,16 @@
   "schema_version": 2,
   "cases": [
     {
+      "id": "fixed-literal-equality",
+      "path": "pass/fixed-literal-equality.larp",
+      "milestone": "M3",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "1\n2\nfr\n3\n4\nfr\n"
+      }
+    },
+    {
       "id": "scalars",
       "path": "pass/scalars.larp",
       "milestone": "M1",
