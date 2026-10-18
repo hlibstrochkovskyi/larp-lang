@@ -168,8 +168,14 @@ remapping. Both binaries execute source and loaded-artifact smoke programs.
 The [reproducible-build check](reproducible-builds.md) runs in a separate hosted
 CI job; its local evidence does not establish cross-machine reproducibility.
 
-Remaining: distribution packaging, additional host APIs,
-and platform/distribution decisions. The maintainer selected the
+Implemented candidate packaging: complete tracked source plus the prebuilt CLI,
+MIT, deterministic tar/gzip metadata, provenance/checksums, and real execution
+after extraction. CI attaches a reviewable Linux x86-64 candidate; see
+[distribution](distribution.md). This is not a versioned Release or a broad
+platform compatibility claim.
+
+Remaining: versioned release/distribution policy, additional host APIs,
+and supported-platform decisions. The maintainer selected the
 [MIT License](../LICENSE). Hosted compiler CI and
 bounded fuzz campaigns passed on `cc1354d`; see
 [the exact-commit evidence](validation-fuzzing.md#hosted-verification). Later

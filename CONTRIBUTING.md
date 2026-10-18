@@ -31,6 +31,12 @@ toolchain download is needed for a compatible system compiler. New dependencies
 require a concrete need, license review, and a lockfile update; offline builds
 will then require a populated Cargo cache.
 
+The dedicated reproducibility job also creates a Linux source/binary candidate
+from its passed build report. `tools/package_candidate.py` checks both binaries,
+normalizes archive metadata, verifies extracted checksums and executable modes,
+and runs the extracted CLI/VM. The candidate retains MIT and the full tracked
+source; it does not publish a versioned Release. See [distribution](docs/distribution.md).
+
 The compiler runs scalars, closures, option/result recovery, dynamic/fixed arrays,
 nominal classes, roles, extensions, isolated scenarios, and lazy bindings through syntax,
 semantics, typed IR, bytecode verification, and the VM.

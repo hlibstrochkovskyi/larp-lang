@@ -43,7 +43,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python3 tools/check_reproducible_build.py
+      - run: python3 tools/check_reproducible_build.py --output artifacts/reproducible-builds/ci
+      - run: python3 tools/package_candidate.py --report artifacts/reproducible-builds/ci/report.json --output artifacts/package-ci
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -52,4 +53,12 @@ jobs:
             artifacts/reproducible-builds/*/report.json
             artifacts/reproducible-builds/*/*/build.stdout.txt
             artifacts/reproducible-builds/*/*/build.stderr.txt
+            artifacts/package-ci/package-report.json
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: larp-candidate-linux-x86_64
+          path: |
+            artifacts/package-ci/larp-*.tar.gz
+            artifacts/package-ci/larp-*.tar.gz.sha256
           retention-days: 14
