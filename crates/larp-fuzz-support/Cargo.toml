@@ -1,0 +1,18 @@
+[package]
+name = "larp-fuzz-support"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+larp-source = { path = "../larp-source" }
+larp-diagnostics = { path = "../larp-diagnostics" }
+larp-syntax = { path = "../larp-syntax" }
+larp-format = { path = "../larp-format" }
+larp-compiler = { path = "../larp-compiler" }
+larp-artifact = { path = "../larp-artifact" }
+larp-bytecode = { path = "../larp-bytecode" }
+
+[lints]
+workspace = true

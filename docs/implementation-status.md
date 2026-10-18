@@ -303,8 +303,12 @@ preceding milestones.
 
 `cargo test --workspace --locked --offline` exercises the frontend, compiler/VM,
 bad bytecode, limits, diagnostics, and the independent model. Deterministic
-malformed-input tests are included; they are not a substitute for sustained
-coverage-guided fuzzing.
+malformed-input tests and shared fuzz oracles are included. Four short
+coverage-guided campaigns completed locally; see [fuzz validation](validation-fuzzing.md)
+for input counts, sanitizer limits, and the warmed-corpus qualification. They do
+not replace sustained campaigns. [Resource measurements](validation-resources.md)
+record fresh-process VM/GC behavior and distinguish structured limits from host
+allocation failure; fuel and traced-object counters are not a memory sandbox.
 
 `python3 tools/run_conformance.py` executes every active fixture through `check`
 and `run`, comparing stdout, explicitly declared inspection output, or primary diagnostic codes and source locations.

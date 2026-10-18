@@ -1,0 +1,63 @@
+name: Bounded fuzz campaigns
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'fuzz/**'
+      - 'crates/larp-fuzz-support/**'
+      - 'crates/larp-compiler/**'
+      - 'crates/larp-artifact/**'
+      - 'crates/larp-syntax/**'
+      - 'crates/larp-format/**'
+      - 'tools/run_fuzz.py'
+      - 'tools/seed_fuzz.py'
+      - '.github/workflows/fuzz.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build public corpus seeds
+        run: |
+          cargo build --locked --offline
+          python3 tools/seed_fuzz.py
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-10-17
+      - name: Install pinned fuzz tooling
+        run: cargo install cargo-fuzz --version 0.13.2 --locked
+      - name: Fetch standalone fuzz dependencies
+        run: cargo fetch --manifest-path fuzz/Cargo.toml --locked
+      - name: Build instrumented targets
+        env:
+          CARGO_NET_OFFLINE: 'true'
+        run: |
+          mkdir -p artifacts
+          rustc -Vv > artifacts/fuzz-build-environment.txt
+          cargo fuzz --version >> artifacts/fuzz-build-environment.txt
+          cargo fuzz build --codegen-units 16
+          git diff --exit-code -- fuzz/Cargo.lock
+      - name: Run four bounded campaigns
+        run: python3 tools/run_fuzz.py --seconds 60 --seed 49
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fuzz-evidence
+          path: |
+            artifacts/fuzz-campaign/
+            artifacts/fuzz-build-environment.txt
+            fuzz/corpus/seeds.json
+          retention-days: 14

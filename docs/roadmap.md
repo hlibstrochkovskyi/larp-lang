@@ -149,9 +149,18 @@ zero-argument prelude function values, CLI argument separation, and source/artif
 input corpus cases. Wire version 2 adds input intrinsics and still loads version 1.
 See [host input validation](validation-host-input.md).
 
-Remaining: expanded reference docs, reproducible distribution builds, and
-additional host APIs. Fuzzing, resource measurements,
-platform/distribution decisions, and hosted CI also remain release work.
+Implemented robustness baseline: four coverage-guided frontend/formatter/compiler/
+loader targets share stable replay oracles, with pinned isolated tooling and
+saved campaign evidence. Linux fresh-process VM/GC measurements distinguish
+logical counters, process RSS, structured VM limits, and host allocation failure.
+See [fuzz validation](validation-fuzzing.md) and
+[resource measurements](validation-resources.md). These bounded measurements do
+not establish sandboxing, sustained fuzz coverage, or a VM-wide byte budget.
+
+Remaining: expanded reference docs, reproducible distribution builds, additional
+host APIs, platform/distribution decisions, and a license choice. Hosted compiler
+CI passed for the preceding input slice; new robustness workflow results must be
+checked on their exact commit before being reported as passed.
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in
 the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource

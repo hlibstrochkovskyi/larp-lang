@@ -117,6 +117,22 @@ Use [the roadmap](docs/roadmap.md) to choose a vertical slice. Keep the checked-
 implementation status accurate, including when tests are only design fixtures.
 All repository prose and commits use English. Do not add assistant attribution.
 
+Coverage-guided targets have their own [fuzz workspace](fuzz/README.md), pinned
+tooling, and lockfile. The main workspace retains no third-party dependencies;
+stable tests replay the same oracles and minimized public findings. Nightly
+campaigns run on relevant main-branch pushes, weekly, or by workflow dispatch, with bounded time/RSS and saved
+failure logs. Do not disable production verification or effect checks for fuzzing.
+`python3 tools/seed_fuzz.py` accepts only the public example/conformance directories
+and public regressions; never seed from private notes or a recursive workspace scan.
+
+Run `python3 tools/measure_resources.py --samples 5` on Linux for measured VM
+workloads, deterministic counters, fresh-process RSS, and explicit VM/host-limit
+witnesses. The harness requires `cc`, builds a release probe, and records ignored
+JSON/CSV evidence. See [measurement boundaries](docs/validation-resources.md):
+traced allocation counts are not a memory budget, and instruction fuel does not
+provide a wall-clock or host-heap bound. CI runs a one-sample-per-mode smoke check;
+it does not assert timing/RSS thresholds across different runners.
+
 No open-source license has been chosen. This repository does not grant a license
 by implication. The maintainer-selected remote is
 [hlibstrochkovskyi/larp-lang](https://github.com/hlibstrochkovskyi/larp-lang).

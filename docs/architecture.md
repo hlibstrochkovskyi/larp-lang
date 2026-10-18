@@ -97,6 +97,7 @@ Current crates:
 | `larp-artifact` | Versioned encoding, bounded loading, source maps, mandatory verification |
 | `larp-format` | AST annotations, lossless token/comment layout, preservation checks |
 | `larp-cli` | `build`, `check`, `run`, `dump`, `fmt`, and `explain` |
+| `larp-fuzz-support` | Shared compiler/formatter/loader invariants for stable replay and libFuzzer |
 | `larp-scenario-model` | Isolated experiment, not linked into the CLI |
 
 Each crate contains working code. The dependency direction is from

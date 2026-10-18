@@ -39,3 +39,20 @@ an ordinary snapshot API, that the region checker is sound, that GC is correct,
 or that bytecode will be fast. Those require implementation, negative tests,
 stress/fuzz testing, and measured workloads. No performance or safety claim is
 inferred merely from choosing Rust.
+
+## Robustness and measurement follow-up (2026-10-19)
+
+[Rust Fuzz Book](https://rust-fuzz.github.io/book/cargo-fuzz/guide.html) documents
+instrumented `cargo-fuzz` targets and the `cfg(fuzzing)` configuration.
+[LLVM libFuzzer](https://llvm.org/docs/LibFuzzer.html) describes coverage feedback,
+seed corpora, failure reproduction, and bounded campaigns. LARP uses the actual
+production checks in every target; the fuzz configuration does not bypass the
+verifier, resource admission, visibility, or effects. Instrumentation counters
+are feedback rather than proof of complete input-space or source coverage.
+
+The standalone tooling workspace isolates registry dependencies from normal
+offline compiler builds. Shared oracle code and saved findings run on stable
+CI. [Resource measurements](validation-resources.md) separately distinguish VM
+instruction/frame diagnostics from host allocation failure and report process
+RSS alongside logical traced-object counts. Choosing Rust or using ASan alone
+does not provide an untrusted-code sandbox or a complete memory budget.

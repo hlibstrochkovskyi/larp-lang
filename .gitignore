@@ -7,4 +7,8 @@
 /.aws/
 *.larpbc
 *.profraw
+/fuzz/target/
+/fuzz/corpus/
+/fuzz/artifacts/
+/fuzz/coverage/
 .DS_Store

@@ -47,6 +47,8 @@ provide explicitly effect-checked CLI input through host capabilities.
 - [Lazy and suppression validation](docs/validation-lazy-and-suppression.md): current implementation checks.
 - [Host input](docs/host-input.md): arguments, stdin, EOF/errors, and embedding.
 - [Source formatter](docs/formatter.md): layout, preservation, and CLI modes.
+- [Fuzzing](fuzz/README.md): coverage-guided targets and stable regression replay.
+- [Resource measurements](docs/validation-resources.md): VM counters, process memory, and limit witnesses.
 - [Bytecode artifacts](docs/bytecode-format-v1.md): baseline wire format and limits; [version 2](docs/bytecode-format-v2.md) adds host input.
 - [Development](CONTRIBUTING.md): local setup and checks.
 - [Git setup](docs/git-setup.md): saved history in this managed workspace.

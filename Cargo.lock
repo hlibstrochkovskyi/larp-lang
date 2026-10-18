@@ -63,6 +63,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "larp-fuzz-support"
+version = "0.1.0-dev"
+dependencies = [
+ "larp-artifact",
+ "larp-bytecode",
+ "larp-compiler",
+ "larp-diagnostics",
+ "larp-format",
+ "larp-source",
+ "larp-syntax",
+]
+
+[[package]]
 name = "larp-ir"
 version = "0.1.0-dev"
 dependencies = [
