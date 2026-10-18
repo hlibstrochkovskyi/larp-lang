@@ -24,3 +24,4 @@ jobs:
       - run: python3 tools/run_conformance.py
       - run: python3 tools/run_conformance.py --gc-stress
       - run: python3 tools/run_conformance.py --artifacts --gc-stress
+      - run: python3 tools/run_conformance.py --formatted --artifacts --gc-stress

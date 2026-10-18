@@ -20,6 +20,7 @@ python3 tools/check_corpus.py
 python3 tools/run_conformance.py
 python3 tools/run_conformance.py --gc-stress
 python3 tools/run_conformance.py --artifacts --gc-stress
+python3 tools/run_conformance.py --formatted --artifacts --gc-stress
 git diff --check
 ```
 
@@ -85,6 +86,17 @@ Managed arena counters do not measure all host allocations or total memory.
 validate LARP region typing, scenario effects, GC, or scenario bytecode.
 `tools/check_corpus.py` validates fixture metadata and paths only.
 
+`larp fmt SOURCE --stdout` previews canonical source; `--check` checks without
+writing, and no flag updates the source. The formatter requires valid syntax,
+not valid types. Preserve raw token/comment sequences, parentheses, and program
+order; AST annotations drive spacing but do not reorder declarations. Every
+successful result is reparsed and its lexical stream compared before writing.
+Tests must cover idempotence and comment boundaries, not only output snapshots.
+`--formatted` in the corpus harness formats temporary copies, checks idempotence,
+and executes the original contracts through the real compiler/VM. It composes
+with `--artifacts` and `--gc-stress`; CI exercises the combined path. The harness
+does not reformat checked-in fixtures. See [formatter policy](docs/formatter.md).
+
 Persisted bytecode goes through `larp-artifact`, including complete source maps
 and explicit wire tags. Preserve shared loader budgets and mandatory independent
 verification; never hand an unchecked module to the VM. See the
@@ -96,5 +108,5 @@ implementation status accurate, including when tests are only design fixtures.
 All repository prose and commits use English. Do not add assistant attribution.
 
 No open-source license has been chosen. This repository does not grant a license
-by implication; select one before public distribution. Git has no remote until
-the maintainer supplies a destination.
+by implication. The maintainer-selected remote is
+[hlibstrochkovskyi/larp-lang](https://github.com/hlibstrochkovskyi/larp-lang).

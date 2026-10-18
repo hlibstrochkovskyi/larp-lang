@@ -145,8 +145,7 @@ restores its inherited depth. Suppressed calls still require `observe`, still
 evaluate their arguments, and still execute their computation. `palantir`,
 diagnostics, fatal errors, and external effects are not muted.
 
-These features are part of M6; formatting, host APIs, and release gates remain
-pending. See [lazy and suppression validation](validation-lazy-and-suppression.md).
+These features are part of M6; host APIs and release gates remain pending. See [lazy and suppression validation](validation-lazy-and-suppression.md).
 
 ## CLI
 
@@ -175,13 +174,16 @@ executes it. Original source files are unnecessary when running an artifact.
 `--gc-stress` collects at every object, array, closure, and lazy-cell allocation
 safepoint and may be combined with `--fuel`. `dump` emits disassembly
 or typed IR; `--ir` requires source because artifacts contain bytecode. Input is
-one UTF-8 source or versioned artifact. `fmt` remains unavailable. See the
-[artifact format](bytecode-format-v1.md) for wire tables, limits, and output publication.
+one UTF-8 source or versioned artifact. `fmt SOURCE [--check|--stdout]` formats
+syntactically valid source without requiring type validity. It preserves raw
+tokens/comments and checks its result before publication. Default mode writes
+atomically; check/preview modes never write. See [formatter policy](formatter.md)
+and the [artifact format](bytecode-format-v1.md) for wire tables, limits, and output publication.
 Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 ## Not implemented yet
 
-Modules, host I/O APIs, and formatting. These are tracked by the existing roadmap,
+Modules and host I/O APIs. These are tracked by the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
 
 The scenario model remains independent and is not a substitute for compiling
@@ -272,7 +274,8 @@ a fixed array still retain their shared identity.
 
 ## Evidence
 
-See [artifact validation](validation-artifacts.md) for the current M6 slice and
+See [formatter validation](validation-formatter.md) for source formatting and
+[artifact validation](validation-artifacts.md) for the current M6 slice and
 [lazy and suppression validation](validation-lazy-and-suppression.md) for the preceding one. See [scenario validation](validation-scenarios.md) and
 [scenario evaluation](scenario-evaluation.md) for the current M5 acceptance gate, [roles and extensions validation](validation-roles-and-extensions.md)
 for the preceding completed gate, and [objects validation](validation-objects.md) for
@@ -291,5 +294,7 @@ and `run`, comparing stdout, explicitly declared inspection output, or primary d
 and lazy-cell allocation safepoint. All 77 current fixtures are active; `--all`
 selects the same complete inventory and passes. `--artifacts` also builds valid
 programs, loads/verifies them, and compares execution with source; invalid source
-must fail build without producing output. A finite corpus with no pending
+must fail build without producing output. `--formatted` formats temporary copies,
+checks idempotence, and compiles/executes the same contracts; it composes with
+artifact loading and GC stress. A finite corpus with no pending
 cases does not establish full language conformance or complete the M6 release.

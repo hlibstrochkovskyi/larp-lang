@@ -27,6 +27,7 @@ dependencies = [
  "larp-bytecode",
  "larp-compiler",
  "larp-diagnostics",
+ "larp-format",
  "larp-source",
  "larp-vm",
 ]
@@ -49,6 +50,16 @@ name = "larp-diagnostics"
 version = "0.1.0-dev"
 dependencies = [
  "larp-source",
+]
+
+[[package]]
+name = "larp-format"
+version = "0.1.0-dev"
+dependencies = [
+ "larp-diagnostics",
+ "larp-source",
+ "larp-syntax",
+ "larp-types",
 ]
 
 [[package]]

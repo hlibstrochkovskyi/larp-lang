@@ -16,6 +16,7 @@ larp-compiler.workspace = true
 larp-vm.workspace = true
 larp-bytecode.workspace = true
 larp-artifact.workspace = true
+larp-format.workspace = true
 
 [lints]
 workspace = true

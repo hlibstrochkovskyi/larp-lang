@@ -5,6 +5,7 @@ mod parser;
 
 use larp_source::Span;
 use larp_types::{Binary, Unary};
+pub use lexer::{Comment, CommentKind, Kind as TokenKind, Lexed, Token, lex_with_comments};
 pub use parser::parse;
 
 #[derive(Clone, Debug)]

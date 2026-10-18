@@ -29,7 +29,8 @@ scenario frames with checked call graphs, selective final-field commit, and
 `palantir` reports. Read-only `nonchalant` bindings memoize snapshot computations;
 `sybau` suppresses ordinary `yap` output across calls. The separate state model
 remains an independent experiment. Versioned `.larpbc` artifacts embed source maps
-and pass verification again on loading. Formatting remains planned.
+and pass verification again on loading. The syntax-aware formatter preserves
+comments, original token spellings, and program order.
 
 ## Start here
 
@@ -43,6 +44,7 @@ and pass verification again on loading. Formatting remains planned.
 - [Scenario evaluation](docs/scenario-evaluation.md): executed comparisons and a counterexample.
 - [Scenario validation](docs/validation-scenarios.md): compiled scenario acceptance evidence.
 - [Lazy and suppression validation](docs/validation-lazy-and-suppression.md): current implementation checks.
+- [Source formatter](docs/formatter.md): layout, preservation, and CLI modes.
 - [Bytecode artifacts](docs/bytecode-format-v1.md): wire format, limits, and CLI behavior.
 - [Development](CONTRIBUTING.md): local setup and checks.
 - [Git setup](docs/git-setup.md): saved history in this managed workspace.
@@ -66,17 +68,20 @@ cargo run -p larp-cli -- run tests/conformance/pass/scenario.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo run -p larp-cli -- build examples/objects.larp -o /tmp/objects.larpbc
 cargo run -p larp-cli -- run /tmp/objects.larpbc --gc-stress
+cargo run -p larp-cli -- fmt examples/objects.larp --stdout
 cargo test --workspace --locked --offline
 python3 tools/run_conformance.py
 python3 tools/run_conformance.py --gc-stress
 python3 tools/run_conformance.py --artifacts --gc-stress
+python3 tools/run_conformance.py --formatted --artifacts --gc-stress
 ```
 
 The implemented CLI commands are `--help`, `--version`, `explain CODE`,
 `build SOURCE [-o OUTPUT]`, `check FILE`, `run FILE [--fuel N] [--gc-stress]`,
-and `dump FILE [--ir]`. Source and artifact input are supported by `check`, `run`,
-and bytecode `dump`; `--ir` requires source. Artifacts contain full source text
-for diagnostics and run without the original source file. `fmt` remains unavailable.
+`dump FILE [--ir]`, and `fmt SOURCE [--check|--stdout]`. Source and artifact input
+are supported by `check`, `run`, and bytecode `dump`; `--ir` requires source. Artifacts contain full source text
+for diagnostics and run without the original source file. `fmt` updates source
+by default; `--stdout` previews and `--check` verifies formatting without changes.
 
 The compiler implementation direction is Rust → typed IR → bytecode → LARP VM.
 The language semantics do not depend on Rust, LLVM, or any particular collector.
@@ -84,5 +89,6 @@ All 77 current conformance fixtures are active; the corpus is a finite acceptanc
 suite, not a proof that every language rule is implemented. Specification v0.1
 defines the broader target, and M6 developer-preview gates remain open.
 
-No remote or distribution license has been selected. Private design material is
-excluded from version control.
+The project repository is [hlibstrochkovskyi/larp-lang](https://github.com/hlibstrochkovskyi/larp-lang).
+No distribution license has been selected. Private design material is excluded
+from version control.

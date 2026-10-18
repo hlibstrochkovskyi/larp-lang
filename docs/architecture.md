@@ -94,7 +94,9 @@ Current crates:
 | `larp-ir` | Typed basic blocks and bytecode lowering |
 | `larp-bytecode` | In-memory instructions, dataflow verifier, disassembly |
 | `larp-vm` | Iterative frames/callbacks, tagged values, object/array/closure/lazy GC, checked execution, observations |
-| `larp-cli` | `check`, `run`, `dump`, and `explain` |
+| `larp-artifact` | Versioned encoding, bounded loading, source maps, mandatory verification |
+| `larp-format` | AST annotations, lossless token/comment layout, preservation checks |
+| `larp-cli` | `build`, `check`, `run`, `dump`, `fmt`, and `explain` |
 | `larp-scenario-model` | Isolated experiment, not linked into the CLI |
 
 Each crate contains working code. The dependency direction is from
@@ -412,11 +414,17 @@ rejection, not a promise of long-term binary compatibility.
 Semantic phases emit structured English diagnostics with stable codes. Rendering
 into terminal text or future JSON happens at the boundary. Keep expected/found
 types and related spans in data, not embedded in ANSI strings. Memes never replace
-an actionable explanation. A formatter must operate on parsed syntax with comment
-preservation; it is not a regex substitution pass.
+an actionable explanation. The formatter parses source and annotates token spans for generic delimiters
+and unary operators. A concrete delimiter tree retains original tokens and
+comments, including parentheses and declaration/member order that the grouped
+AST does not preserve. A bounded renderer produces deterministic layout. The
+result is reparsed and raw token/comment sequences compared before the CLI can
+write. Compiler lexing skips comment allocation; tooling opts into a lossless
+lexical API. See [formatter policy](formatter.md).
 
 Commands already available: `explain`, artifact `build`, source/artifact `check`
-and `run`, and IR/bytecode `dump` (`--ir` requires source). Disassembly includes role method signatures, class implementation tables,
-concrete extension metadata, lazy construction/forcing, and silence operations. Next: `fmt` and tooling integrations. No language
+and `run`, IR/bytecode `dump` (`--ir` requires source), and source `fmt` in
+write/check/stdout modes. Disassembly includes role method signatures, class implementation tables,
+concrete extension metadata, lazy construction/forcing, and silence operations. Next: host APIs and tooling integrations. No language
 server, incremental query engine, package manager, or optimizer is needed before
 basic programs pass conformance.

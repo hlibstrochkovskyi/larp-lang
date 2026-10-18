@@ -1,8 +1,8 @@
 # Implementation roadmap
 
 Status: M1 through the M5 feature set are implemented. M6 is in progress; lazy
-bindings, output suppression, and persisted bytecode are implemented, while
-preview gates remain open.
+bindings, output suppression, persisted bytecode, and source formatting are
+implemented, while preview gates remain open.
 This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -137,14 +137,20 @@ maps, bounded decoding and mandatory verification, `build` and source/artifact
 `check`/`run`/`dump`, deleted-source diagnostics, and corpus execution through loaded
 artifacts with GC stress. See [artifact validation](validation-artifacts.md).
 
-Remaining: formatter, expanded examples/reference docs, reproducible distribution builds,
+Implemented formatter slice: AST-aware layout over a lossless token/comment
+stream, preserved spellings/parentheses/order, result reparse and lexical
+invariant checking, idempotence tests, and CLI write/check/stdout modes. Corpus
+contracts also run after formatting, artifact loading, and GC stress. See
+[formatter validation](validation-formatter.md).
+
+Remaining: expanded examples/reference docs, reproducible distribution builds,
 and minimal host APIs with declared effects. Fuzzing, resource measurements,
 platform/distribution decisions, and hosted CI also remain release work.
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in
 the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource
-limits. Choose a distribution license and supported platforms. Run CI on the
-remote when a remote exists; local checks do not prove hosted CI passed.
+limits. Choose a distribution license and supported platforms. Run CI on the maintainer-selected
+GitHub remote; local checks do not prove hosted CI passed.
 
 ## Later RFCs
 

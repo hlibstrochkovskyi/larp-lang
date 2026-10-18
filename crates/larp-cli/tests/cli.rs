@@ -32,7 +32,7 @@ fn explanation_has_code_and_actionable_conversion_help() {
 #[test]
 fn unavailable_and_invalid_commands_fail_without_pretending_to_compile() {
     for args in [
-        vec!["fmt", "missing.larp"],
+        vec!["fmt", "missing.larp", "--unknown"],
         vec!["explain", "LARP-T999"],
         vec!["explain"],
         vec!["--help", "extra"],
@@ -338,4 +338,140 @@ fn artifact_loading_rejects_corruption_and_obeys_runtime_fuel() {
     for code in ["LARP-B002", "LARP-B003"] {
         assert!(larp(&["explain", code]).status.success());
     }
+}
+
+#[test]
+fn formatter_modes_are_idempotent_and_check_stdout_never_modify_source() {
+    let scratch = Scratch::new();
+    let source = scratch.path("format.larp");
+    let raw = "// lead 🦀\nmain_character{mf n=4;yap(n);}// tail\n";
+    std::fs::write(&source, raw).unwrap();
+    let checked = larp(&["fmt", &source, "--check"]);
+    assert_eq!(checked.status.code(), Some(1));
+    assert!(checked.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&checked.stderr).contains("needs formatting"));
+    assert_eq!(std::fs::read_to_string(&source).unwrap(), raw);
+    let preview = larp(&["fmt", &source, "--stdout"]);
+    assert!(
+        preview.status.success(),
+        "{}",
+        String::from_utf8_lossy(&preview.stderr)
+    );
+    assert!(preview.stderr.is_empty());
+    let formatted = String::from_utf8(preview.stdout).unwrap();
+    assert!(formatted.contains("\n    mf n = 4;\n"), "{formatted}");
+    assert!(formatted.contains("// lead 🦀") && formatted.contains("// tail"));
+    assert_eq!(std::fs::read_to_string(&source).unwrap(), raw);
+    let written = larp(&["fmt", &source]);
+    assert!(
+        written.status.success(),
+        "{}",
+        String::from_utf8_lossy(&written.stderr)
+    );
+    assert!(written.stdout.is_empty() && written.stderr.is_empty());
+    assert_eq!(std::fs::read_to_string(&source).unwrap(), formatted);
+    let stable = larp(&["fmt", "--check", &source]);
+    assert!(stable.status.success());
+    assert!(stable.stdout.is_empty() && stable.stderr.is_empty());
+    assert_eq!(
+        larp(&["fmt", "--stdout", &source]).stdout,
+        formatted.as_bytes()
+    );
+    assert_eq!(larp(&["run", &source]).stdout, b"4\n");
+    assert_eq!(std::fs::read_dir(&scratch.0).unwrap().count(), 1);
+}
+
+#[test]
+fn formatter_requires_valid_syntax_but_does_not_require_valid_types() {
+    let scratch = Scratch::new();
+    let source = scratch.path("unfinished.larp");
+    let semantic_error = "main_character{if(49){yap(\"never\");}}";
+    std::fs::write(&source, semantic_error).unwrap();
+    assert!(larp(&["fmt", &source]).status.success());
+    let checked = larp(&["check", &source]);
+    assert!(String::from_utf8_lossy(&checked.stderr).contains("LARP-T002"));
+    for raw in ["main_character{yap(49)", "main_character{yap(\"bad\\q\");}"] {
+        std::fs::write(&source, raw).unwrap();
+        for options in [vec![], vec!["--check"], vec!["--stdout"]] {
+            let mut args = vec!["fmt", &source];
+            args.extend(options);
+            let failed = larp(&args);
+            assert_eq!(failed.status.code(), Some(1));
+            assert!(failed.stdout.is_empty());
+            assert!(String::from_utf8_lossy(&failed.stderr).contains(" --> "));
+            assert_eq!(std::fs::read_to_string(&source).unwrap(), raw);
+        }
+    }
+    for args in [
+        vec!["fmt"],
+        vec!["fmt", "--check"],
+        vec!["fmt", "--stdout", "--check"],
+        vec!["fmt", &source, "--stdout", "--check"],
+    ] {
+        assert_eq!(larp(&args).status.code(), Some(2), "{args:?}");
+    }
+    assert_eq!(larp(&["fmt", "missing.larp"]).status.code(), Some(1));
+    let artifact = scratch.path("program.larpbc");
+    assert!(
+        larp(&["build", &fixture("pass/functions.larp"), "-o", &artifact])
+            .status
+            .success()
+    );
+    let before = std::fs::read(&artifact).unwrap();
+    assert_eq!(larp(&["fmt", &artifact]).status.code(), Some(2));
+    assert_eq!(std::fs::read(&artifact).unwrap(), before);
+    assert!(larp(&["explain", "LARP-C001"]).status.success());
+}
+
+#[cfg(unix)]
+#[test]
+fn formatter_preserves_source_permissions_and_follows_symlink_targets() {
+    use std::os::unix::fs::{PermissionsExt, symlink};
+    let scratch = Scratch::new();
+    let target = scratch.path("target.larp");
+    let link = scratch.path("link.larp");
+    std::fs::write(&target, "main_character{yap(49);}").unwrap();
+    std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o640)).unwrap();
+    symlink(&target, &link).unwrap();
+    assert!(larp(&["fmt", &link]).status.success());
+    assert!(
+        std::fs::symlink_metadata(&link)
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
+    assert_eq!(
+        std::fs::metadata(&target).unwrap().permissions().mode() & 0o777,
+        0o640
+    );
+    assert!(larp(&["fmt", &target, "--check"]).status.success());
+    assert_eq!(larp(&["run", &link]).stdout, b"49\n");
+    assert_eq!(std::fs::read_dir(&scratch.0).unwrap().count(), 2);
+}
+
+#[test]
+fn formatter_input_size_is_bounded_before_utf8_decoding_and_source_indexing() {
+    let scratch = Scratch::new();
+    let path = scratch.path("oversize.larp");
+    let text = format!(
+        "main_character {{}} //{}",
+        "🦀".repeat(larp_format::MAX_SOURCE_BYTES / 4)
+    );
+    std::fs::write(&path, &text).unwrap();
+    let before = std::fs::metadata(&path).unwrap().len();
+    for options in [vec![], vec!["--check"], vec!["--stdout"]] {
+        let mut args = vec!["fmt", &path];
+        args.extend(options);
+        let output = larp(&args);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(
+            stderr.contains("LARP-P003") && stderr.contains("source size limit"),
+            "{stderr}"
+        );
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), before);
+    }
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
+    assert_eq!(std::fs::read_dir(&scratch.0).unwrap().count(), 1);
 }

@@ -13,6 +13,7 @@ Usage:
   larp check FILE.larp|FILE.larpbc
   larp run FILE.larp|FILE.larpbc [--fuel INSTRUCTIONS] [--gc-stress]
   larp dump FILE.larp|FILE.larpbc [--ir]
+  larp fmt FILE.larp [--check|--stdout]
 
 Implemented: scalar types, first-class functions, closures, arrays, options/results,
 archetypes, roles, extensions, constructors, private/public fields, bound methods,
@@ -20,7 +21,7 @@ branches, loops, checked conversions, effect bounds, typed IR,
 verified bytecode and versioned artifacts, eager collection pipelines, isolated scenarios,
 pure memoized lazy bindings, dynamic observation suppression, and tracing GC. palantir reports go to stderr.
 Artifacts embed source maps and are verified again when loaded. --ir requires source.
-Planned: fmt.
+fmt preserves tokens and comments; its default mode updates the source file.
 --gc-stress collects at every object/array/closure/lazy allocation safepoint.";
 
 fn main() -> ExitCode {
@@ -67,11 +68,12 @@ fn main() -> ExitCode {
         },
         ["dump", path] => process(path, Mode::Dump),
         ["dump", path, "--ir"] => process(path, Mode::Ir),
-        [command @ "fmt", ..] => {
-            eprintln!(
-                "error: '{command}' is not implemented yet; see docs/implementation-status.md"
-            );
-            ExitCode::from(2)
+        ["fmt", path] if !path.starts_with("--") => process(path, Mode::Format(FormatMode::Write)),
+        ["fmt", path, "--check"] | ["fmt", "--check", path] if !path.starts_with("--") => {
+            process(path, Mode::Format(FormatMode::Check))
+        }
+        ["fmt", path, "--stdout"] | ["fmt", "--stdout", path] if !path.starts_with("--") => {
+            process(path, Mode::Format(FormatMode::Stdout))
         }
         _ => {
             eprintln!("error: invalid arguments\n\n{HELP}");
@@ -108,6 +110,13 @@ enum Mode {
     Dump,
     Ir,
     Build(PathBuf),
+    Format(FormatMode),
+}
+
+enum FormatMode {
+    Write,
+    Check,
+    Stdout,
 }
 
 fn process(path: &str, mode: Mode) -> ExitCode {
@@ -127,8 +136,8 @@ fn process(path: &str, mode: Mode) -> ExitCode {
             .extension()
             .is_some_and(|ext| ext == "larpbc")
     {
-        if matches!(mode, Mode::Ir | Mode::Build(_)) {
-            eprintln!("error: build and dump --ir require source input");
+        if matches!(mode, Mode::Ir | Mode::Build(_) | Mode::Format(_)) {
+            eprintln!("error: build, fmt, and dump --ir require source input");
             return ExitCode::from(2);
         }
         let artifact = match larp_artifact::read(&mut file) {
@@ -145,11 +154,42 @@ fn process(path: &str, mode: Mode) -> ExitCode {
         };
         return execute(&artifact.module, &artifact.sources, mode);
     }
-    let mut text = String::new();
-    if let Err(error) = file.read_to_string(&mut text) {
-        return input_error(path, &error);
-    }
+    let text = if matches!(mode, Mode::Format(_)) {
+        let mut bytes = Vec::new();
+        let limit = larp_format::MAX_SOURCE_BYTES;
+        if let Err(error) = file.take((limit + 1) as u64).read_to_end(&mut bytes) {
+            return input_error(path, &error);
+        }
+        if bytes.len() > limit {
+            let source = SourceFile::new(SourceId(0), path, "");
+            let diagnostic = larp_diagnostics::Diagnostic::error(
+                "LARP-P003",
+                source.span(0..0).unwrap(),
+                "Formatter source size limit exceeded",
+            );
+            eprint!("{}", larp_diagnostics::render(&diagnostic, &source));
+            return ExitCode::from(1);
+        }
+        match String::from_utf8(bytes) {
+            Ok(text) => text,
+            Err(error) => {
+                return input_error(
+                    path,
+                    &std::io::Error::new(std::io::ErrorKind::InvalidData, error),
+                );
+            }
+        }
+    } else {
+        let mut text = String::new();
+        if let Err(error) = file.read_to_string(&mut text) {
+            return input_error(path, &error);
+        }
+        text
+    };
     let source = SourceFile::new(SourceId(0), path, text);
+    if let Mode::Format(mode) = mode {
+        return format_source(path, &source, mode);
+    }
     let compilation = match larp_compiler::compile(&source) {
         Ok(compilation) => compilation,
         Err(diagnostics) => {
@@ -180,7 +220,7 @@ fn process(path: &str, mode: Mode) -> ExitCode {
                     return ExitCode::from(1);
                 }
             };
-            if let Err(error) = write_artifact(&output, &bytes) {
+            if let Err(error) = write_file(&output, &bytes, None, None) {
                 eprintln!("error: cannot write '{}': {error}", output.display());
                 return ExitCode::from(1);
             }
@@ -217,15 +257,63 @@ fn execute(module: &larp_bytecode::VerifiedModule, sources: &[SourceFile], mode:
                 return ExitCode::from(1);
             }
         }
-        Mode::Build(_) | Mode::Ir => {
+        Mode::Build(_) | Mode::Ir | Mode::Format(_) => {
             unreachable!("source-only commands are handled before execution")
         }
     }
     ExitCode::SUCCESS
 }
 
-/// Publish a complete file with a sibling rename. Failed builds keep prior output.
-fn write_artifact(output: &Path, bytes: &[u8]) -> std::io::Result<()> {
+fn format_source(path: &str, source: &SourceFile, mode: FormatMode) -> ExitCode {
+    let formatted = match larp_format::format(source) {
+        Ok(formatted) => formatted,
+        Err(diagnostics) => {
+            for diagnostic in diagnostics {
+                eprint!("{}", larp_diagnostics::render(&diagnostic, source));
+            }
+            return ExitCode::from(1);
+        }
+    };
+    match mode {
+        FormatMode::Stdout => {
+            if let Err(error) = std::io::stdout().lock().write_all(formatted.as_bytes()) {
+                eprintln!("error: cannot write formatted source: {error}");
+                return ExitCode::from(1);
+            }
+        }
+        FormatMode::Check if formatted != source.text() => {
+            eprintln!("{path}: source needs formatting");
+            return ExitCode::from(1);
+        }
+        FormatMode::Write if formatted != source.text() => {
+            let result = (|| {
+                // Follow source symlinks without replacing the link itself.
+                let target = std::fs::canonicalize(path)?;
+                let permissions = std::fs::metadata(&target)?.permissions();
+                write_file(
+                    &target,
+                    formatted.as_bytes(),
+                    Some(permissions),
+                    Some(source.text().as_bytes()),
+                )
+            })();
+            if let Err(error) = result {
+                eprintln!("error: cannot format '{path}': {error}");
+                return ExitCode::from(1);
+            }
+        }
+        FormatMode::Check | FormatMode::Write => {}
+    }
+    ExitCode::SUCCESS
+}
+
+/// Publish a complete file by sibling rename. Errors preserve previous output.
+fn write_file(
+    output: &Path,
+    bytes: &[u8],
+    permissions: Option<std::fs::Permissions>,
+    expected: Option<&[u8]>,
+) -> std::io::Result<()> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SERIAL: AtomicU64 = AtomicU64::new(0);
     let parent = output
@@ -262,12 +350,52 @@ fn write_artifact(output: &Path, bytes: &[u8]) -> std::io::Result<()> {
         temporary.ok_or_else(|| std::io::Error::other("cannot reserve temporary output"))?;
     let result = (|| {
         file.write_all(bytes)?;
+        if let Some(permissions) = permissions {
+            file.set_permissions(permissions)?;
+        }
         file.sync_all()?;
         drop(file);
+        if let Some(expected) = expected
+            && std::fs::read(output)? != expected
+        {
+            return Err(std::io::Error::other(
+                "source changed while formatting; retry with the latest file",
+            ));
+        }
         std::fs::rename(&path, output)
     })();
     if result.is_err() {
         let _ = std::fs::remove_file(path);
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn publication_rejects_changed_source_and_cleans_failed_rename_output() {
+        let directory =
+            std::env::temp_dir().join(format!("larp-publication-{}", std::process::id()));
+        std::fs::create_dir(&directory).unwrap();
+        let source = directory.join("source.larp");
+        std::fs::write(&source, b"latest edit").unwrap();
+        let error = write_file(
+            &source,
+            b"stale formatted result",
+            None,
+            Some(b"old source"),
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("source changed"));
+        assert_eq!(std::fs::read(&source).unwrap(), b"latest edit");
+        assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 1);
+        let target_directory = directory.join("destination");
+        std::fs::create_dir(&target_directory).unwrap();
+        assert!(write_file(&target_directory, b"artifact", None, None).is_err());
+        assert!(target_directory.is_dir());
+        assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 2);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 }

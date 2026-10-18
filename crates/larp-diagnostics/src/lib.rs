@@ -11,6 +11,11 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-C001",
+        title: "Formatter invariant failed",
+        explanation: "The formatter could not preserve the parsed program's token and comment stream. This is a tooling bug; the source file is left unchanged. Report the input and keep the original source.",
+    },
+    DiagnosticCode {
         id: "LARP-B002",
         title: "Invalid bytecode artifact",
         explanation: "The persisted bytecode file could not be read or has an unsupported version, malformed section, invalid source map, or unknown wire tag. Rebuild the artifact from source with this toolchain. Loading never executes unverified bytecode.",
@@ -73,7 +78,7 @@ pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
         id: "LARP-P003",
         title: "Compilation resource limit exceeded",
-        explanation: "The source exceeds a parser nesting/expression limit or a compiler/verifier resource budget. Split large expressions and functions. This is an implementation resource limit, not a type error or malformed-bytecode compiler bug.",
+        explanation: "The source or formatted output exceeds a frontend/tooling size, nesting, token, or analysis budget. Split large expressions and files. This is an implementation resource limit, not a type error or malformed-bytecode compiler bug.",
     },
     DiagnosticCode {
         id: "LARP-P001",

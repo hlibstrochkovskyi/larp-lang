@@ -25,7 +25,10 @@ every object, array, closure, and lazy-cell allocation safepoint; CI executes th
 corpus with both normal collection and this stress mode. `--artifacts` adds
 `build`/loaded `check`/loaded `run`, comparing exit status, stdout, and stderr
 with direct source execution. Invalid source must fail to build without creating
-a file. CI includes this path with GC stress.
+a file. `--formatted` additionally formats temporary copies, checks idempotence,
+and compiles/executes the same expectations. It composes with `--artifacts` and
+`--gc-stress`; CI exercises the combined path. Error locations must remain valid,
+while line numbers may change after formatting. Checked-in files are not modified.
 
 The harness must fail if an unsupported case is silently skipped within a release's
 declared subset. Report fixtures pin the current deterministic renderer; its

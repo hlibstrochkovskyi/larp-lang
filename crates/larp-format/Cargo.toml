@@ -1,0 +1,15 @@
+[package]
+name = "larp-format"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+larp-source.workspace = true
+larp-diagnostics.workspace = true
+larp-syntax.workspace = true
+larp-types.workspace = true
+
+[lints]
+workspace = true
