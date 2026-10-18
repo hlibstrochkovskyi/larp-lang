@@ -20,8 +20,31 @@ branch with the alternate repository's saved history. The alternate repository
 uses the maintainer's existing author/committer configuration, with no assistant
 credit. The maintainer-selected `origin` is
 `https://github.com/hlibstrochkovskyi/larp-lang.git`; `main` tracks `origin/main`.
-The remote head was inspected through the connected GitHub tool and matched
-local commit `8eeef7c` before the formatter slice.
+The 2026-10-19 read-only audit confirmed 12 project commits through `cc1354d`,
+236 tracked files, a readable index exactly matching HEAD, clean tracked files,
+and successful `git fsck --full`. Local `main`, `origin/main`, and the hosted
+GitHub branch all matched `cc1354d3c294c47565adedeaffb9ca56fa5b1d7e` at that audit.
+These are dated observations; later development can change the head and counts.
+
+In contrast, ordinary `.git` had no index, no `origin`, and an unborn `main`.
+Its `refs/agents/...` contained host-generated checkpoints, not the published
+project history. Consequently plain `git status --short` listed the project as
+untracked. Do not stage everything or create a new initial commit to resolve
+that symptom. Do not delete checkpoint objects or replace either metadata tree.
+Inspect the selected Git directory before changing history:
+
+```sh
+git rev-parse --git-dir
+git status --short --branch
+sh tools/git-local.sh rev-parse --git-dir
+sh tools/git-local.sh status --short --branch
+sh tools/git-local.sh remote -v
+sh tools/git-local.sh log -5 --oneline
+```
+
+Only the helper's status describes the saved project history in this managed
+checkout. A standard clone elsewhere uses its ordinary `.git`; this alternate
+metadata arrangement is local tooling, not a language/build requirement.
 
 A portable `artifacts/larp-foundation.bundle` is regenerated from `main` after
 implementation commits. Both the bundle and alternate metadata are ignored by Git.

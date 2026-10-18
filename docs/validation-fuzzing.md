@@ -94,9 +94,34 @@ The complete workspace tests, formatting, Clippy with denied warnings, compiler
 release tests, and corpus checks passed locally. All 84 active corpus cases
 passed both ordinary execution and the combined formatter/artifact/GC-stress path.
 
-The new hosted workflow runs on relevant main-branch pushes, weekly, and by
-manual dispatch; normal CI replays stable oracles and performs a one-sample
-resource smoke check. Local success does not establish hosted workflow success.
+## Hosted verification
+
+Both hosted workflows completed successfully for the exact implementation commit
+`cc1354d3c294c47565adedeaffb9ca56fa5b1d7e`:
+
+- [Compiler/conformance run](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39175904084):
+  formatting, denied-warning Clippy, workspace/release tests, all four corpus
+  execution modes, and the resource harness smoke check passed.
+- [Bounded fuzz run](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39175904054):
+  all four campaigns passed on a GitHub-hosted Linux runner. This workflow did
+  not disable leak checking, and completed without the local LeakSanitizer error.
+
+| Target | Hosted executed units | Reported peak RSS MiB |
+| --- | ---: | ---: |
+| Frontend | 250,847 | 447 |
+| Formatter | 355,687 | 470 |
+| Compiler | 365,821 | 485 |
+| Artifact | 705,516 | 504 |
+
+Total: **1,677,871 hosted executed units**. All four exit statuses were zero,
+none timed out, and none produced finding inputs. The job's decoded logs were
+inspected independently; extracted outcomes are retained locally in ignored
+`artifacts/hosted-fuzz-cc1354d.json`. Workflow artifacts preserve runner evidence.
+This finite successful run is not proof that leaks or other defects cannot exist.
+
+The workflow runs on relevant main-branch pushes, weekly, and by manual dispatch;
+normal CI replays stable oracles and performs a one-sample resource smoke check.
+These links prove results for the named commit, not every later revision.
 
 This baseline is intentionally short. Public source fixtures are mostly below
 one KiB; the observed dynamic mutation length remained near that scale. A 64 KiB
