@@ -14,6 +14,8 @@ larp-diagnostics.workspace = true
 larp-source.workspace = true
 larp-compiler.workspace = true
 larp-vm.workspace = true
+larp-bytecode.workspace = true
+larp-artifact.workspace = true
 
 [lints]
 workspace = true

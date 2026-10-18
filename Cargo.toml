@@ -18,6 +18,7 @@ larp-bytecode = { path = "crates/larp-bytecode" }
 larp-ir = { path = "crates/larp-ir" }
 larp-compiler = { path = "crates/larp-compiler" }
 larp-vm = { path = "crates/larp-vm" }
+larp-artifact = { path = "crates/larp-artifact" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

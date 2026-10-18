@@ -17,7 +17,7 @@ main_character {
 ```
 
 **Status: executable core with objects, roles, collections, and isolated scenarios.**
-The example above compiles to verified in-memory bytecode and runs on the LARP VM, printing
+The example above compiles to verified bytecode and runs on the LARP VM, printing
 `1009`. Functions, recursion, loops, checked arithmetic, effect bounds, first-class
 functions, snapshot captures, options/results, checked conversions, dynamic/fixed
 arrays, and eager collection pipelines work today. Nominal classes support
@@ -28,7 +28,8 @@ and checked effect bounds. Language-level `larp` blocks now compile to isolated
 scenario frames with checked call graphs, selective final-field commit, and
 `palantir` reports. Read-only `nonchalant` bindings memoize snapshot computations;
 `sybau` suppresses ordinary `yap` output across calls. The separate state model
-remains an independent experiment. Persisted artifacts and formatting are planned.
+remains an independent experiment. Versioned `.larpbc` artifacts embed source maps
+and pass verification again on loading. Formatting remains planned.
 
 ## Start here
 
@@ -42,6 +43,7 @@ remains an independent experiment. Persisted artifacts and formatting are planne
 - [Scenario evaluation](docs/scenario-evaluation.md): executed comparisons and a counterexample.
 - [Scenario validation](docs/validation-scenarios.md): compiled scenario acceptance evidence.
 - [Lazy and suppression validation](docs/validation-lazy-and-suppression.md): current implementation checks.
+- [Bytecode artifacts](docs/bytecode-format-v1.md): wire format, limits, and CLI behavior.
 - [Development](CONTRIBUTING.md): local setup and checks.
 - [Git setup](docs/git-setup.md): saved history in this managed workspace.
 - [Conformance corpus](tests/conformance/README.md): required programs and failures.
@@ -62,15 +64,19 @@ cargo run -p larp-cli -- run examples/roles.larp --gc-stress
 cargo run -p larp-cli -- run examples/lazy.larp --gc-stress
 cargo run -p larp-cli -- run tests/conformance/pass/scenario.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
+cargo run -p larp-cli -- build examples/objects.larp -o /tmp/objects.larpbc
+cargo run -p larp-cli -- run /tmp/objects.larpbc --gc-stress
 cargo test --workspace --locked --offline
 python3 tools/run_conformance.py
 python3 tools/run_conformance.py --gc-stress
+python3 tools/run_conformance.py --artifacts --gc-stress
 ```
 
 The implemented CLI commands are `--help`, `--version`, `explain CODE`,
-`check FILE`, `run FILE [--fuel N] [--gc-stress]`, and `dump FILE [--ir]`.
-`build` and `fmt` report that they are unavailable. Bytecode currently lives
-in memory; there is no persisted `.larpbc` format yet.
+`build SOURCE [-o OUTPUT]`, `check FILE`, `run FILE [--fuel N] [--gc-stress]`,
+and `dump FILE [--ir]`. Source and artifact input are supported by `check`, `run`,
+and bytecode `dump`; `--ir` requires source. Artifacts contain full source text
+for diagnostics and run without the original source file. `fmt` remains unavailable.
 
 The compiler implementation direction is Rust → typed IR → bytecode → LARP VM.
 The language semantics do not depend on Rust, LLVM, or any particular collector.

@@ -145,8 +145,8 @@ restores its inherited depth. Suppressed calls still require `observe`, still
 evaluate their arguments, and still execute their computation. `palantir`,
 diagnostics, fatal errors, and external effects are not muted.
 
-These features are the first M6 slice; artifacts, formatting, host APIs, and
-release gates remain pending. See [lazy and suppression validation](validation-lazy-and-suppression.md).
+These features are part of M6; formatting, host APIs, and release gates remain
+pending. See [lazy and suppression validation](validation-lazy-and-suppression.md).
 
 ## CLI
 
@@ -163,19 +163,25 @@ cargo run -p larp-cli -- run tests/conformance/pass/scenario.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo run -p larp-cli -- dump examples/primes.larp --ir
 cargo run -p larp-cli -- explain LARP-T041
+cargo run -p larp-cli -- build examples/objects.larp -o /tmp/objects.larpbc
+cargo run -p larp-cli -- run /tmp/objects.larpbc --gc-stress
 ```
 
-`check` compiles and verifies without execution. `run` recompiles source and
-executes in-memory bytecode. `--gc-stress` collects at every object, array,
-closure, and lazy-cell allocation safepoint and may be combined with `--fuel`. `dump` emits disassembly
-or typed IR. `build` and `fmt` explicitly report that they are unavailable. Input
-is one UTF-8 file.
+`build SOURCE [-o OUTPUT]` writes deterministic versioned `.larpbc`; the default
+is the source path with that extension. Artifacts embed complete source text and
+validated spans. `check` compiles source or loads artifacts and verifies without
+execution. `run` compiles source or independently verifies loaded bytecode, then
+executes it. Original source files are unnecessary when running an artifact.
+`--gc-stress` collects at every object, array, closure, and lazy-cell allocation
+safepoint and may be combined with `--fuel`. `dump` emits disassembly
+or typed IR; `--ir` requires source because artifacts contain bytecode. Input is
+one UTF-8 source or versioned artifact. `fmt` remains unavailable. See the
+[artifact format](bytecode-format-v1.md) for wire tables, limits, and output publication.
 Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 ## Not implemented yet
 
-Persisted artifacts, modules, host I/O APIs, and formatting. These are tracked by
-the existing roadmap,
+Modules, host I/O APIs, and formatting. These are tracked by the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
 
 The scenario model remains independent and is not a substitute for compiling
@@ -192,11 +198,15 @@ allocations, and memoized cells release captured initializer inputs.
 - Parser nesting: 128 guarded levels; each expression: at most 256 tokens.
 - Type complexity: at most 128 nested edges and 4096 expanded nodes per type,
   counting repeated shared subtrees. The verifier preflights types across the
-  entire module before forward calls can trigger structural comparisons.
+  entire module, including complete parameter/capture/result headers, before
+  forward calls can trigger structural comparisons.
 - Function count: at most 4096 including main; per function: at most 65,536 local
   slots and 1,000,000 bytecode instructions.
 - Verifier dataflow state: at most 4,000,000 stored type/initialization cells per
-  function; operand stack: at most 65,536 entries. Resource-limit diagnostics are
+  function; at most 16,000,000 processed analysis cells across the module, including
+  revisits; signature/type preflight: at most 16,000,000 expanded nodes plus
+  nominal-name bytes, including derived intrinsic parameters; operand stack:
+  at most 65,536 entries. Resource-limit diagnostics are
   distinct from malformed-bytecode compiler bugs.
 - Default execution budget: 1,000,000 instructions, adjustable with `--fuel`.
   VM call frames: at most 1024 by default; the Rust API accepts explicit limits.
@@ -262,8 +272,8 @@ a fixed array still retain their shared identity.
 
 ## Evidence
 
-See [lazy and suppression validation](validation-lazy-and-suppression.md) for the
-current M6 slice. See [scenario validation](validation-scenarios.md) and
+See [artifact validation](validation-artifacts.md) for the current M6 slice and
+[lazy and suppression validation](validation-lazy-and-suppression.md) for the preceding one. See [scenario validation](validation-scenarios.md) and
 [scenario evaluation](scenario-evaluation.md) for the current M5 acceptance gate, [roles and extensions validation](validation-roles-and-extensions.md)
 for the preceding completed gate, and [objects validation](validation-objects.md) for
 the preceding executed class checks. [Collections validation](validation-collections.md) and
@@ -279,5 +289,7 @@ coverage-guided fuzzing.
 and `run`, comparing stdout, explicitly declared inspection output, or primary diagnostic codes and source locations.
 `--gc-stress` repeats execution with collection at every object, array, closure,
 and lazy-cell allocation safepoint. All 77 current fixtures are active; `--all`
-selects the same complete inventory and passes. A finite corpus with no pending
+selects the same complete inventory and passes. `--artifacts` also builds valid
+programs, loads/verifies them, and compares execution with source; invalid source
+must fail build without producing output. A finite corpus with no pending
 cases does not establish full language conformance or complete the M6 release.

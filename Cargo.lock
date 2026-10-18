@@ -3,6 +3,15 @@
 version = 4
 
 [[package]]
+name = "larp-artifact"
+version = "0.1.0-dev"
+dependencies = [
+ "larp-bytecode",
+ "larp-source",
+ "larp-types",
+]
+
+[[package]]
 name = "larp-bytecode"
 version = "0.1.0-dev"
 dependencies = [
@@ -14,6 +23,8 @@ dependencies = [
 name = "larp-cli"
 version = "0.1.0-dev"
 dependencies = [
+ "larp-artifact",
+ "larp-bytecode",
  "larp-compiler",
  "larp-diagnostics",
  "larp-source",

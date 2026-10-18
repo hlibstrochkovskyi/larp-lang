@@ -14,7 +14,7 @@ fn help_reports_actual_implementation_status() {
     assert!(
         String::from_utf8(output.stdout)
             .unwrap()
-            .contains("verified in-memory bytecode")
+            .contains("verified bytecode and versioned artifacts")
     );
     assert!(output.stderr.is_empty());
 }
@@ -32,7 +32,6 @@ fn explanation_has_code_and_actionable_conversion_help() {
 #[test]
 fn unavailable_and_invalid_commands_fail_without_pretending_to_compile() {
     for args in [
-        vec!["build", "missing.larp"],
         vec!["fmt", "missing.larp"],
         vec!["explain", "LARP-T999"],
         vec!["explain"],
@@ -204,4 +203,139 @@ fn lazy_values_execute_once_and_suppression_does_not_hide_runtime_diagnostics() 
     let dump = String::from_utf8(dump.stdout).unwrap();
     assert!(dump.contains("MakeLazy("));
     assert!(dump.contains("Force("));
+}
+
+struct Scratch(std::path::PathBuf);
+
+impl Scratch {
+    fn new() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let path = std::env::temp_dir().join(format!(
+            "larp-cli-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        std::fs::create_dir(&path).unwrap();
+        Self(path)
+    }
+    fn path(&self, name: &str) -> String {
+        self.0.join(name).to_str().unwrap().to_owned()
+    }
+}
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+#[test]
+fn built_program_runs_without_source_and_preserves_embedded_runtime_locations() {
+    let scratch = Scratch::new();
+    let source = scratch.path("unicode.larp");
+    let artifact = scratch.path("unicode.larpbc");
+    std::fs::write(&source, "main_character { yap(\"🦀\"); no_cap(cap); }\n").unwrap();
+    let expected = larp(&["run", &source]);
+    assert_eq!(expected.status.code(), Some(1));
+    let built = larp(&["build", &source]);
+    assert!(
+        built.status.success(),
+        "{}",
+        String::from_utf8_lossy(&built.stderr)
+    );
+    assert!(built.stdout.is_empty());
+    assert!(built.stderr.is_empty());
+    let bytes = std::fs::read(&artifact).unwrap();
+    assert_eq!(&bytes[..8], b"LARPBC\r\n");
+    let second = scratch.path("same.larpbc");
+    assert!(larp(&["build", &source, "-o", &second]).status.success());
+    assert_eq!(bytes, std::fs::read(&second).unwrap());
+    std::fs::remove_file(&source).unwrap();
+    let checked = larp(&["check", &artifact]);
+    assert!(checked.status.success());
+    assert!(checked.stdout.is_empty() && checked.stderr.is_empty());
+    for options in [vec![], vec!["--gc-stress"]] {
+        let mut args = vec!["run", &artifact];
+        args.extend(options);
+        let loaded = larp(&args);
+        assert_eq!(loaded.status.code(), expected.status.code());
+        assert_eq!(loaded.stdout, expected.stdout);
+        assert_eq!(loaded.stderr, expected.stderr);
+    }
+    let renamed = scratch.path("renamed.data");
+    std::fs::rename(&artifact, &renamed).unwrap();
+    assert_eq!(larp(&["run", &renamed]).stderr, expected.stderr);
+    assert!(larp(&["dump", &renamed]).status.success());
+    for args in [vec!["dump", &renamed, "--ir"], vec!["build", &renamed]] {
+        assert_eq!(larp(&args).status.code(), Some(2));
+    }
+}
+
+#[test]
+fn build_failure_preserves_prior_output_and_rejects_source_overwrite() {
+    let scratch = Scratch::new();
+    let source = scratch.path("program.larp");
+    let artifact = scratch.path("program.larpbc");
+    let valid = b"main_character { yap(49); }";
+    std::fs::write(&source, valid).unwrap();
+    assert!(larp(&["build", &source]).status.success());
+    let bytes = std::fs::read(&artifact).unwrap();
+    assert_eq!(
+        larp(&["build", &source, "-o", &source]).status.code(),
+        Some(2)
+    );
+    assert_eq!(std::fs::read(&source).unwrap(), valid);
+    assert_eq!(std::fs::read(&artifact).unwrap(), bytes);
+    std::fs::write(&source, "main_character { if (49) {} }").unwrap();
+    let failed = larp(&["build", &source]);
+    assert_eq!(failed.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&failed.stderr).contains("LARP-T002"));
+    assert_eq!(std::fs::read(&artifact).unwrap(), bytes);
+    assert_eq!(larp(&["run", &artifact]).stdout, b"49\n");
+    std::fs::write(&source, valid).unwrap();
+    let missing_parent = scratch.path("missing/output.larpbc");
+    assert_eq!(
+        larp(&["build", &source, "-o", &missing_parent])
+            .status
+            .code(),
+        Some(1)
+    );
+    assert_eq!(std::fs::read_dir(&scratch.0).unwrap().count(), 2);
+    assert_eq!(larp(&["build", "missing.larp"]).status.code(), Some(1));
+    assert_eq!(larp(&["build", &source, "-o"]).status.code(), Some(2));
+}
+
+#[test]
+fn artifact_loading_rejects_corruption_and_obeys_runtime_fuel() {
+    let scratch = Scratch::new();
+    let source = fixture("pass/scenario.larp");
+    let artifact = scratch.path("program.larpbc");
+    assert!(larp(&["build", &source, "-o", &artifact]).status.success());
+    let valid = std::fs::read(&artifact).unwrap();
+    let exhausted = larp(&["run", &artifact, "--fuel", "0", "--gc-stress"]);
+    assert_eq!(exhausted.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&exhausted.stderr).contains("LARP-R006"));
+    assert!(exhausted.stdout.is_empty());
+    let mut bad_version = valid.clone();
+    bad_version[8] = 255;
+    let mut bad_length = valid.clone();
+    bad_length[12..16].copy_from_slice(&u32::MAX.to_le_bytes());
+    let mut trailing = valid.clone();
+    trailing.push(0);
+    for bytes in [valid[..7].to_vec(), bad_version, bad_length, trailing] {
+        std::fs::write(&artifact, bytes).unwrap();
+        let output = larp(&["run", &artifact]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(
+            stderr.contains("LARP-B002") || stderr.contains("LARP-B003"),
+            "{stderr}"
+        );
+    }
+    std::fs::write(&artifact, "main_character { yap(49); }").unwrap();
+    assert_eq!(larp(&["check", &artifact]).status.code(), Some(1));
+    for code in ["LARP-B002", "LARP-B003"] {
+        assert!(larp(&["explain", code]).status.success());
+    }
 }

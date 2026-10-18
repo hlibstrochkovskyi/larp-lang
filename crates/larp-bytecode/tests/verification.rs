@@ -229,3 +229,96 @@ fn verification_is_resource_bounded_before_large_dataflow_allocation() {
     code.extend([Op::Constant(Scalar::Unit), Op::Return]);
     rejects(code, vec![Type::Mf; 65_536], "analysis budget");
 }
+
+#[test]
+fn combined_function_headers_are_bounded_before_forward_closure_comparisons() {
+    let mut shared = Type::Mf;
+    for _ in 0..10 {
+        shared = Type::result(shared.clone(), shared);
+    }
+    assert!(shared.within_limits());
+    let entry = function(vec![Op::MakeClosure(1), Op::Return], vec![], Effects::NONE);
+    for captures in [false, true] {
+        let mut target = function(
+            vec![Op::Constant(Scalar::Unit), Op::Return],
+            vec![],
+            Effects::NONE,
+        );
+        if captures {
+            target.captures = vec![shared.clone(); 3];
+        } else {
+            target.parameters = vec![shared.clone(); 3];
+        }
+        target.locals = target
+            .parameters
+            .iter()
+            .chain(&target.captures)
+            .cloned()
+            .collect();
+        let error = verify(Module {
+            roles: vec![],
+            extensions: vec![],
+            classes: vec![],
+            functions: vec![entry.clone(), target],
+            entry: 0,
+        })
+        .unwrap_err();
+        assert_eq!(error.kind, larp_bytecode::VerifyErrorKind::ResourceLimit);
+        assert_eq!(error.function, 1);
+        assert!(error.message.contains("complexity"));
+    }
+}
+
+#[test]
+fn analysis_work_is_bounded_across_individually_valid_functions() {
+    let code: Vec<_> = (1..2048)
+        .map(Op::Jump)
+        .chain([Op::Constant(Scalar::Unit), Op::Return])
+        .collect();
+    let ordinary = function(code, vec![Type::Mf; 1024], Effects::NONE);
+    let error = verify(Module {
+        roles: vec![],
+        extensions: vec![],
+        classes: vec![],
+        functions: vec![ordinary; 9],
+        entry: 0,
+    })
+    .unwrap_err();
+    assert_eq!(error.kind, larp_bytecode::VerifyErrorKind::ResourceLimit);
+    assert!(
+        error.message.contains("Module verification work"),
+        "{error:?}"
+    );
+    assert!(error.function > 0);
+}
+
+#[test]
+fn derived_intrinsic_signatures_share_the_verification_type_work_budget() {
+    let mut element = Type::Mf;
+    for _ in 0..10 {
+        element = Type::result(element.clone(), element);
+    }
+    let array = Type::array(element);
+    assert!(array.is_well_formed());
+    let entry = function(
+        vec![
+            Op::Intrinsic(larp_types::Intrinsic::ArrayNew {
+                ty: array,
+                count: 65_536,
+            }),
+            Op::Return,
+        ],
+        vec![],
+        Effects::NONE,
+    );
+    let error = verify(Module {
+        roles: vec![],
+        extensions: vec![],
+        classes: vec![],
+        functions: vec![entry],
+        entry: 0,
+    })
+    .unwrap_err();
+    assert_eq!(error.kind, larp_bytecode::VerifyErrorKind::ResourceLimit);
+    assert!(error.message.contains("type work"), "{error:?}");
+}

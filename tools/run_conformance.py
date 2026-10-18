@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "tests" / "conformance"
@@ -20,11 +21,36 @@ def invoke(binary: Path, command: str, path: Path, gc_stress: bool = False) -> s
                                        result.stdout.decode("utf-8"), result.stderr.decode("utf-8"))
 
 
+def artifact_errors(binary: Path, source: Path, expected: dict, source_run: subprocess.CompletedProcess[str], gc_stress: bool) -> list[str]:
+    """Compare the loaded-file path with real compilation, including failures."""
+    with tempfile.TemporaryDirectory(prefix="larp-conformance-") as directory:
+        artifact = Path(directory) / "program.larpbc"
+        built = subprocess.run([str(binary), "build", str(source), "-o", str(artifact)],
+                               capture_output=True, timeout=10)
+        if expected["kind"] == "compile_error":
+            match = re.search(rb"error\[(LARP-[A-Z][0-9]{3})\]", built.stderr)
+            if (built.returncode != 1 or built.stdout or artifact.exists() or
+                    not match or match[1].decode() != expected["code"]):
+                return [f"build must reject source without an artifact: {built.stderr!r}"]
+            return []
+        if built.returncode != 0 or built.stdout or built.stderr or not artifact.is_file():
+            return [f"artifact build failed or observed output: {built.stderr!r}"]
+        checked = invoke(binary, "check", artifact)
+        loaded = invoke(binary, "run", artifact, gc_stress)
+        errors = []
+        if checked.returncode != 0 or checked.stdout or checked.stderr:
+            errors.append(f"artifact check failed or observed output: {checked.stderr}")
+        if (loaded.returncode, loaded.stdout, loaded.stderr) != (source_run.returncode, source_run.stdout, source_run.stderr):
+            errors.append(f"loaded execution differs: exit={loaded.returncode}, stdout={loaded.stdout!r}, stderr={loaded.stderr!r}")
+        return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin", type=Path, help="Use an already built larp binary")
     parser.add_argument("--all", action="store_true", help="Also attempt pending cases; failures are expected")
     parser.add_argument("--gc-stress", action="store_true", help="Collect at every object/array/closure allocation safepoint")
+    parser.add_argument("--artifacts", action="store_true", help="Also build, load, verify, and execute persisted bytecode")
     args = parser.parse_args()
     subprocess.run([sys.executable, str(ROOT / "tools/check_corpus.py")], cwd=ROOT, check=True)
     binary = args.bin
@@ -65,6 +91,8 @@ def main() -> int:
             if kind != "run":
                 if not re.search(r" --> .+:[0-9]+:[0-9]+", output.stderr):
                     errors.append("error is missing a source location")
+            if args.artifacts:
+                errors.extend(artifact_errors(binary, path, expectation, output, args.gc_stress))
             if errors:
                 failures.append(f"FAIL {case['id']}: " + "\n".join(errors))
             else:

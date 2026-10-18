@@ -5,7 +5,8 @@ compile through typed IR and verified in-memory bytecode to VM execution.
 Object/array/closure tracing is implemented. Role dispatch, concrete extensions,
 and built-in method extraction are implemented. Scenario regions use isolated
 function instances and VM frames. Lazy bindings use checked memoization cells;
-output suppression has explicit dynamic scope. Persisted artifacts remain planned.
+output suppression has explicit dynamic scope. Versioned artifacts embed source
+maps and pass a bounded loader and mandatory verification before execution.
 The pipeline below includes both current contracts and their intended extensions;
 see [implementation status](implementation-status.md) for the supported subset.
 
@@ -22,6 +23,10 @@ flowchart LR
     IR --> Lower[Bytecode lowering]
     Lower --> Verify[Bytecode verifier]
     Verify --> VM[LARP stack VM]
+    Verify --> Encode[Deterministic encoder]
+    Encode --> Artifact[Versioned .larpbc with sources]
+    Artifact --> Decode[Bounded artifact loader]
+    Decode --> Verify
     VM --> Host[Observation sink]
 ```
 
@@ -382,18 +387,25 @@ compiled explicit-copy comparisons, failure modes, and measured costs.
 
 ## Bytecode artifacts
 
-Begin with an internal instruction enum and in-memory verified modules. Before
-`build` writes `.larpbc`, specify magic/version, bounded sections, integer byte
-order, constant representations, function signatures, effect/region summaries,
-source maps, and entry identity. No Rust enum discriminants or memory layouts
-are an external file format. Bound lengths before allocation and reject unknown
-versions. Do not deserialize arbitrary host objects.
+`larp-artifact` defines a versioned explicit wire format around verified stack
+bytecode. Header magic/version/flags and seven ordered bounded sections contain
+source text/spans, topological types, roles, classes, extensions, functions, and
+entry identity. No Rust enum discriminants or host object layouts are serialized.
+See the [version 1 format](bytecode-format-v1.md) for exact tags and limits.
 
-The verifier is required before loading persisted modules. Compiler output is
-not inherently trusted when a file can be edited. Runtime host functions check
-capabilities as a second boundary, including active scenario restrictions.
-Stack validation alone does not enforce scenario safety. Exact opcodes and
-serialization are a later bytecode RFC; freezing them now would be premature.
+The decoder validates framing, UTF-8/source boundaries, type shape/expanded work,
+counts, and shared logical allocation budgets before independently invoking the
+bytecode verifier. Loaded ownership, effects, and region metadata never bypass
+instruction checks. Only a `VerifiedModule` can enter the VM. The verifier bounds
+complete function headers and module-wide processed analysis cells as well as
+per-function stored state. An artifact does not grant host capabilities.
+
+Source maps are embedded rather than reopened by path, preserving diagnostics
+after source deletion. The deterministic encoder validates its emitted bytes
+through the same loader policy. Build writes a fresh sibling temporary file and
+publishes by rename after successful compilation/encoding. Failure preserves
+previous output. This is an internal preview format with explicit version
+rejection, not a promise of long-term binary compatibility.
 
 ## Diagnostics and tools
 
@@ -403,8 +415,8 @@ types and related spans in data, not embedded in ANSI strings. Memes never repla
 an actionable explanation. A formatter must operate on parsed syntax with comment
 preservation; it is not a regex substitution pass.
 
-Commands already available: `explain`, `check`, compiler-to-VM `run`, and
-IR/bytecode `dump`. Disassembly includes role method signatures, class implementation tables,
-concrete extension metadata, lazy construction/forcing, and silence operations. Next: verified artifact `build`/`run`; `fmt`; tooling integrations. No language
+Commands already available: `explain`, artifact `build`, source/artifact `check`
+and `run`, and IR/bytecode `dump` (`--ir` requires source). Disassembly includes role method signatures, class implementation tables,
+concrete extension metadata, lazy construction/forcing, and silence operations. Next: `fmt` and tooling integrations. No language
 server, incremental query engine, package manager, or optimizer is needed before
 basic programs pass conformance.

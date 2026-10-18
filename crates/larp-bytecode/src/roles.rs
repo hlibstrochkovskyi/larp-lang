@@ -18,6 +18,12 @@ pub(super) fn validate_layouts(module: &Module) -> Result<(), VerifyError> {
         }
     }
     for class in &module.classes {
+        let public_methods: HashSet<_> = class
+            .methods
+            .iter()
+            .filter(|method| method.public)
+            .map(|method| (method.function, method.name.as_str()))
+            .collect();
         let mut implemented = HashSet::new();
         for implementation in &class.implementations {
             let role = module.roles.get(implementation.role).ok_or_else(|| {
@@ -32,9 +38,7 @@ pub(super) fn validate_layouts(module: &Module) -> Result<(), VerifyError> {
                 ));
             }
             for (target, signature) in implementation.methods.iter().zip(&role.methods) {
-                if !class.methods.iter().any(|method| {
-                    method.function == *target && method.public && method.name == signature.name
-                }) {
+                if !public_methods.contains(&(*target, signature.name.as_str())) {
                     return Err(invalid(
                         class.constructor,
                         "Role target must be a public instance method of the same name",

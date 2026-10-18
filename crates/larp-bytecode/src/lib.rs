@@ -306,11 +306,20 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
         return Err(invalid("Entry cannot belong to a class"));
     }
     classes::preflight_types(&module)?;
+    let mut type_work = 0usize;
     // A forward call/closure can expose another function's types during
     // dataflow. Validate every type before any structural type comparison.
     for (index, function) in module.functions.iter().enumerate() {
-        let validate = |ty: &Type, instruction| {
+        let mut validate = |ty: &Type, instruction| {
             let resource = !ty.within_limits();
+            if !resource && !charge_type_work(ty, &mut type_work) {
+                return Err(VerifyError {
+                    kind: VerifyErrorKind::ResourceLimit,
+                    function: index,
+                    instruction,
+                    message: "Verification type work budget exceeded".into(),
+                });
+            }
             if resource || !ty.is_well_formed() {
                 Err(VerifyError {
                     kind: if resource {
@@ -331,6 +340,34 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
                 Ok(())
             }
         };
+        // Individual payloads can be small while their combined header expands
+        // beyond the structural-comparison budget (for example shared DAGs).
+        if function
+            .parameters
+            .len()
+            .saturating_add(function.captures.len())
+            > 4096
+        {
+            return Err(VerifyError {
+                kind: VerifyErrorKind::ResourceLimit,
+                function: index,
+                instruction: None,
+                message: "Function header complexity limit exceeded".into(),
+            });
+        }
+        validate(
+            &Type::function(
+                function
+                    .parameters
+                    .iter()
+                    .chain(&function.captures)
+                    .cloned()
+                    .collect(),
+                function.result.clone(),
+                function.effects,
+            ),
+            None,
+        )?;
         for ty in function
             .locals
             .iter()
@@ -365,13 +402,50 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
     classes::validate_layouts(&module)?;
     roles::validate_layouts(&module)?;
     scenarios::validate_contexts(&module)?;
+    let mut analysis_work = 0usize;
     for index in 0..module.functions.len() {
-        verify_function(&module, index)?;
+        verify_function(&module, index, &mut analysis_work)?;
     }
     Ok(VerifiedModule(module))
 }
 
-fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
+/// Derived intrinsic signatures can repeat a small encoded type thousands of
+/// times. Bound their expanded validation and nominal-name comparison work.
+fn charge_type_work(ty: &Type, work: &mut usize) -> bool {
+    let mut pending = vec![ty];
+    while let Some(ty) = pending.pop() {
+        let cost = match ty {
+            Type::Class(_, name) | Type::Role(_, name) => 1usize.saturating_add(name.len()),
+            _ => 1,
+        };
+        *work = work.saturating_add(cost);
+        if *work > 16_000_000 {
+            return false;
+        }
+        match ty {
+            Type::Function(signature) => {
+                pending.extend(&signature.parameters);
+                pending.push(&signature.result);
+            }
+            Type::Baddie(payload)
+            | Type::Array(payload)
+            | Type::FixedArray(payload, _)
+            | Type::Lazy(payload, _) => pending.push(payload),
+            Type::Result(payloads) => {
+                pending.push(&payloads.0);
+                pending.push(&payloads.1);
+            }
+            _ => {}
+        }
+    }
+    true
+}
+
+fn verify_function(
+    module: &Module,
+    index: usize,
+    analysis_work: &mut usize,
+) -> Result<(), VerifyError> {
     let function = &module.functions[index];
     let error = |pc: Option<usize>, message: String| VerifyError {
         kind: VerifyErrorKind::Invalid,
@@ -596,6 +670,19 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
     states[0] = Some(initial);
     let mut queue = VecDeque::from([0]);
     while let Some(pc) = queue.pop_front() {
+        let current = states[pc].as_ref().unwrap();
+        *analysis_work = analysis_work.saturating_add(
+            current
+                .initialized
+                .len()
+                .saturating_add(current.stack.len())
+                .saturating_add(1),
+        );
+        if *analysis_work > 16_000_000 {
+            return Err(
+                error(Some(pc), "Module verification work budget exceeded".into()).resource(),
+            );
+        }
         let mut state = states[pc].clone().unwrap();
         let failure = |message: String| error(Some(pc), message);
         let pop = |state: &mut State, ty: Type| -> Result<(), VerifyError> {

@@ -11,6 +11,16 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-B002",
+        title: "Invalid bytecode artifact",
+        explanation: "The persisted bytecode file could not be read or has an unsupported version, malformed section, invalid source map, or unknown wire tag. Rebuild the artifact from source with this toolchain. Loading never executes unverified bytecode.",
+    },
+    DiagnosticCode {
+        id: "LARP-B003",
+        title: "Bytecode artifact resource limit exceeded",
+        explanation: "Encoding, loading, or verification exceeded an artifact resource budget. File size, decoded tables, source maps, type complexity, and verifier analysis are bounded independently of VM execution fuel. Reduce the program size or rebuild with a compatible toolchain.",
+    },
+    DiagnosticCode {
         id: "LARP-T014",
         title: "Invalid lazy binding",
         explanation: "A nonchalant binding needs an explicit SnapshotValue result type and can capture only SnapshotValue bindings. Copy immutable inputs before declaring it. Initializers may abort but cannot read/write existing heap state, observe, or use I/O. The binding cannot be assigned after declaration.",

@@ -19,6 +19,7 @@ cargo test -p larp-compiler --release --locked --offline
 python3 tools/check_corpus.py
 python3 tools/run_conformance.py
 python3 tools/run_conformance.py --gc-stress
+python3 tools/run_conformance.py --artifacts --gc-stress
 git diff --check
 ```
 
@@ -32,8 +33,10 @@ nominal classes, roles, extensions, isolated scenarios, and lazy bindings throug
 semantics, typed IR, bytecode verification, and the VM.
 `tools/run_conformance.py` tests active cases through the CLI. `--gc-stress`
 repeats runtime cases with collection at every object/array/closure allocation
-safepoint, including lazy cells; CI runs both modes. All 77 current fixtures are
-active, so `--all` selects the same cases and passes. If future cases are marked
+safepoint, including lazy cells. `--artifacts` additionally builds each valid
+program, loads/verifies it, and compares execution with the source path; invalid
+source must fail without producing an artifact. CI includes artifact stress runs.
+All 77 current fixtures are active, so `--all` selects the same cases and passes. If future cases are marked
 pending, `--all` attempts them as well. Do not activate a fixture without running
 it and keeping it in CI. A fully active corpus does not close the developer-preview
 release gates or prove all normative rules.
@@ -81,6 +84,12 @@ Managed arena counters do not measure all host allocations or total memory.
 `experiments/scenario-model` tests a state transition model in Rust. It does not
 validate LARP region typing, scenario effects, GC, or scenario bytecode.
 `tools/check_corpus.py` validates fixture metadata and paths only.
+
+Persisted bytecode goes through `larp-artifact`, including complete source maps
+and explicit wire tags. Preserve shared loader budgets and mandatory independent
+verification; never hand an unchecked module to the VM. See the
+[version 1 format](docs/bytecode-format-v1.md). Artifacts embed source text and
+are ignored by Git. Builds publish complete sibling temporary files by rename.
 
 Use [the roadmap](docs/roadmap.md) to choose a vertical slice. Keep the checked-in
 implementation status accurate, including when tests are only design fixtures.

@@ -23,3 +23,4 @@ jobs:
       - run: python3 tools/check_corpus.py
       - run: python3 tools/run_conformance.py
       - run: python3 tools/run_conformance.py --gc-stress
+      - run: python3 tools/run_conformance.py --artifacts --gc-stress

@@ -22,7 +22,10 @@ codes, and presence of source locations. `--all` includes pending cases when
 any exist; currently it selects the same 77 active cases and passes. An optional
 `--bin PATH` selects an existing binary. `--gc-stress` requests collection at
 every object, array, closure, and lazy-cell allocation safepoint; CI executes the
-corpus with both normal collection and this stress mode.
+corpus with both normal collection and this stress mode. `--artifacts` adds
+`build`/loaded `check`/loaded `run`, comparing exit status, stdout, and stderr
+with direct source execution. Invalid source must fail to build without creating
+a file. CI includes this path with GC stress.
 
 The harness must fail if an unsupported case is silently skipped within a release's
 declared subset. Report fixtures pin the current deterministic renderer; its

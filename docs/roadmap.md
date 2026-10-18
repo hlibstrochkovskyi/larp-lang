@@ -1,7 +1,8 @@
 # Implementation roadmap
 
 Status: M1 through the M5 feature set are implemented. M6 is in progress; lazy
-bindings and output suppression are implemented, while preview gates remain open.
+bindings, output suppression, and persisted bytecode are implemented, while
+preview gates remain open.
 This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -131,8 +132,12 @@ All 77 current corpus cases are active and executable. This closes the current
 fixture inventory, not the developer-preview release gate or every normative
 rule. See [lazy and suppression validation](validation-lazy-and-suppression.md).
 
-Remaining: persisted versioned bytecode with a bounded loader/verifier; useful source maps,
-CLI integration tests, formatter, examples, reference docs, reproducible builds,
+Implemented artifact slice: deterministic versioned `.larpbc`, embedded source
+maps, bounded decoding and mandatory verification, `build` and source/artifact
+`check`/`run`/`dump`, deleted-source diagnostics, and corpus execution through loaded
+artifacts with GC stress. See [artifact validation](validation-artifacts.md).
+
+Remaining: formatter, expanded examples/reference docs, reproducible distribution builds,
 and minimal host APIs with declared effects. Fuzzing, resource measurements,
 platform/distribution decisions, and hosted CI also remain release work.
 
