@@ -82,5 +82,5 @@ across machines or toolchains.
 Tooling references: [Rust Fuzz Book](https://rust-fuzz.github.io/book/cargo-fuzz/guide.html)
 and [LLVM libFuzzer options](https://llvm.org/docs/LibFuzzer.html#options).
 The pinned `libfuzzer-sys` 0.4.13 declares `(MIT OR Apache-2.0) AND NCSA`;
-`cargo-fuzz` declares `MIT OR Apache-2.0`. These are tool dependency licenses,
-not a license choice for LARP.
+`cargo-fuzz` declares `MIT OR Apache-2.0`. These dependencies retain their own
+licenses; LARP's original code uses the [MIT License](../LICENSE).

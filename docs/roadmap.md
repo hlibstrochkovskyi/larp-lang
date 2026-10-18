@@ -163,14 +163,15 @@ through normal/stress source runs, formatting, and independently loaded artifact
 in CI; see [reference validation](validation-reference.md).
 
 Remaining: reproducible distribution builds, additional host APIs,
-platform/distribution decisions, and a license choice. Hosted compiler CI and
+and platform/distribution decisions. The maintainer selected the
+[MIT License](../LICENSE). Hosted compiler CI and
 bounded fuzz campaigns passed on `cc1354d`; see
 [the exact-commit evidence](validation-fuzzing.md#hosted-verification). Later
 changes require their own results before being reported as passed.
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in
 the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource
-limits. Choose a distribution license and supported platforms. Run CI on the maintainer-selected
+limits. Preserve the selected MIT license and choose supported platforms. Run CI on the maintainer-selected
 GitHub remote; local checks do not prove hosted CI passed.
 
 ## Later RFCs

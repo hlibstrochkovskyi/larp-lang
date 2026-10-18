@@ -96,5 +96,5 @@ suite, not a proof that every language rule is implemented. Specification v0.1
 defines the broader target, and M6 developer-preview gates remain open.
 
 The project repository is [hlibstrochkovskyi/larp-lang](https://github.com/hlibstrochkovskyi/larp-lang).
-No distribution license has been selected. Private design material is excluded
-from version control.
+LARP is licensed under the [MIT License](LICENSE). Private design material is
+excluded from version control.

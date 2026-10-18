@@ -141,6 +141,6 @@ traced allocation counts are not a memory budget, and instruction fuel does not
 provide a wall-clock or host-heap bound. CI runs a one-sample-per-mode smoke check;
 it does not assert timing/RSS thresholds across different runners.
 
-No open-source license has been chosen. This repository does not grant a license
-by implication. The maintainer-selected remote is
+LARP uses the [MIT License](LICENSE). Dependencies retain their own licenses.
+The maintainer-selected remote is
 [hlibstrochkovskyi/larp-lang](https://github.com/hlibstrochkovskyi/larp-lang).
