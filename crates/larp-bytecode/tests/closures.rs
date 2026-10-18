@@ -39,6 +39,8 @@ fn unit() -> Function {
 
 fn reject(functions: Vec<Function>, expected: &str) -> VerifyError {
     let error = verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions,
         entry: 0,
@@ -68,6 +70,8 @@ fn capture_slots_must_follow_parameters_with_exact_types() {
         vec![Op::Load(1), Op::Return],
     );
     verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![unit(), target.clone()],
         entry: 0,
@@ -171,6 +175,8 @@ fn closure_capture_order_and_indirect_arguments_are_checked_separately() {
         Op::Return,
     ]);
     verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![entry(good), target.clone()],
         entry: 0,
@@ -237,6 +243,8 @@ fn function_effect_bounds_can_widen_without_changing_parameters_or_results() {
         Op::Return,
     ];
     verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![entry(code), target.clone()],
         entry: 0,
@@ -355,6 +363,8 @@ fn checked_conversion_abort_effect_cannot_be_hidden() {
     main.effects = Effects::NONE;
     main.locals = vec![Type::Verdict];
     verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![main],
         entry: 0,
@@ -426,6 +436,8 @@ fn result_payload_stacks_must_agree_at_a_shared_target() {
     );
     let ty = Type::result(Type::Mf, Type::Mf);
     verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![entry(vec![
             Op::Constant(Scalar::Mf(1)),
@@ -444,6 +456,8 @@ fn result_payload_stacks_must_agree_at_a_shared_target() {
 fn distinct_result_payloads_can_be_consumed_before_a_control_flow_merge() {
     let ty = Type::result(Type::Mf, Type::Text);
     verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![entry(vec![
             Op::Constant(Scalar::Text("error".into())),
@@ -527,6 +541,8 @@ fn shared_type_dags_are_bounded_by_expanded_work_before_dataflow() {
     let mut main = unit();
     main.locals = vec![shared_result_dag(30)];
     let error = verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![main],
         entry: 0,
@@ -559,6 +575,8 @@ fn forward_function_types_are_checked_before_closure_or_call_dataflow() {
         // Signature comparisons and diagnostic formatting in function 0 must never
         // encounter the unchecked forward result type from function 1.
         let error = verify(Module {
+            roles: vec![],
+            extensions: vec![],
             classes: vec![],
             functions: vec![main, target],
             entry: 0,

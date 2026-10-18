@@ -52,6 +52,8 @@ fn unit() -> Op {
 
 fn run(functions: Vec<Function>, expected: &str) {
     let module = verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions,
         entry: 0,
@@ -272,6 +274,8 @@ fn aliased_push_is_rejected_while_callback_is_running() {
     let effects = Effects::WRITE.union(Effects::ABORT);
     let callback = Type::function(vec![Type::Mf], Type::Unit, effects);
     let module = verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         entry: 0,
         functions: vec![
@@ -329,6 +333,8 @@ fn nested_collection_callbacks_obey_frame_limits_without_host_recursion() {
     let array = Type::array(Type::Mf);
     let callback = Type::function(vec![Type::Mf], Type::Unit, Effects::READ);
     let module = verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         entry: 0,
         functions: vec![
@@ -390,6 +396,8 @@ fn negative_and_end_indices_abort_for_fixed_and_dynamic_arrays() {
     for array in [Type::array(Type::Mf), Type::fixed_array(Type::Mf, 1)] {
         for index in [-1, 1, i32::MAX] {
             let module = verify(Module {
+                roles: vec![],
+                extensions: vec![],
                 classes: vec![],
                 entry: 0,
                 functions: vec![entry(
@@ -470,6 +478,8 @@ fn checked_assignment_place_aborts_before_later_side_effects() {
     for array in [Type::array(Type::Mf), Type::fixed_array(Type::Mf, 1)] {
         for index in [-1, 1, i32::MAX] {
             let module = verify(Module {
+                roles: vec![],
+                extensions: vec![],
                 classes: vec![],
                 entry: 0,
                 functions: vec![entry(

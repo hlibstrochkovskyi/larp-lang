@@ -2,8 +2,8 @@
 
 Status: scalar, closure, option/result, collection, and nominal class programs
 compile through typed IR and verified in-memory bytecode to VM execution.
-Object/array/closure tracing is implemented; roles, extensions, scenario regions,
-and persisted artifacts remain planned.
+Object/array/closure tracing is implemented. Role dispatch, concrete extensions,
+and built-in method extraction are implemented. Scenario regions and persisted artifacts remain planned.
 The pipeline below includes both current contracts and their intended extensions;
 see [implementation status](implementation-status.md) for the supported subset.
 
@@ -34,8 +34,9 @@ flowchart LR
 4. **Semantic analysis:** bidirectional local inference, lexical capture analysis,
    return-path checks, exact payload types, and finite effect bounds through
    direct and indirect calls, nominal class/access checks, and constructor field
-   initialization. Reject before lowering. Scenario eligibility summaries and
-   region restrictions are planned.
+   initialization. Role implementation contracts, contextual class-to-role
+   conversion, and exact extension resolution are checked before lowering.
+   Scenario eligibility summaries and region restrictions are planned.
 5. **Typed IR:** explicit basic blocks, typed local slots, temporaries, calls,
    branch targets, and terminators. Initially use mutable slots rather than SSA.
    Preserve source locations and effect signatures; future region qualifiers
@@ -45,13 +46,15 @@ flowchart LR
    closures, direct/indirect calls, intrinsics, total result-tag dispatch, and
    observations. Array operations use typed built-in intrinsics with validated
    element/callback signatures. Object operations encode class, field, and method
-   identities instead of performing VM source-name lookup. Scenario instructions
+   identities instead of performing VM source-name lookup. Role conversion and
+   dispatch use explicit class/role/method indices. Scenario instructions
    remain future extensions.
 7. **Verification:** check instruction indices, stack types at joins, initialized
    locals, branch targets, closure capture layouts, immutable capture slots,
    intrinsic types, call signatures, effect bounds, nominal layout/member access,
-   immutable method receivers, and constructor operation restrictions. Check
-   unreachable code structurally as well. Before dataflow, preflight every type in the module,
+   immutable method receivers, constructor operation restrictions, role tables,
+   and extension receiver/ownership contracts. Check unreachable code structurally
+   as well. Before dataflow, preflight every type in the module,
    including forward-call targets. Bound depth to 128 edges and expanded size
    to 4096 nodes per type, counting shared subtrees repeatedly, so structural
    comparisons and diagnostic formatting remain bounded. Scenario nesting/escape
@@ -146,9 +149,12 @@ a fatal trap terminates execution and releases the owning VM heap.
 Filtering and mapping allocate new dynamic arrays; sorting copies the receiver
 and uses stable integer/text ordering. Text length counts Unicode scalars.
 Dynamic arrays have no equality; fixed-array equality recurses only through
-element types that themselves support equality. Collection built-ins currently
-support direct dot calls; extracting them as bound function values remains
-pending.
+element types that themselves support equality. Extracted built-ins use
+generated wrappers over the same typed operations, so indirect invocation retains
+callback bounds, iteration guards, and receiver semantics. Monomorphic operations
+infer a function type; higher-order built-ins require an expected concrete
+callback signature. Fixed-array/text/option/result receivers are copied at
+extraction, while dynamic arrays retain their original shared identity.
 
 ## Classes and construction
 
@@ -165,8 +171,7 @@ binding is immutable, while the referenced object's fields remain mutable.
 Lexical class ownership authorizes private access and is retained by nested
 closures. Extracting a method generates an ordinary closure that captures the
 receiver and preserves the method's declared effect bound. Its invocation uses
-the same verifier access/signature checks as a direct call. Roles and extension
-resolution are still separate future work.
+the same verifier access/signature checks as a direct call.
 
 A constructor has implicit `read,write,abort` bounds. Until successful completion,
 `self.field` denotes a typed field local, not a heap object. Control-flow analysis
@@ -190,6 +195,39 @@ bodies retain lexical private ownership without inheriting constructor execution
 restrictions; invoking a write-bound lambda during construction is rejected.
 Reference parameters and captured values therefore cannot provide an alternate
 route to external mutation while initialization runs.
+
+## Roles, extensions, and bound built-ins
+
+A role layout contains nominal identity and public method signatures. Each
+implementing class stores a complete ordered implementation table whose entries
+name its public instance methods. Parameter/result types must match exactly;
+implementation effects must fit the role's declared bound. Both declaration
+checking and bytecode verification validate these contracts. A role does not
+supply storage, inheritance, or a default implementation.
+
+Contextual conversion emits `IntoRole` for a known class/role pair. A runtime
+role value contains the original object handle and the role identity. `CallRole`
+uses that object's class layout and the verified implementation table to select
+the target; its static signature and effect bound come from the role. Extracting
+a role method produces a wrapper closure that captures the view and issues the
+same dispatch instruction. Role values trace their object handles through locals,
+fields, tagged wrappers, collection buffers, and closure captures.
+
+Extensions are ordinary receiver functions with an explicit first `self`
+parameter and no class ownership. Module metadata records the exact static
+receiver type, name, and target function. Lookup first resolves real class, role,
+or built-in members by name; access or signature failures cannot select an
+extension instead. Otherwise exactly one concrete receiver/name pair is required.
+There is no runtime extension lookup, implicit role conversion for choosing an
+extension, private access grant, or user generic extension mechanism.
+
+Extracted built-ins compile to wrapper closures around the existing typed
+intrinsics or total result-recovery branch. Receiver evaluation occurs during
+extraction and is captured once. `size`, `push`, `sorted`, `isSome`, `isOk`, and
+`copium` have inferable concrete signatures. `map`, `filter`, `forEach`, and `cope`
+require an expected function type that fixes their callback signature. Wrapper
+effects include receiver operations and the callback's declared effects; calling
+through a saved method cannot erase them or bypass active iteration guards.
 
 ## Runtime representation and memory
 
@@ -225,10 +263,10 @@ collection, reclamation, and peak-live counts for tests. A final collection afte
 successful program exit reclaims the remaining object/array/closure heap. Trap
 paths release the owning Rust heap as execution unwinds.
 
-Role dispatch tables, lazy cells, and scenario snapshots are planned. Their
-fields and temporary allocation buffers must become roots or traced edges before
-their allocation instructions can run. Role values will contain a receiver and
-dispatch identity. Preserve stable language identity across collection and allow
+Role dispatch tables are immutable module metadata; role values trace their
+object receiver. Lazy cells and scenario snapshots remain planned. Their fields
+and temporary allocation buffers must become roots or traced edges before their
+allocation instructions can run. Preserve stable language identity across collection and allow
 unreachable cycles to be reclaimed. Reclamation timing is unobservable; bounded
 pause times are not promised.
 
@@ -288,6 +326,7 @@ an actionable explanation. A formatter must operate on parsed syntax with commen
 preservation; it is not a regex substitution pass.
 
 Commands already available: `explain`, `check`, compiler-to-VM `run`, and
-IR/bytecode `dump`. Next: verified artifact `build`/`run`; `fmt`; tooling integrations. No language
+IR/bytecode `dump`. Disassembly includes role method signatures, class
+implementation tables, and concrete extension metadata. Next: verified artifact `build`/`run`; `fmt`; tooling integrations. No language
 server, incremental query engine, package manager, or optimizer is needed before
 basic programs pass conformance.

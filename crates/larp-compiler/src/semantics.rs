@@ -6,9 +6,12 @@ use larp_source::Span;
 use larp_syntax::{self as ast, Expr, ExprKind, Name, StatementKind};
 use larp_types::{Binary, Effects, Intrinsic, Scalar, Type, Unary, binary_type, unary_type};
 mod arrays;
+mod bound_builtins;
 mod calls;
 mod closures;
+mod declarations;
 mod objects;
+mod roles;
 use std::collections::HashMap;
 
 type Result<T> = std::result::Result<T, Box<Diagnostic>>;
@@ -21,6 +24,15 @@ struct Header {
     effects: Effects,
     owner: Option<usize>,
     constructor: Option<usize>,
+}
+
+struct Tables {
+    headers: Vec<Header>,
+    names: HashMap<String, usize>,
+    types: HashMap<String, Type>,
+    classes: Vec<larp_bytecode::Class>,
+    roles: Vec<larp_bytecode::Role>,
+    extensions: Vec<larp_bytecode::Extension>,
 }
 
 fn error(code: &str, span: Span, message: impl Into<String>) -> Box<Diagnostic> {
@@ -141,7 +153,7 @@ fn ty(expression: &ast::TypeExpr, class_types: &HashMap<String, Type>) -> Result
 }
 
 pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>> {
-    objects::check_program(ast)
+    declarations::check_program(ast)
 }
 
 #[derive(Clone)]
@@ -164,10 +176,7 @@ struct Builder<'a> {
     current: BlockId,
     scopes: Vec<HashMap<String, Binding>>,
     breaks: Vec<BlockId>,
-    headers: &'a [Header],
-    names: &'a HashMap<String, usize>,
-    classes: &'a [larp_bytecode::Class],
-    class_types: &'a HashMap<String, Type>,
+    tables: &'a Tables,
     constructor_fields: Vec<Binding>,
     errors: Vec<Diagnostic>,
     generated: Vec<Function>,
@@ -177,15 +186,7 @@ struct Builder<'a> {
 }
 
 impl<'a> Builder<'a> {
-    fn new(
-        header: &Header,
-        headers: &'a [Header],
-        names: &'a HashMap<String, usize>,
-        classes: &'a [larp_bytecode::Class],
-        class_types: &'a HashMap<String, Type>,
-        span: Span,
-        generated_base: usize,
-    ) -> Self {
+    fn new(header: &Header, tables: &'a Tables, span: Span, generated_base: usize) -> Self {
         Self {
             function: Function {
                 owner: header.owner,
@@ -207,10 +208,7 @@ impl<'a> Builder<'a> {
             current: 0,
             scopes: vec![HashMap::new()],
             breaks: Vec::new(),
-            headers,
-            names,
-            classes,
-            class_types,
+            tables,
             constructor_fields: Vec::new(),
             errors: Vec::new(),
             generated: Vec::new(),
@@ -252,7 +250,7 @@ impl<'a> Builder<'a> {
         }
     }
     fn resolve_type(&self, expression: &ast::TypeExpr) -> Result<Type> {
-        ty(expression, self.class_types)
+        ty(expression, &self.tables.types)
     }
     fn local(&mut self, ty: Type) -> Local {
         let slot = self.function.locals.len();
@@ -643,15 +641,15 @@ impl<'a> Builder<'a> {
             ExprKind::SelfValue => self.resolve("self").map(|binding| binding.ty).or_else(|| {
                 self.function
                     .constructor
-                    .map(|class| Type::class(class, self.classes[class].name.as_str()))
+                    .map(|class| Type::class(class, self.tables.classes[class].name.as_str()))
             }),
-            ExprKind::New { class, .. } => self.class_types.get(&class.text).cloned(),
+            ExprKind::New { class, .. } => self.tables.types.get(&class.text).cloned(),
             ExprKind::Name(name) => {
                 self.resolve(&name.text)
                     .map(|binding| binding.ty)
                     .or_else(|| {
-                        if let Some(index) = self.names.get(&name.text) {
-                            let header = &self.headers[*index];
+                        if let Some(index) = self.tables.names.get(&name.text) {
+                            let header = &self.tables.headers[*index];
                             Some(Type::function(
                                 header.parameters.clone(),
                                 header.result.clone(),
@@ -746,7 +744,10 @@ impl<'a> Builder<'a> {
         expected: Option<Type>,
         evaluate: bool,
     ) -> Result<Value> {
-        let value = self.expression_value(expression, expected.clone(), evaluate)?;
+        let mut value = self.expression_value(expression, expected.clone(), evaluate)?;
+        if let Some(expected) = &expected {
+            value = self.coerce_role(value, expected, expression.span)?;
+        }
         if let Some(expected) = expected {
             self.matches(expected, value.ty.clone(), expression.span)?;
         }
@@ -802,10 +803,10 @@ impl<'a> Builder<'a> {
             ExprKind::Name(name) => {
                 if let Some(binding) = self.resolve(&name.text) {
                     self.read(&binding, span)
-                } else if name.text == "fortnine" && !self.names.contains_key(&name.text) {
+                } else if name.text == "fortnine" && !self.tables.names.contains_key(&name.text) {
                     self.literal(Scalar::Unc(49), span)
-                } else if let Some(index) = self.names.get(&name.text).copied() {
-                    let header = &self.headers[index];
+                } else if let Some(index) = self.tables.names.get(&name.text).copied() {
+                    let header = &self.tables.headers[index];
                     let function_type = Type::function(
                         header.parameters.clone(),
                         header.result.clone(),
@@ -963,7 +964,7 @@ impl<'a> Builder<'a> {
                 if receiver.ty == Type::ConversionError && name.text == "message" {
                     self.intrinsic(Intrinsic::ConversionMessage, vec![receiver.slot], span)?
                 } else {
-                    self.member_value(receiver, name, span)?
+                    self.member_value(receiver, name, expected.clone(), span)?
                 }
             }
             ExprKind::Lambda { parameters, body } => {

@@ -133,15 +133,7 @@ fn new_and_self_are_distinct_expression_nodes_with_ordinary_postfix_precedence()
 }
 
 #[test]
-fn unsupported_roles_and_extensions_remain_explicit_and_malformed_members_are_rejected() {
-    for text in [
-        "archetype C : R { init() {} } main_character {}",
-        "role R {} main_character {}",
-        "sidequest mf.extension() -> mf { return self; } main_character {}",
-    ] {
-        let errors = parse(text).unwrap_err();
-        assert_eq!(errors[0].code.id, "LARP-P002", "{text}");
-    }
+fn malformed_members_and_construction_are_rejected() {
     for member in [
         "highkey init() {}",
         "lowkey init() {}",
@@ -153,6 +145,7 @@ fn unsupported_roles_and_extensions_remain_explicit_and_malformed_members_are_re
         "sidequest method(mf self) -> unit {}",
         "init(mf) {}",
         "archetype Nested {}",
+        "sidequest mf.extension() -> mf { return self; }",
     ] {
         let errors = parse(&format!("archetype C {{ {member} }} main_character {{}}")).unwrap_err();
         assert!(

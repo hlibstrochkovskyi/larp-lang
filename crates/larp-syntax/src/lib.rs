@@ -15,6 +15,7 @@ pub struct Name {
 
 #[derive(Debug)]
 pub struct Program {
+    pub roles: Vec<Role>,
     pub classes: Vec<Class>,
     pub functions: Vec<Function>,
     pub main: Block,
@@ -23,6 +24,7 @@ pub struct Program {
 #[derive(Debug)]
 pub struct Class {
     pub name: Name,
+    pub roles: Vec<Name>,
     pub fields: Vec<Field>,
     pub methods: Vec<Method>,
     pub constructors: Vec<Constructor>,
@@ -51,11 +53,28 @@ pub struct Constructor {
 
 #[derive(Debug)]
 pub struct Function {
+    pub receiver: Option<TypeExpr>,
     pub name: Name,
     pub parameters: Vec<(TypeExpr, Name)>,
     pub result: TypeExpr,
     pub effects: Option<Vec<Name>>,
     pub body: Block,
+}
+
+#[derive(Debug)]
+pub struct Role {
+    pub name: Name,
+    pub methods: Vec<RoleMethod>,
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub struct RoleMethod {
+    pub name: Name,
+    pub parameters: Vec<(TypeExpr, Name)>,
+    pub result: TypeExpr,
+    pub effects: Option<Vec<Name>>,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug)]

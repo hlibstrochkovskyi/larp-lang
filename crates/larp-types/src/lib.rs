@@ -21,6 +21,7 @@ pub enum Type {
     FixedArray(Arc<Type>, usize),
     ConversionError,
     Class(usize, Arc<str>),
+    Role(usize, Arc<str>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -31,6 +32,16 @@ pub struct Signature {
 }
 
 impl Type {
+    pub fn role(id: usize, name: impl AsRef<str>) -> Self {
+        Self::Role(id, Arc::from(name.as_ref()))
+    }
+    pub fn role_id(&self) -> Option<usize> {
+        if let Self::Role(id, _) = self {
+            Some(*id)
+        } else {
+            None
+        }
+    }
     pub fn class(id: usize, name: impl Into<Arc<str>>) -> Self {
         Self::Class(id, name.into())
     }
@@ -205,7 +216,7 @@ impl fmt::Display for Type {
             Self::Array(element) => write!(f, "mfs<{element}>"),
             Self::FixedArray(element, length) => write!(f, "hediJeans<{element}, {length}>"),
             Self::ConversionError => f.write_str("ConversionError"),
-            Self::Class(_, name) => f.write_str(name),
+            Self::Class(_, name) | Self::Role(_, name) => f.write_str(name),
             _ => f.write_str(match self {
                 Self::Mf => "mf",
                 Self::Unc => "unc",

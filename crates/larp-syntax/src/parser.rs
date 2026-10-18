@@ -16,12 +16,17 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
         errors: Vec::new(),
     };
     let mut classes = Vec::new();
+    let mut roles = Vec::new();
     let mut functions = Vec::new();
     let mut main = None;
     while !parser.eof() {
         let start = parser.pos;
         let result = if parser.word("sidequest") {
-            parser.function().map(|function| functions.push(function))
+            parser
+                .function(true)
+                .map(|function| functions.push(function))
+        } else if parser.word("role") {
+            parser.role().map(|role| roles.push(role))
         } else if parser.word("archetype") {
             parser.class().map(|class| classes.push(class))
         } else if parser.eat_word("main_character") {
@@ -36,7 +41,7 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
         } else {
             Err(parser.error(
                 "LARP-P002",
-                "Expected archetype, sidequest, or main_character; other declarations are not implemented yet",
+                "Expected role, archetype, sidequest, or main_character",
             ))
         };
         if let Err(error) = result {
@@ -47,6 +52,7 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
             while !parser.eof()
                 && !parser.word("sidequest")
                 && !parser.word("archetype")
+                && !parser.word("role")
                 && !parser.word("main_character")
             {
                 parser.advance();
@@ -60,6 +66,7 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
     }
     if parser.errors.is_empty() {
         Ok(Program {
+            roles,
             classes,
             functions,
             main: main.unwrap(),
@@ -267,26 +274,78 @@ impl Parser<'_> {
         self.expect(")")?;
         Ok(Some(effects))
     }
-    fn function(&mut self) -> Result<Function> {
+    fn function(&mut self, allow_receiver: bool) -> Result<Function> {
         self.expect_word("sidequest")?;
-        let name = self.name()?;
-        if self.punct(".") {
-            return Err(self.error(
-                "LARP-P002",
-                "Extension declarations are not implemented yet",
-            ));
+        let ordinary = !self.word("fn")
+            && self
+                .tokens
+                .get(self.pos + 1)
+                .is_some_and(|token| token.kind == Kind::Punctuation("("));
+        let receiver = if ordinary { None } else { Some(self.ty()?) };
+        if receiver.is_some() {
+            self.expect(".")?;
         }
+        if receiver.is_some() && !allow_receiver {
+            return Err(self.error("LARP-P001", "Extensions can only be declared at file scope"));
+        }
+        let name = self.name()?;
         let parameters = self.parameters()?;
         self.expect("->")?;
         let result = self.ty()?;
         let effects = self.effects()?;
         let body = self.block()?;
         Ok(Function {
+            receiver,
             name,
             parameters,
             result,
             effects,
             body,
+        })
+    }
+    fn role(&mut self) -> Result<Role> {
+        self.guarded(|parser| {
+            let start = parser.current().span;
+            parser.expect_word("role")?;
+            let name = parser.name()?;
+            parser.expect("{")?;
+            let mut methods = Vec::new();
+            while !parser.eof() && !parser.punct("}") {
+                let method_start = parser.pos;
+                let result = (|| -> Result<RoleMethod> {
+                    let span = parser.current().span;
+                    parser.expect_word("sidequest")?;
+                    let name = parser.name()?;
+                    let parameters = parser.parameters()?;
+                    parser.expect("->")?;
+                    let result = parser.ty()?;
+                    let effects = parser.effects()?;
+                    parser.expect(";")?;
+                    Ok(RoleMethod {
+                        name,
+                        parameters,
+                        result,
+                        effects,
+                        span: parser.joined(span),
+                    })
+                })();
+                match result {
+                    Ok(method) => methods.push(method),
+                    Err(error) => {
+                        parser.errors.push(*error);
+                        if parser.pos == method_start {
+                            parser.advance();
+                        }
+                        parser.synchronize();
+                    }
+                }
+            }
+            parser.expect("}")?;
+            Ok(Role {
+                name,
+                methods,
+                span: parser.joined(start),
+            })
         })
     }
     fn parameters(&mut self) -> Result<Vec<(TypeExpr, Name)>> {
@@ -308,11 +367,14 @@ impl Parser<'_> {
             let start = parser.current().span;
             parser.expect_word("archetype")?;
             let name = parser.name()?;
-            if parser.punct(":") {
-                return Err(parser.error(
-                    "LARP-P002",
-                    "Role implementation lists are not implemented yet",
-                ));
+            let mut roles = Vec::new();
+            if parser.eat(":") {
+                loop {
+                    roles.push(parser.name()?);
+                    if !parser.eat(",") {
+                        break;
+                    }
+                }
             }
             parser.expect("{")?;
             let mut fields = Vec::new();
@@ -340,7 +402,7 @@ impl Parser<'_> {
                         };
                         if parser.word("sidequest") {
                             methods.push(Method {
-                                function: parser.function()?,
+                                function: parser.function(false)?,
                                 public,
                             });
                         } else {
@@ -364,6 +426,7 @@ impl Parser<'_> {
             parser.expect("}")?;
             Ok(Class {
                 name,
+                roles,
                 fields,
                 methods,
                 constructors,

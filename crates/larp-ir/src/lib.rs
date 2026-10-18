@@ -8,6 +8,8 @@ pub type BlockId = usize;
 
 #[derive(Debug)]
 pub struct Program {
+    pub roles: Vec<larp_bytecode::Role>,
+    pub extensions: Vec<larp_bytecode::Extension>,
     pub classes: Vec<larp_bytecode::Class>,
     pub functions: Vec<Function>,
     pub entry: usize,
@@ -43,6 +45,19 @@ pub struct Instruction {
 
 #[derive(Debug)]
 pub enum InstructionKind {
+    IntoRole {
+        destination: Local,
+        receiver: Local,
+        class: usize,
+        role: usize,
+    },
+    CallRole {
+        destination: Local,
+        receiver: Local,
+        role: usize,
+        method: usize,
+        arguments: Vec<Local>,
+    },
     Construct {
         destination: Local,
         class: usize,
@@ -181,6 +196,36 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                     let span = instruction.span;
                     let mut emit = |op| code.push(ByteInstruction { op, span });
                     match &instruction.kind {
+                        InstructionKind::IntoRole {
+                            destination,
+                            receiver,
+                            class,
+                            role,
+                        } => {
+                            emit(Op::Load(*receiver));
+                            emit(Op::IntoRole {
+                                class: *class,
+                                role: *role,
+                            });
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::CallRole {
+                            destination,
+                            receiver,
+                            role,
+                            method,
+                            arguments,
+                        } => {
+                            emit(Op::Load(*receiver));
+                            for argument in arguments {
+                                emit(Op::Load(*argument));
+                            }
+                            emit(Op::CallRole {
+                                role: *role,
+                                method: *method,
+                            });
+                            emit(Op::Store(*destination));
+                        }
                         InstructionKind::Construct {
                             destination,
                             class,
@@ -418,6 +463,8 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
         })
         .collect();
     larp_bytecode::Module {
+        roles: program.roles.clone(),
+        extensions: program.extensions.clone(),
         classes: program.classes.clone(),
         functions,
         entry: program.entry,

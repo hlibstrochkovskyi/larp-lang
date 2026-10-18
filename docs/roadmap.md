@@ -1,7 +1,7 @@
 # Implementation roadmap
 
-Status: M1, M2, and the M3 feature set are implemented; M4 is in progress. This is a
-sequence of acceptance gates, not a delivery-date promise.
+Status: M1 through the M4 feature set are implemented. M5 and M6 remain pending.
+This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
 
@@ -63,7 +63,7 @@ Gate: the collection pipeline produces `5\n50\n`; structural callback mutation
 through an alias aborts; captured local bindings are snapshots; higher-order
 calls cannot erase effects. No user-defined generic declarations required yet.
 
-## M4 — Objects and managed lifetime (in progress)
+## M4 — Objects and managed lifetime (implemented)
 
 Implemented class slice: nominal `archetype` declarations, one checked `init`,
 public/private fields and methods, immutable `self` bindings, direct instance
@@ -74,10 +74,14 @@ observation, and I/O are forbidden during construction; nested construction is
 allowed. Object fields participate in tracing, including object/array/closure
 cycles and temporary roots during nested allocations.
 
-Remaining: roles, class-to-role coercion, interface dispatch, concrete extensions,
-and exact member/extension resolution. Class method extraction is implemented;
-built-in collection method extraction remains pending. The complete M4 gate
-remains open.
+Roles, contextual class-to-role conversion, verified interface dispatch, bound
+role methods, and exact concrete extensions are implemented. Real members take
+priority over extensions, including access and signature failures. Built-in
+method extraction now generates closures with captured receivers and preserved
+callback bounds; polymorphic methods require an expected concrete signature.
+Frontend, adversarial bytecode, and normal/stress runtime checks exercise these
+features. See [M4 validation](validation-roles-and-extensions.md) for executed
+results and the limits of this local acceptance gate.
 
 Gate: public/private cases, role dispatch, exact member priority, identity
 aliasing, constructor escape rejection, and collection under stress mode pass.

@@ -6,9 +6,12 @@ use std::collections::VecDeque;
 use std::fmt::Write;
 
 mod classes;
+mod roles;
 
 #[derive(Clone, Debug)]
 pub struct Module {
+    pub roles: Vec<Role>,
+    pub extensions: Vec<Extension>,
     pub classes: Vec<Class>,
     pub functions: Vec<Function>,
     pub entry: usize,
@@ -16,10 +19,35 @@ pub struct Module {
 
 #[derive(Clone, Debug)]
 pub struct Class {
+    pub implementations: Vec<Implementation>,
     pub name: String,
     pub fields: Vec<Field>,
     pub constructor: usize,
     pub methods: Vec<Method>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Role {
+    pub name: String,
+    pub methods: Vec<RoleMethod>,
+}
+#[derive(Clone, Debug)]
+pub struct RoleMethod {
+    pub name: String,
+    pub parameters: Vec<Type>,
+    pub result: Type,
+    pub effects: Effects,
+}
+#[derive(Clone, Debug)]
+pub struct Implementation {
+    pub role: usize,
+    pub methods: Vec<usize>,
+}
+#[derive(Clone, Debug)]
+pub struct Extension {
+    pub receiver: Type,
+    pub name: String,
+    pub function: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -58,6 +86,14 @@ pub struct Instruction {
 
 #[derive(Clone, Debug)]
 pub enum Op {
+    IntoRole {
+        class: usize,
+        role: usize,
+    },
+    CallRole {
+        role: usize,
+        method: usize,
+    },
     Constant(Scalar),
     Load(usize),
     Store(usize),
@@ -121,12 +157,36 @@ impl VerifiedModule {
 
     pub fn disassemble(&self) -> String {
         let mut result = String::new();
+        for (index, role) in self.0.roles.iter().enumerate() {
+            let _ = writeln!(result, "role {index} {}", role.name);
+            for (slot, method) in role.methods.iter().enumerate() {
+                let _ = writeln!(
+                    result,
+                    "  method {slot} {}({:?}) -> {} {}",
+                    method.name, method.parameters, method.result, method.effects
+                );
+            }
+        }
+        for extension in &self.0.extensions {
+            let _ = writeln!(
+                result,
+                "extension {}.{} function={}",
+                extension.receiver, extension.name, extension.function
+            );
+        }
         for (index, class) in self.0.classes.iter().enumerate() {
             let _ = writeln!(
                 result,
                 "class {index} {} constructor={}",
                 class.name, class.constructor
             );
+            for implementation in &class.implementations {
+                let _ = writeln!(
+                    result,
+                    "  implements role={} methods={:?}",
+                    implementation.role, implementation.methods
+                );
+            }
             for (field, layout) in class.fields.iter().enumerate() {
                 let _ = writeln!(
                     result,
@@ -261,6 +321,7 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
         }
     }
     classes::validate_layouts(&module)?;
+    roles::validate_layouts(&module)?;
     for index in 0..module.functions.len() {
         verify_function(&module, index)?;
     }
@@ -300,11 +361,36 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
     let receiver_readonly = module
         .classes
         .iter()
-        .any(|class| class.methods.iter().any(|method| method.function == index));
+        .any(|class| class.methods.iter().any(|method| method.function == index))
+        || module
+            .extensions
+            .iter()
+            .any(|extension| extension.function == index);
     // Validate structural indices and capabilities even in unreachable code.
     for (pc, instruction) in function.code.iter().enumerate() {
         let mut effects = operation_effect(&instruction.op);
         match &instruction.op {
+            Op::IntoRole { class, role } => {
+                let layout = module
+                    .classes
+                    .get(*class)
+                    .ok_or_else(|| error(Some(pc), "Class index out of bounds".into()))?;
+                if !layout
+                    .implementations
+                    .iter()
+                    .any(|implementation| implementation.role == *role)
+                {
+                    return Err(error(Some(pc), "Class does not implement this role".into()));
+                }
+            }
+            Op::CallRole { role, method } => {
+                let method = module
+                    .roles
+                    .get(*role)
+                    .and_then(|role| role.methods.get(*method))
+                    .ok_or_else(|| error(Some(pc), "Role or method index out of bounds".into()))?;
+                effects = effects.union(method.effects);
+            }
             Op::Load(local) | Op::Store(local) if *local >= function.locals.len() => {
                 return Err(error(Some(pc), "Local index out of bounds".into()));
             }
@@ -448,6 +534,23 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
         };
         let mut successors = Vec::with_capacity(2);
         match &function.code[pc].op {
+            Op::IntoRole { class, role } => {
+                pop(
+                    &mut state,
+                    Type::class(*class, module.classes[*class].name.as_str()),
+                )?;
+                state
+                    .stack
+                    .push(Type::role(*role, &module.roles[*role].name));
+            }
+            Op::CallRole { role, method } => {
+                let signature = &module.roles[*role].methods[*method];
+                for parameter in signature.parameters.iter().rev() {
+                    pop(&mut state, parameter.clone())?;
+                }
+                pop(&mut state, Type::role(*role, &module.roles[*role].name))?;
+                state.stack.push(signature.result.clone());
+            }
             Op::Constant(value) => state.stack.push(value.ty()),
             Op::Load(local) => {
                 if !state.initialized[*local] {

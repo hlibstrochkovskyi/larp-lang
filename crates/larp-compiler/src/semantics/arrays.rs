@@ -264,7 +264,7 @@ impl Builder<'_> {
                     )
                 })?;
                 let field = self.class_field(class, name)?;
-                let ty = self.classes[class].fields[field].ty.clone();
+                let ty = self.tables.classes[class].fields[field].ty.clone();
                 Ok(Place::Field {
                     receiver,
                     class,

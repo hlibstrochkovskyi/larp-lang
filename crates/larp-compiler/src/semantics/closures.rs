@@ -102,10 +102,7 @@ impl Builder<'_> {
         };
         let mut child = Builder::new(
             &header,
-            self.headers,
-            self.names,
-            self.classes,
-            self.class_types,
+            self.tables,
             span,
             self.generated_base + self.generated.len(),
         );

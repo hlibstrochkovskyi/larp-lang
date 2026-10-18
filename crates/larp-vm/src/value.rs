@@ -10,6 +10,7 @@ pub(crate) enum Value {
     Closure(Handle),
     Array(Handle),
     Object(Handle),
+    Role { object: Handle, role: usize },
     FixedArray(Vec<Value>),
 }
 
@@ -23,6 +24,9 @@ impl Value {
             | (Self::Result(Err(a)), Self::Result(Err(b))) => a.equals(b),
             (Self::ConversionError(a), Self::ConversionError(b)) => a == b,
             (Self::Object(a), Self::Object(b)) => a == b,
+            (Self::Role { object: a, role: x }, Self::Role { object: b, role: y }) => {
+                a == b && x == y
+            }
             (Self::FixedArray(a), Self::FixedArray(b)) => {
                 a.len() == b.len() && a.iter().zip(b).all(|(a, b)| a.equals(b))
             }
@@ -37,6 +41,7 @@ impl Value {
                 Self::Closure(handle) | Self::Array(handle) | Self::Object(handle) => {
                     pending.push(*handle)
                 }
+                Self::Role { object, .. } => pending.push(*object),
                 Self::FixedArray(elements) => values.extend(elements),
                 Self::Option(Some(value)) | Self::Result(Ok(value)) | Self::Result(Err(value)) => {
                     values.push(value)

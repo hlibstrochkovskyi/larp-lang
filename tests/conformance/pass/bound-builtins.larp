@@ -1,0 +1,12 @@
+main_character {
+    mfs<mf> values = [3, 1];
+    let push = values.push;
+    let size = values.size;
+    push(2);
+    yap(size());
+    fn(fn(mf) -> mf uses(abort)) -> mfs<mf> uses(read, abort) map = values.map;
+    map(x => x + 1).forEach(x => yap(x));
+    result<mf,text> parsed = fumble("unc");
+    fn(fn(text) -> mf uses()) -> mf uses() recover = parsed.cope;
+    yap(recover(err => 49));
+}

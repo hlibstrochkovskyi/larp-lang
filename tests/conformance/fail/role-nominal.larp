@@ -1,0 +1,6 @@
+role Score { sidequest score() -> mf uses(); }
+archetype Similar {
+    init() {}
+    highkey sidequest score() -> mf uses() { return 49; }
+}
+main_character { Score score = new Similar(); }

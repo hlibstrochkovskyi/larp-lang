@@ -1,0 +1,6 @@
+role Score { sidequest score() -> mf uses(); }
+archetype Noisy : Score {
+    init() {}
+    highkey sidequest score() -> mf uses(observe) { yap("unc"); return 49; }
+}
+main_character {}

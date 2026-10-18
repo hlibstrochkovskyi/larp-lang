@@ -13,7 +13,7 @@ fn invalid(function: usize, instruction: Option<usize>, message: impl Into<Strin
     }
 }
 
-fn validate_type(
+pub(super) fn validate_type(
     module: &Module,
     ty: &Type,
     function: usize,
@@ -28,6 +28,19 @@ fn validate_type(
     let mut pending = vec![ty];
     while let Some(ty) = pending.pop() {
         match ty {
+            Type::Role(id, name) => {
+                if module
+                    .roles
+                    .get(*id)
+                    .is_none_or(|role| role.name.as_str() != name.as_ref())
+                {
+                    return Err(invalid(
+                        function,
+                        instruction,
+                        "Invalid nominal role identity or name",
+                    ));
+                }
+            }
             Type::Class(id, name) => {
                 if module
                     .classes
@@ -57,15 +70,57 @@ fn validate_type(
 }
 
 pub(super) fn preflight_types(module: &Module) -> Result<(), VerifyError> {
+    if module.roles.len() > 4096 || module.extensions.len() > 4096 {
+        return Err(
+            invalid(module.entry, None, "Role or extension count limit exceeded").resource(),
+        );
+    }
     if module.classes.len() > 4096 {
         return Err(invalid(module.entry, None, "Class count limit exceeded").resource());
     }
     let mut members = 0usize;
     let mut names = HashSet::new();
+    for role in &module.roles {
+        if role.name.is_empty() || !names.insert(role.name.as_str()) {
+            return Err(invalid(
+                module.entry,
+                None,
+                "Duplicate or empty nominal name",
+            ));
+        }
+        members = members.saturating_add(role.methods.len());
+        if members > 65_536 {
+            return Err(invalid(module.entry, None, "Role member limit exceeded").resource());
+        }
+        for method in &role.methods {
+            if method.parameters.len() > 4096 {
+                return Err(invalid(module.entry, None, "Role parameter limit exceeded").resource());
+            }
+            // Validate the complete signature before any structural comparison.
+            validate_type(
+                module,
+                &Type::function(
+                    method.parameters.clone(),
+                    method.result.clone(),
+                    method.effects,
+                ),
+                module.entry,
+                None,
+            )?;
+        }
+    }
+    for extension in &module.extensions {
+        validate_type(module, &extension.receiver, extension.function, None)?;
+    }
     for class in &module.classes {
         members = members
             .saturating_add(class.fields.len())
             .saturating_add(class.methods.len());
+        for implementation in &class.implementations {
+            members = members
+                .saturating_add(1)
+                .saturating_add(implementation.methods.len());
+        }
         if members > 65_536 {
             return Err(invalid(module.entry, None, "Class member limit exceeded").resource());
         }

@@ -33,6 +33,8 @@ fn unit() -> Function {
 
 fn verify_target(target: Function) -> Result<(), VerifyError> {
     verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![unit(), target],
         entry: 0,

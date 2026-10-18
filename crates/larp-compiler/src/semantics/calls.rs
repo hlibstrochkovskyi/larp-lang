@@ -137,7 +137,7 @@ impl Builder<'_> {
         if let ExprKind::Name(name) = &callee.kind
             && self.resolve(&name.text).is_none()
         {
-            if let Some(index) = self.names.get(&name.text).copied() {
+            if let Some(index) = self.tables.names.get(&name.text).copied() {
                 if !type_arguments.is_empty() {
                     return Err(error(
                         "LARP-P002",
@@ -145,7 +145,7 @@ impl Builder<'_> {
                         "User-defined generic functions are not implemented",
                     ));
                 }
-                let header = self.headers[index].clone();
+                let header = self.tables.headers[index].clone();
                 self.arity(arguments, header.parameters.len(), span)?;
                 self.require(header.effects, span)?;
                 let arguments = arguments
@@ -333,10 +333,7 @@ impl Builder<'_> {
         };
         let mut child = Builder::new(
             &header,
-            self.headers,
-            self.names,
-            self.classes,
-            self.class_types,
+            self.tables,
             span,
             self.generated_base + self.generated.len(),
         );
@@ -530,7 +527,7 @@ impl Builder<'_> {
     ) -> Result<Value> {
         if self.function.constructor.is_some() && matches!(receiver.kind, ExprKind::SelfValue) {
             let class = self.function.constructor.unwrap();
-            if self.classes[class]
+            if self.tables.classes[class]
                 .fields
                 .iter()
                 .any(|field| field.name == name.text)
@@ -547,6 +544,12 @@ impl Builder<'_> {
         let receiver = self.expression(receiver, None, evaluate)?;
         if receiver.ty.class_id().is_some() {
             return self.object_call(receiver, name, arguments, span, evaluate);
+        }
+        if receiver.ty.role_id().is_some() {
+            return self.role_call(receiver, name, arguments, span, evaluate);
+        }
+        if !roles::builtin_member(&receiver.ty, &name.text) {
+            return self.extension_call(receiver, name, arguments, span, evaluate);
         }
         if receiver.ty.element().is_some() || receiver.ty == Type::Text {
             return self.array_method(receiver, name, arguments, expected, span, evaluate);
@@ -577,55 +580,7 @@ impl Builder<'_> {
                     Type::function(vec![error_type.clone()], success_type.clone(), Effects::ALL);
                 // Evaluate the handler expression eagerly, then dispatch the result tag.
                 let handler = self.expression(&arguments[0], Some(expected_handler), evaluate)?;
-                let success = self.new_block(span);
-                let failure = self.new_block(span);
-                let done = self.new_block(span);
-                let success_payload = self.local(success_type.clone());
-                let error_payload = self.local(error_type.clone());
-                let result = self.local(success_type.clone());
-                self.function.blocks[success].parameter = Some(success_payload);
-                self.function.blocks[failure].parameter = Some(error_payload);
-                self.terminate(
-                    Terminator::MatchResult {
-                        value: receiver.slot,
-                        success,
-                        error: failure,
-                    },
-                    span,
-                );
-                self.current = success;
-                self.emit(
-                    Inst::Copy {
-                        destination: result,
-                        source: success_payload,
-                    },
-                    span,
-                );
-                self.terminate(Terminator::Goto(done), span);
-                self.current = failure;
-                let recovered = self.indirect_value(
-                    handler,
-                    vec![Value {
-                        slot: error_payload,
-                        ty: error_type,
-                        constant: None,
-                    }],
-                    span,
-                )?;
-                self.emit(
-                    Inst::Copy {
-                        destination: result,
-                        source: recovered.slot,
-                    },
-                    span,
-                );
-                self.terminate(Terminator::Goto(done), span);
-                self.current = done;
-                Ok(Value {
-                    slot: result,
-                    ty: success_type,
-                    constant: None,
-                })
+                self.cope_values(receiver, handler, success_type, error_type, span)
             }
             _ => Err(error(
                 "LARP-T001",
@@ -633,5 +588,63 @@ impl Builder<'_> {
                 format!("Unknown method '{}' on {}", name.text, receiver.ty),
             )),
         }
+    }
+    pub(super) fn cope_values(
+        &mut self,
+        receiver: Value,
+        handler: Value,
+        success_type: Type,
+        error_type: Type,
+        span: Span,
+    ) -> Result<Value> {
+        let success = self.new_block(span);
+        let failure = self.new_block(span);
+        let done = self.new_block(span);
+        let success_payload = self.local(success_type.clone());
+        let error_payload = self.local(error_type.clone());
+        let result = self.local(success_type.clone());
+        self.function.blocks[success].parameter = Some(success_payload);
+        self.function.blocks[failure].parameter = Some(error_payload);
+        self.terminate(
+            Terminator::MatchResult {
+                value: receiver.slot,
+                success,
+                error: failure,
+            },
+            span,
+        );
+        self.current = success;
+        self.emit(
+            Inst::Copy {
+                destination: result,
+                source: success_payload,
+            },
+            span,
+        );
+        self.terminate(Terminator::Goto(done), span);
+        self.current = failure;
+        let recovered = self.indirect_value(
+            handler,
+            vec![Value {
+                slot: error_payload,
+                ty: error_type,
+                constant: None,
+            }],
+            span,
+        )?;
+        self.emit(
+            Inst::Copy {
+                destination: result,
+                source: recovered.slot,
+            },
+            span,
+        );
+        self.terminate(Terminator::Goto(done), span);
+        self.current = done;
+        Ok(Value {
+            slot: result,
+            ty: success_type,
+            constant: None,
+        })
     }
 }

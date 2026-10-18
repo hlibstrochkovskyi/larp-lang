@@ -1,0 +1,4 @@
+main_character {
+    mfs<mf> values = [49];
+    fn() -> mf uses() size = values.size;
+}

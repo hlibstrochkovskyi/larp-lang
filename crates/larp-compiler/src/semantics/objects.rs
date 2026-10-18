@@ -1,292 +1,5 @@
 use super::*;
-use std::collections::{HashSet, VecDeque};
-
-fn constructor_effects() -> Effects {
-    Effects::READ.union(Effects::WRITE).union(Effects::ABORT)
-}
-
-fn parameters(
-    parameters: &[(ast::TypeExpr, Name)],
-    class_types: &HashMap<String, Type>,
-) -> Result<Vec<Type>> {
-    parameters
-        .iter()
-        .map(|(expression, name)| {
-            let result = ty(expression, class_types)?;
-            if result == Type::Unit {
-                return Err(error(
-                    "LARP-T001",
-                    name.span,
-                    "Function parameters cannot have type unit",
-                ));
-            }
-            Ok(result)
-        })
-        .collect()
-}
-
-pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>> {
-    let mut body_errors = Vec::new();
-    let result = (|| -> Result<Program> {
-        if ast.classes.len() > 4096 {
-            return Err(error(
-                "LARP-P003",
-                ast.main.span,
-                "Class count limit exceeded",
-            ));
-        }
-        let mut class_types = HashMap::new();
-        for (index, class) in ast.classes.iter().enumerate() {
-            if Type::from_name(&class.name.text).is_some()
-                || matches!(
-                    class.name.text.as_str(),
-                    "mfs" | "hediJeans" | "baddie" | "result"
-                )
-                || class_types
-                    .insert(
-                        class.name.text.clone(),
-                        Type::class(index, class.name.text.as_str()),
-                    )
-                    .is_some()
-            {
-                return Err(error(
-                    "LARP-N002",
-                    class.name.span,
-                    format!("Duplicate or reserved type name '{}'", class.name.text),
-                ));
-            }
-        }
-        let mut classes = Vec::new();
-        let mut members = 0usize;
-        for class in &ast.classes {
-            if class.constructors.len() != 1 {
-                return Err(error(
-                    "LARP-T011",
-                    class.span,
-                    "An archetype must declare exactly one init constructor",
-                ));
-            }
-            members += class.fields.len() + class.methods.len();
-            if members > 65_536 {
-                return Err(error(
-                    "LARP-P003",
-                    class.span,
-                    "Class member limit exceeded",
-                ));
-            }
-            let mut seen = HashSet::new();
-            let mut fields = Vec::new();
-            for field in &class.fields {
-                if !seen.insert(field.name.text.clone()) {
-                    return Err(error(
-                        "LARP-N002",
-                        field.name.span,
-                        "Duplicate class member name",
-                    ));
-                }
-                let field_type = ty(&field.ty, &class_types)?;
-                if field_type == Type::Unit {
-                    return Err(error(
-                        "LARP-T001",
-                        field.name.span,
-                        "A field cannot have type unit",
-                    ));
-                }
-                fields.push(larp_bytecode::Field {
-                    name: field.name.text.clone(),
-                    ty: field_type,
-                    public: field.public,
-                });
-            }
-            for method in &class.methods {
-                if !seen.insert(method.function.name.text.clone()) {
-                    return Err(error(
-                        "LARP-N002",
-                        method.function.name.span,
-                        "Fields and methods must have distinct names",
-                    ));
-                }
-            }
-            classes.push(larp_bytecode::Class {
-                name: class.name.text.clone(),
-                fields,
-                methods: Vec::new(),
-                constructor: usize::MAX,
-            });
-        }
-        let mut headers = Vec::new();
-        let mut bodies = Vec::new();
-        let mut parameter_names = Vec::new();
-        let mut names = HashMap::new();
-        for function in &ast.functions {
-            if let Some(previous) = names.get(&function.name.text).copied() {
-                let mut diagnostic =
-                    error("LARP-N002", function.name.span, "Duplicate function name");
-                let previous: usize = previous;
-                diagnostic.related.push(Label {
-                    span: ast.functions[previous].name.span,
-                    message: "First declaration".into(),
-                });
-                return Err(diagnostic);
-            }
-            names.insert(function.name.text.clone(), headers.len());
-            headers.push(Header {
-                name: function.name.clone(),
-                parameters: parameters(&function.parameters, &class_types)?,
-                result: ty(&function.result, &class_types)?,
-                effects: effects(&function.effects)?,
-                owner: None,
-                constructor: None,
-            });
-            bodies.push(&function.body);
-            parameter_names.push(
-                function
-                    .parameters
-                    .iter()
-                    .map(|(_, name)| name.clone())
-                    .collect::<Vec<_>>(),
-            );
-        }
-        for (index, class) in ast.classes.iter().enumerate() {
-            let constructor = &class.constructors[0];
-            classes[index].constructor = headers.len();
-            headers.push(Header {
-                name: Name {
-                    text: format!("{}::init", class.name.text),
-                    span: constructor.span,
-                },
-                parameters: parameters(&constructor.parameters, &class_types)?,
-                result: class_types[&class.name.text].clone(),
-                effects: constructor_effects(),
-                owner: Some(index),
-                constructor: Some(index),
-            });
-            bodies.push(&constructor.body);
-            parameter_names.push(
-                constructor
-                    .parameters
-                    .iter()
-                    .map(|(_, name)| name.clone())
-                    .collect(),
-            );
-            for declaration in &class.methods {
-                let method = &declaration.function;
-                let mut method_parameters = vec![class_types[&class.name.text].clone()];
-                method_parameters.extend(parameters(&method.parameters, &class_types)?);
-                classes[index].methods.push(larp_bytecode::Method {
-                    name: method.name.text.clone(),
-                    function: headers.len(),
-                    public: declaration.public,
-                });
-                headers.push(Header {
-                    name: Name {
-                        text: format!("{}::{}", class.name.text, method.name.text),
-                        span: method.name.span,
-                    },
-                    parameters: method_parameters,
-                    result: ty(&method.result, &class_types)?,
-                    effects: effects(&method.effects)?,
-                    owner: Some(index),
-                    constructor: None,
-                });
-                bodies.push(&method.body);
-                let mut names = vec![Name {
-                    text: "self".into(),
-                    span: method.name.span,
-                }];
-                names.extend(method.parameters.iter().map(|(_, name)| name.clone()));
-                parameter_names.push(names);
-            }
-        }
-        if headers.len() >= 4096 {
-            return Err(error(
-                "LARP-P003",
-                ast.main.span,
-                "Too many functions including methods and constructors",
-            ));
-        }
-        let entry = headers.len();
-        headers.push(Header {
-            name: Name {
-                text: "main_character".into(),
-                span: ast.main.span,
-            },
-            parameters: Vec::new(),
-            result: Type::Unit,
-            effects: Effects::ALL,
-            owner: None,
-            constructor: None,
-        });
-        bodies.push(&ast.main);
-        parameter_names.push(Vec::new());
-        let mut functions = Vec::new();
-        let mut generated = Vec::new();
-        let mut errors = Vec::new();
-        for (index, header) in headers.iter().enumerate() {
-            let mut builder = Builder::new(
-                header,
-                &headers,
-                &names,
-                &classes,
-                &class_types,
-                bodies[index].span,
-                headers.len() + generated.len(),
-            );
-            for (slot, name) in parameter_names[index].iter().enumerate() {
-                if let Err(error) = builder.declare(
-                    name,
-                    Binding {
-                        slot,
-                        ty: header.parameters[slot].clone(),
-                        writable: name.text != "self",
-                        span: name.span,
-                    },
-                ) {
-                    builder.errors.push(*error);
-                }
-            }
-            if let Some(class) = header.constructor {
-                for (field, declaration) in
-                    classes[class].fields.iter().zip(&ast.classes[class].fields)
-                {
-                    let slot = builder.local(field.ty.clone());
-                    builder.constructor_fields.push(Binding {
-                        slot,
-                        ty: field.ty.clone(),
-                        writable: true,
-                        span: declaration.name.span,
-                    });
-                }
-            }
-            builder.block(bodies[index], false);
-            builder.finish();
-            if builder.function.constructor.is_some() && builder.errors.is_empty() {
-                builder.check_initialization();
-            }
-            generated.extend(builder.generated);
-            functions.push(builder.function);
-            errors.extend(builder.errors);
-        }
-        if !errors.is_empty() {
-            let first = errors[0].clone();
-            body_errors = errors;
-            return Err(Box::new(first));
-        }
-        functions.extend(generated);
-        Ok(Program {
-            classes,
-            functions,
-            entry,
-        })
-    })();
-    result.map_err(|error| {
-        if body_errors.is_empty() {
-            vec![*error]
-        } else {
-            body_errors
-        }
-    })
-}
+use std::collections::VecDeque;
 
 impl Builder<'_> {
     pub(super) fn self_value(&mut self, span: Span) -> Result<Value> {
@@ -308,7 +21,7 @@ impl Builder<'_> {
     }
 
     pub(super) fn class_field(&self, class: usize, name: &Name) -> Result<usize> {
-        let field = self.classes[class]
+        let field = self.tables.classes[class]
             .fields
             .iter()
             .position(|field| field.name == name.text)
@@ -316,10 +29,13 @@ impl Builder<'_> {
                 error(
                     "LARP-T001",
                     name.span,
-                    format!("{} has no field '{}'", self.classes[class].name, name.text),
+                    format!(
+                        "{} has no field '{}'",
+                        self.tables.classes[class].name, name.text
+                    ),
                 )
             })?;
-        if !self.classes[class].fields[field].public && self.function.owner != Some(class) {
+        if !self.tables.classes[class].fields[field].public && self.function.owner != Some(class) {
             return Err(error(
                 "LARP-T010",
                 name.span,
@@ -331,7 +47,7 @@ impl Builder<'_> {
 
     pub(super) fn constructor_field(&self, name: &Name) -> Result<Binding> {
         let class = self.function.constructor.unwrap();
-        if self.classes[class]
+        if self.tables.classes[class]
             .methods
             .iter()
             .any(|method| method.name == name.text)
@@ -359,15 +75,21 @@ impl Builder<'_> {
         span: Span,
         evaluate: bool,
     ) -> Result<Value> {
-        let ty = self.class_types.get(&name.text).cloned().ok_or_else(|| {
+        let ty = self.tables.types.get(&name.text).cloned().ok_or_else(|| {
             error(
                 "LARP-T005",
                 name.span,
                 "new requires a declared archetype name",
             )
         })?;
-        let class = ty.class_id().unwrap();
-        let header = self.headers[self.classes[class].constructor].clone();
+        let class = ty.class_id().ok_or_else(|| {
+            error(
+                "LARP-T005",
+                name.span,
+                "new requires an archetype, not a role",
+            )
+        })?;
+        let header = self.tables.headers[self.tables.classes[class].constructor].clone();
         if arguments.len() != header.parameters.len() {
             return Err(error(
                 "LARP-T006",
@@ -418,7 +140,7 @@ impl Builder<'_> {
         span: Span,
     ) -> Result<Value> {
         self.require(Effects::READ, span)?;
-        let ty = self.classes[class].fields[field].ty.clone();
+        let ty = self.tables.classes[class].fields[field].ty.clone();
         let slot = self.local(ty.clone());
         self.emit(
             Inst::GetField {
@@ -460,7 +182,7 @@ impl Builder<'_> {
     }
 
     fn method_id(&self, class: usize, name: &Name) -> Result<Option<usize>> {
-        let Some(method) = self.classes[class]
+        let Some(method) = self.tables.classes[class]
             .methods
             .iter()
             .find(|method| method.name == name.text)
@@ -481,16 +203,20 @@ impl Builder<'_> {
         &mut self,
         receiver: Value,
         name: &Name,
+        expected: Option<Type>,
         span: Span,
     ) -> Result<Value> {
+        if receiver.ty.role_id().is_some() {
+            return self.role_member(receiver, name, span);
+        }
         let Some(class) = receiver.ty.class_id() else {
-            return Err(error(
-                "LARP-T001",
-                name.span,
-                format!("Unknown member '{}' on {}", name.text, receiver.ty),
-            ));
+            if roles::builtin_member(&receiver.ty, &name.text) {
+                return self.bound_builtin(receiver, name, expected, span);
+            }
+            let id = self.extension_id(&receiver.ty, name)?;
+            return self.bound_method(receiver, id, span);
         };
-        if self.classes[class]
+        if self.tables.classes[class]
             .fields
             .iter()
             .any(|field| field.name == name.text)
@@ -498,9 +224,10 @@ impl Builder<'_> {
             let field = self.class_field(class, name)?;
             return self.get_field(receiver, class, field, span);
         }
-        let method = self
-            .method_id(class, name)?
-            .ok_or_else(|| error("LARP-T001", name.span, "Unknown class member"))?;
+        let method = match self.method_id(class, name)? {
+            Some(id) => id,
+            None => self.extension_id(&receiver.ty, name)?,
+        };
         self.bound_method(receiver, method, span)
     }
 
@@ -513,7 +240,7 @@ impl Builder<'_> {
         evaluate: bool,
     ) -> Result<Value> {
         let class = receiver.ty.class_id().unwrap();
-        if self.classes[class]
+        if self.tables.classes[class]
             .fields
             .iter()
             .any(|field| field.name == name.text)
@@ -522,40 +249,20 @@ impl Builder<'_> {
             let callee = self.get_field(receiver, class, field, span)?;
             return self.call_value(callee, arguments, span, evaluate);
         }
-        let method = self
-            .method_id(class, name)?
-            .ok_or_else(|| error("LARP-T001", name.span, "Unknown class method"))?;
-        let header = self.headers[method].clone();
-        if arguments.len() + 1 != header.parameters.len() {
-            return Err(error(
-                "LARP-T006",
-                span,
-                "Incorrect instance method argument count",
-            ));
-        }
-        self.require(header.effects, span)?;
-        let mut values = vec![receiver.slot];
-        for (argument, ty) in arguments.iter().zip(&header.parameters[1..]) {
-            values.push(self.expression(argument, Some(ty.clone()), evaluate)?.slot);
-        }
-        let slot = self.local(header.result.clone());
-        self.emit(
-            Inst::Call {
-                destination: slot,
-                function: method,
-                arguments: values,
-            },
-            span,
-        );
-        Ok(Value {
-            slot,
-            ty: header.result,
-            constant: None,
-        })
+        let method = match self.method_id(class, name)? {
+            Some(id) => id,
+            None => self.extension_id(&receiver.ty, name)?,
+        };
+        self.receiver_call(receiver, method, arguments, span, evaluate)
     }
 
-    fn bound_method(&mut self, receiver: Value, method: usize, span: Span) -> Result<Value> {
-        let target = self.headers[method].clone();
+    pub(super) fn bound_method(
+        &mut self,
+        receiver: Value,
+        method: usize,
+        span: Span,
+    ) -> Result<Value> {
+        let target = self.tables.headers[method].clone();
         let header = Header {
             name: Name {
                 text: format!("bound:{}@{}", target.name.text, span.range().start),
@@ -569,10 +276,7 @@ impl Builder<'_> {
         };
         let mut child = Builder::new(
             &header,
-            self.headers,
-            self.names,
-            self.classes,
-            self.class_types,
+            self.tables,
             span,
             self.generated_base + self.generated.len(),
         );
@@ -617,16 +321,21 @@ impl Builder<'_> {
     }
 
     pub(super) fn member_hint(&self, ty: &Type, name: &Name) -> Option<Type> {
-        let class = ty.class_id()?;
-        let layout = &self.classes[class];
+        let Some(class) = ty.class_id() else {
+            return self.extra_member_hint(ty, name);
+        };
+        let layout = &self.tables.classes[class];
         if let Some(field) = layout.fields.iter().find(|field| field.name == name.text) {
             return Some(field.ty.clone());
         }
-        let method = layout
+        let Some(method) = layout
             .methods
             .iter()
-            .find(|method| method.name == name.text)?;
-        let header = &self.headers[method.function];
+            .find(|method| method.name == name.text)
+        else {
+            return self.extra_member_hint(ty, name);
+        };
+        let header = &self.tables.headers[method.function];
         Some(Type::function(
             header.parameters[1..].to_vec(),
             header.result.clone(),

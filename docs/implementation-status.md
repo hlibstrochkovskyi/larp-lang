@@ -1,6 +1,6 @@
 # Implementation status
 
-The compiler currently implements algorithmic programs and nominal classes from
+The compiler currently implements algorithmic programs and nominal objects from
 Specification v0.1. Programs are lexed, parsed, name/type/effect checked, lowered
 into typed control-flow IR, compiled to stack bytecode, verified, and executed by LARP's VM.
 No host `eval`, source-to-Python/JavaScript translation, or AST execution is used.
@@ -59,6 +59,31 @@ No host `eval`, source-to-Python/JavaScript translation, or AST execution is use
   handles, explicit roots, stress collection, and execution statistics through
   the Rust VM API. Suspended collection callbacks and partial results remain rooted.
 
+## Roles, extensions, and bound built-ins
+
+The M4 feature set is implemented and exercised through the compiler and VM.
+See [roles and extensions validation](validation-roles-and-extensions.md) for
+executed checks, coverage, and limits of the completed local acceptance gate.
+
+- Nominal `role` signatures and explicit `archetype C : R1, R2` implementations.
+  Every required method must be public, match parameter/result types exactly,
+  and stay within the role's effect bound. Roles have no fields, default methods,
+  inheritance, or downcasts.
+- Contextual class-to-role conversion where the class explicitly implements the
+  expected role. The role view retains its underlying object's identity; calls
+  dispatch through verified implementation tables. Bound role methods capture
+  that view and preserve its declared interface effect bound.
+- Concrete top-level receiver extensions resolved by the static receiver type.
+  Real class/role/built-in members win by name. Inaccessible members and wrong
+  signatures produce errors rather than falling back to an extension. Extensions
+  have no class-private access; duplicate receiver/name declarations are rejected.
+- Built-in method extraction: `size`, `push`, `sorted`, `isSome`, `isOk`, and
+  `copium` infer their concrete function types. `map`, `filter`, `forEach`, and
+  `cope` need an expected concrete function type and retain callback effect bounds.
+  Extraction evaluates and captures its receiver immediately. Dynamic arrays and
+  object/role views preserve shared identity; fixed arrays and tagged values are
+  snapshots. Saved methods retain their original receiver after reassignment.
+
 ## CLI
 
 ```sh
@@ -68,6 +93,7 @@ cargo run -p larp-cli -- run examples/primes.larp --fuel 100000
 cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
 cargo run -p larp-cli -- run examples/collections.larp --gc-stress
 cargo run -p larp-cli -- run examples/objects.larp --gc-stress
+cargo run -p larp-cli -- run examples/roles.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo run -p larp-cli -- dump examples/primes.larp --ir
 cargo run -p larp-cli -- explain LARP-T041
@@ -82,8 +108,7 @@ Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 ## Not implemented yet
 
-Roles, class-to-role coercion, extension resolution, extraction of built-in
-collection methods as bound functions, scenario regions,
+Scenario regions,
 `larp/flex/canon/palantir`, lazy bindings, `sybau`, persisted artifacts,
 modules, host I/O APIs, and formatting. These are tracked by the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
@@ -91,8 +116,10 @@ not removed from the project objective. Later syntax is explicitly rejected.
 The scenario model remains independent and is not a substitute for compiling
 scenario programs. GC manages objects, closures, and dynamic arrays, including
 cycles between them. Option/result/fixed-array wrappers are owned values that
-trace any contained handles. Text uses owned immutable storage. Lazy cells and scenario
-roots need additional GC integration when those features are implemented.
+trace any contained handles. Role values trace their underlying object handle;
+extracted methods retain that handle through closure captures. Text uses owned
+immutable storage. Lazy cells and scenario roots need additional GC integration
+when those features are implemented.
 
 ## Current limits and conservative checks
 
@@ -123,8 +150,8 @@ roots need additional GC integration when those features are implemented.
   type `unit`. Array literal operands are limited to 65,536, within the existing
   expression-token limit; runtime dynamic arrays may grow up to the `mf` length
   limit. Negative/out-of-range indices and oversized growth abort.
-- Class declarations are limited to 4096, with at most 65,536 fields/methods
-  across the module. Constructor initialization analysis is bounded to 4,000,000
+- Class and role declarations are each limited to 4096, with at most 65,536
+  nominal member/table entries across the module. Constructor initialization analysis is bounded to 4,000,000
   block/field cells. Constructor calls conservatively carry `read,write,abort`;
   ordinary operations/callbacks with `write` bounds are rejected during
   construction, even when a particular call might only affect fresh storage.
@@ -165,8 +192,9 @@ a fixed array still retain their shared identity.
 
 ## Evidence
 
-See [objects validation](validation-objects.md) for current executed checks,
-coverage, and limits. [Collections validation](validation-collections.md) and
+See [roles and extensions validation](validation-roles-and-extensions.md) for
+the current acceptance gate, and [objects validation](validation-objects.md) for
+the preceding executed class checks. [Collections validation](validation-collections.md) and
 [functions and recovery validation](validation-functions-and-recovery.md) record
 preceding milestones.
 

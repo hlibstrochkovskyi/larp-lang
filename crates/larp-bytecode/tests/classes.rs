@@ -56,7 +56,10 @@ fn module() -> Module {
     );
     getter.owner = Some(0);
     Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![Class {
+            implementations: vec![],
             name: "Counter".into(),
             fields: vec![Field {
                 name: "value".into(),
@@ -310,6 +313,7 @@ fn constructing_nested_fresh_objects_is_permitted_inside_constructors() {
     let mut module = module();
     let inner = Type::class(1, "Inner");
     module.classes.push(Class {
+        implementations: vec![],
         name: "Inner".into(),
         fields: vec![],
         constructor: 3,

@@ -24,6 +24,8 @@ fn function(code: Vec<Op>, locals: Vec<Type>, effects: Effects) -> Function {
 
 fn rejects(code: Vec<Op>, locals: Vec<Type>, expected: &str) {
     let result = verify(Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![],
         functions: vec![function(code, locals, Effects::ALL)],
         entry: 0,
@@ -129,6 +131,8 @@ fn effects_cannot_be_hidden_in_direct_calls_or_unreachable_instructions() {
     );
     assert!(
         verify(Module {
+            roles: vec![],
+            extensions: vec![],
             classes: vec![],
             functions: vec![entry, callee],
             entry: 0
@@ -144,6 +148,8 @@ fn effects_cannot_be_hidden_in_direct_calls_or_unreachable_instructions() {
     );
     assert!(
         verify(Module {
+            roles: vec![],
+            extensions: vec![],
             classes: vec![],
             functions: vec![entry],
             entry: 0
@@ -159,6 +165,8 @@ fn effects_cannot_be_hidden_in_direct_calls_or_unreachable_instructions() {
     );
     assert!(
         verify(Module {
+            roles: vec![],
+            extensions: vec![],
             classes: vec![],
             functions: vec![entry],
             entry: 0
@@ -179,6 +187,8 @@ fn entry_and_parameter_signatures_are_verified() {
     entry.parameters = vec![Type::Mf];
     assert!(
         verify(Module {
+            roles: vec![],
+            extensions: vec![],
             classes: vec![],
             functions: vec![entry],
             entry: 0
@@ -196,6 +206,8 @@ fn entry_and_parameter_signatures_are_verified() {
     callee.parameters = vec![Type::Mf];
     assert!(
         verify(Module {
+            roles: vec![],
+            extensions: vec![],
             classes: vec![],
             functions: vec![entry, callee],
             entry: 0

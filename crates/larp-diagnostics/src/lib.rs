@@ -11,6 +11,11 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-T013",
+        title: "Invalid role implementation",
+        explanation: "An archetype must implement each listed role exactly once. Every required method must be public with identical parameter/result types and an effect bound contained in the role declaration. Role conformance is nominal, not inferred from method names.",
+    },
+    DiagnosticCode {
         id: "LARP-T011",
         title: "Invalid constructor initialization",
         explanation: "An archetype must have exactly one init. Every field must be assigned on every successful constructor path before reading it or completing construction. Assign missing fields in every branch, including early returns.",

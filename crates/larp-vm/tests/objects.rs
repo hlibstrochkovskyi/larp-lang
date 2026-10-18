@@ -98,7 +98,10 @@ fn module(main: Function) -> Module {
     );
     helper.owner = Some(0);
     Module {
+        roles: vec![],
+        extensions: vec![],
         classes: vec![Class {
+            implementations: vec![],
             name: "Counter".into(),
             constructor: 1,
             fields: vec![Field {
@@ -229,6 +232,7 @@ fn object_fields_and_constructor_temporaries_are_roots_during_nested_allocations
         ],
     ));
     module.classes.push(Class {
+        implementations: vec![],
         name: "Holder".into(),
         constructor: 5,
         fields: vec![

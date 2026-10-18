@@ -1,0 +1,37 @@
+role Scored {
+    sidequest score() -> mf uses(read);
+}
+
+archetype Founder : Scored {
+    lowkey mf aura;
+
+    init(mf aura) {
+        self.aura = aura;
+    }
+
+    highkey sidequest score() -> mf uses(read) {
+        return self.aura;
+    }
+}
+
+archetype Rival : Scored {
+    lowkey mf aura;
+
+    init(mf aura) {
+        self.aura = aura;
+    }
+
+    highkey sidequest score() -> mf uses(read) {
+        return self.aura;
+    }
+}
+
+sidequest Scored.doubled() -> mf uses(read, abort) {
+    return self.score() * 2;
+}
+
+main_character {
+    mfs<Scored> players = [new Founder(7), new Rival(49)];
+    players.forEach(player => yap(player.score()));
+    players.map(player => player.doubled()).forEach(value => yap(value));
+}

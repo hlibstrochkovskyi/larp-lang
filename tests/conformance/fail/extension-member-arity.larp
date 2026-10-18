@@ -1,0 +1,6 @@
+archetype Score {
+    init() {}
+    highkey sidequest score() -> mf uses() { return 49; }
+}
+sidequest Score.score(mf value) -> mf uses() { return value; }
+main_character { yap(new Score().score(1)); }

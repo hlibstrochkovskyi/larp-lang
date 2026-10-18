@@ -1,0 +1,6 @@
+archetype Secret {
+    init() {}
+    lowkey sidequest score() -> mf uses() { return 49; }
+}
+sidequest Secret.score() -> mf uses() { return 0; }
+main_character { yap(new Secret().score()); }

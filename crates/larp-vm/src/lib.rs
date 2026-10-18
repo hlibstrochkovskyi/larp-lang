@@ -213,6 +213,51 @@ pub fn execute_with_stats(
         let frame = frames.last_mut().unwrap();
         frame.pc += 1;
         match &instruction.op {
+            Op::IntoRole { role, .. } => {
+                let Value::Object(object) = stack.pop().unwrap() else {
+                    unreachable!("verified class-to-role coercion")
+                };
+                stack.push(Value::Role {
+                    object,
+                    role: *role,
+                });
+            }
+            Op::CallRole { role, method } => {
+                if frames.len() >= limits.call_frames {
+                    return Err(error("LARP-R006", "Call-frame limit exceeded".into()));
+                }
+                let count = module.roles[*role].methods[*method].parameters.len();
+                let arguments = stack.split_off(stack.len() - count);
+                let Value::Role {
+                    object,
+                    role: actual,
+                } = stack.pop().unwrap()
+                else {
+                    unreachable!("verified role receiver")
+                };
+                debug_assert_eq!(*role, actual);
+                let instance = heap.instance(object).expect("rooted live role receiver");
+                let implementation = module.classes[instance.class]
+                    .implementations
+                    .iter()
+                    .find(|implementation| implementation.role == *role)
+                    .expect("verified role implementation");
+                let target = implementation.methods[*method];
+                let mut locals = vec![None; module.functions[target].locals.len()];
+                for (slot, value) in locals
+                    .iter_mut()
+                    .zip(std::iter::once(Value::Object(object)).chain(arguments))
+                {
+                    *slot = Some(value);
+                }
+                frames.push(Frame {
+                    function: target,
+                    pc: 0,
+                    locals,
+                    stack_base: stack.len(),
+                    iteration: None,
+                });
+            }
             Op::Constant(value) => stack.push(Value::Scalar(value.clone())),
             Op::Load(local) => stack.push(
                 frame.locals[*local]

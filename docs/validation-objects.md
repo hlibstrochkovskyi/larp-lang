@@ -1,5 +1,9 @@
 # Classes, constructors, and object lifetime validation
 
+Historical class-slice snapshot. See [roles and extensions validation](validation-roles-and-extensions.md)
+for the following M4 acceptance gate and [implementation status](implementation-status.md)
+for current coverage.
+
 Date: 2026-10-17. Environment: Linux, rustc/Cargo 1.99.0. The dependency-free
 workspace builds offline. This report records local validation of the class
 slice within M4. Roles and extensions remain pending; M4 and Specification v0.1
