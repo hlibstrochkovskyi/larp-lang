@@ -46,6 +46,17 @@ pub struct Instruction {
 
 #[derive(Clone, Debug)]
 pub enum InstructionKind {
+    Lazy {
+        destination: Local,
+        function: usize,
+        captures: Vec<Local>,
+    },
+    Force {
+        destination: Local,
+        value: Local,
+    },
+    SilenceEnter,
+    SilenceExit,
     Scenario {
         destination: Local,
         entry: usize,
@@ -222,6 +233,24 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                     let span = instruction.span;
                     let mut emit = |op| code.push(ByteInstruction { op, span });
                     match &instruction.kind {
+                        InstructionKind::Lazy {
+                            destination,
+                            function,
+                            captures,
+                        } => {
+                            for capture in captures {
+                                emit(Op::Load(*capture));
+                            }
+                            emit(Op::MakeLazy(*function));
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::Force { destination, value } => {
+                            emit(Op::Load(*value));
+                            emit(Op::Force(function.locals[*value].clone()));
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::SilenceEnter => emit(Op::SilenceEnter),
+                        InstructionKind::SilenceExit => emit(Op::SilenceExit),
                         InstructionKind::Scenario {
                             destination,
                             entry,

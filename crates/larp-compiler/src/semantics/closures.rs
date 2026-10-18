@@ -81,6 +81,13 @@ impl Builder<'_> {
         }
         for name in free {
             if let Some(binding) = self.resolve(&name) {
+                if self.snapshot_capture && !binding.ty.is_snapshot() {
+                    return Err(error(
+                        "LARP-T014",
+                        span,
+                        "A lazy initializer may capture only SnapshotValue bindings",
+                    ));
+                }
                 if self.function.scenario.is_some() && !binding.ty.is_snapshot() {
                     return Err(error(
                         "LARP-E002",
@@ -88,7 +95,7 @@ impl Builder<'_> {
                         "A scenario closure may capture only SnapshotValues",
                     ));
                 }
-                let copied = self.read(&binding, span);
+                let copied = self.read(&binding, span)?;
                 captures.push((name, binding, copied.slot));
             }
         }
@@ -123,6 +130,7 @@ impl Builder<'_> {
             child.declare(
                 &parameter.name,
                 Binding {
+                    lazy: None,
                     slot: index,
                     ty: header.parameters[index].clone(),
                     writable: true,
@@ -136,6 +144,7 @@ impl Builder<'_> {
             child.scopes[0].insert(
                 name.clone(),
                 Binding {
+                    lazy: None,
                     slot,
                     ty: binding.ty.clone(),
                     writable: false,
@@ -280,6 +289,11 @@ fn free_names(parameters: &[ast::LambdaParameter], body: &ast::LambdaBody) -> BT
         }
         fn statement(&mut self, statement: &ast::Statement) {
             match &statement.kind {
+                StatementKind::Lazy { name, value, .. } => {
+                    self.expr(value);
+                    self.bound.last_mut().unwrap().insert(name.text.clone());
+                }
+                StatementKind::Sybau(block) => self.block(block),
                 StatementKind::Scenario { root, body, .. } => {
                     self.name(root);
                     self.block(body);

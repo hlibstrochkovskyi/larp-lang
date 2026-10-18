@@ -1,0 +1,15 @@
+sidequest noisy() -> unit uses(observe) { yap("callee"); }
+sidequest early() -> mf uses(observe) {
+    sybau { noisy(); return 49; }
+}
+main_character {
+    nonchalant mf value = 49;
+    sybau {
+        yap(value);
+        sybau { noisy(); }
+        yap(early());
+    }
+    yap(value);
+    yap(early());
+    noisy();
+}

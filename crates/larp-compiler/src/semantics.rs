@@ -10,6 +10,7 @@ mod bound_builtins;
 mod calls;
 mod closures;
 mod declarations;
+mod lazy;
 mod objects;
 mod roles;
 mod scenarios;
@@ -160,6 +161,7 @@ pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>
 
 #[derive(Clone)]
 struct Binding {
+    lazy: Option<Effects>,
     slot: Local,
     ty: Type,
     writable: bool,
@@ -177,7 +179,7 @@ struct Builder<'a> {
     function: Function,
     current: BlockId,
     scopes: Vec<HashMap<String, Binding>>,
-    breaks: Vec<BlockId>,
+    breaks: Vec<(BlockId, usize)>,
     tables: &'a Tables,
     constructor_fields: Vec<Binding>,
     errors: Vec<Diagnostic>,
@@ -189,6 +191,8 @@ struct Builder<'a> {
     scenario_outer: std::collections::HashSet<Local>,
     scenario_forbidden: std::collections::HashSet<String>,
     view_access: usize,
+    snapshot_capture: bool,
+    silence_depth: usize,
 }
 
 impl<'a> Builder<'a> {
@@ -226,6 +230,8 @@ impl<'a> Builder<'a> {
             scenario_outer: Default::default(),
             scenario_forbidden: Default::default(),
             view_access: 0,
+            snapshot_capture: false,
+            silence_depth: 0,
         }
     }
     fn finish(&mut self) {
@@ -398,6 +404,14 @@ impl<'a> Builder<'a> {
     fn statement(&mut self, statement: &ast::Statement) -> Result<()> {
         let span = statement.span;
         match &statement.kind {
+            StatementKind::Lazy { ty, name, value } => self.lazy(ty, name, value, span)?,
+            StatementKind::Sybau(body) => {
+                self.emit(Inst::SilenceEnter, span);
+                self.silence_depth += 1;
+                self.block(body, true);
+                self.emit(Inst::SilenceExit, span);
+                self.silence_depth -= 1;
+            }
             StatementKind::Scenario { root, label, body } => {
                 self.scenario(root, label, body, span)?
             }
@@ -439,6 +453,7 @@ impl<'a> Builder<'a> {
                 self.declare(
                     name,
                     Binding {
+                        lazy: None,
                         slot,
                         ty: binding_type,
                         writable: true,
@@ -496,7 +511,7 @@ impl<'a> Builder<'a> {
                     span,
                 );
                 self.current = run;
-                self.breaks.push(done);
+                self.breaks.push((done, self.silence_depth));
                 self.block(body, true);
                 self.breaks.pop();
                 self.terminate(Terminator::Goto(test), span);
@@ -529,6 +544,7 @@ impl<'a> Builder<'a> {
                     span,
                 );
                 let binding = Binding {
+                    lazy: None,
                     slot,
                     ty: index_type.clone(),
                     writable: false,
@@ -541,7 +557,7 @@ impl<'a> Builder<'a> {
                 let done = self.new_block(span);
                 self.terminate(Terminator::Goto(test), span);
                 self.current = test;
-                let current = self.read(&binding, span);
+                let current = self.read(&binding, span)?;
                 let condition = self.binary(Binary::Less, current, end, span, true)?;
                 self.terminate(
                     Terminator::Branch {
@@ -552,12 +568,12 @@ impl<'a> Builder<'a> {
                     span,
                 );
                 self.current = run;
-                self.breaks.push(done);
+                self.breaks.push((done, self.silence_depth));
                 self.block(body, true);
                 self.breaks.pop();
                 self.terminate(Terminator::Goto(step), span);
                 self.current = step;
-                let current = self.read(&binding, span);
+                let current = self.read(&binding, span)?;
                 let one = self.literal(
                     if index_type == Type::Mf {
                         Scalar::Mf(1)
@@ -583,7 +599,7 @@ impl<'a> Builder<'a> {
                 let done = self.new_block(span);
                 self.terminate(Terminator::Goto(run), span);
                 self.current = run;
-                self.breaks.push(done);
+                self.breaks.push((done, self.silence_depth));
                 self.block(body, true);
                 self.breaks.pop();
                 self.terminate(Terminator::Goto(run), span);
@@ -605,6 +621,7 @@ impl<'a> Builder<'a> {
                             "A constructor accepts return; but cannot return an explicit value",
                         ));
                     }
+                    self.unwind_silence(0, span);
                     self.terminate(
                         Terminator::ConstructReturn {
                             class,
@@ -638,11 +655,12 @@ impl<'a> Builder<'a> {
                     self.function.result = result_type.clone();
                     self.inferred_result = Some(Some(result_type));
                 }
+                self.unwind_silence(0, span);
                 self.terminate(Terminator::Return(slot), span);
                 self.current = self.new_block(span);
             }
             StatementKind::Break => {
-                let target = self.breaks.last().copied().ok_or_else(|| {
+                let (target, silence) = self.breaks.last().copied().ok_or_else(|| {
                     error(
                         if self.scenario_boundary {
                             "LARP-S005"
@@ -653,26 +671,43 @@ impl<'a> Builder<'a> {
                         "touch_grass requires a loop inside the current execution boundary",
                     )
                 })?;
+                self.unwind_silence(silence, span);
                 self.terminate(Terminator::Goto(target), span);
                 self.current = self.new_block(span);
             }
         }
         Ok(())
     }
-    fn read(&mut self, binding: &Binding, span: Span) -> Value {
+    fn unwind_silence(&mut self, target: usize, span: Span) {
+        for _ in target..self.silence_depth {
+            self.emit(Inst::SilenceExit, span);
+        }
+    }
+    fn read(&mut self, binding: &Binding, span: Span) -> Result<Value> {
         let slot = self.local(binding.ty.clone());
-        self.emit(
-            Inst::Copy {
-                destination: slot,
-                source: binding.slot,
-            },
-            span,
-        );
-        Value {
+        if let Some(effects) = binding.lazy {
+            self.require(effects, span)?;
+            self.emit(
+                Inst::Force {
+                    destination: slot,
+                    value: binding.slot,
+                },
+                span,
+            );
+        } else {
+            self.emit(
+                Inst::Copy {
+                    destination: slot,
+                    source: binding.slot,
+                },
+                span,
+            );
+        }
+        Ok(Value {
             slot,
             ty: binding.ty.clone(),
             constant: None,
-        }
+        })
     }
     fn hint(&self, expression: &Expr) -> Option<Type> {
         match &expression.kind {
@@ -855,7 +890,7 @@ impl<'a> Builder<'a> {
                             "The scenario root is a view usable only for field access or a verified call",
                         ));
                     }
-                    self.read(&binding, span)
+                    self.read(&binding, span)?
                 } else if self.scenario_forbidden.contains(&name.text) {
                     return Err(error(
                         "LARP-S002",

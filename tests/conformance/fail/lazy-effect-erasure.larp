@@ -1,0 +1,5 @@
+sidequest bad(mf input) -> mf uses() {
+    nonchalant mf value = input * 2;
+    return value;
+}
+main_character {}

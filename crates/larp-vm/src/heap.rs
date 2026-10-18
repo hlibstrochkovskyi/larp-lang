@@ -27,10 +27,25 @@ pub(crate) struct Instance {
 }
 
 #[derive(Debug)]
+pub(crate) struct LazyCell {
+    pub function: usize,
+    pub captures: Vec<Value>,
+    pub state: LazyState,
+}
+
+#[derive(Debug)]
+pub(crate) enum LazyState {
+    Pending,
+    Evaluating,
+    Ready(Value),
+}
+
+#[derive(Debug)]
 pub(crate) enum Object {
     Closure(Closure),
     Array(Array),
     Instance(Instance),
+    Lazy(LazyCell),
 }
 
 impl From<Closure> for Object {
@@ -48,6 +63,12 @@ impl From<Array> for Object {
 impl From<Instance> for Object {
     fn from(instance: Instance) -> Self {
         Self::Instance(instance)
+    }
+}
+
+impl From<LazyCell> for Object {
+    fn from(cell: LazyCell) -> Self {
+        Self::Lazy(cell)
     }
 }
 
@@ -166,6 +187,31 @@ impl Heap {
     }
 
     #[cfg(test)]
+    pub fn lazy(&self, handle: Handle) -> Option<&LazyCell> {
+        match self.object(handle)? {
+            Object::Lazy(cell) => Some(cell),
+            _ => None,
+        }
+    }
+
+    pub fn lazy_mut(&mut self, handle: Handle) -> Option<&mut LazyCell> {
+        match self.object_mut(handle)? {
+            Object::Lazy(cell) => Some(cell),
+            _ => None,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn lazy_cells(&self) -> impl Iterator<Item = &LazyCell> {
+        self.slots
+            .iter()
+            .filter_map(|slot| match slot.object.as_ref()? {
+                Object::Lazy(cell) => Some(cell),
+                _ => None,
+            })
+    }
+
+    #[cfg(test)]
     pub fn instances(&self) -> impl Iterator<Item = &Instance> {
         self.slots
             .iter()
@@ -193,6 +239,12 @@ impl Heap {
                 Object::Closure(closure) => &closure.captures,
                 Object::Array(array) => &array.values,
                 Object::Instance(instance) => &instance.fields,
+                Object::Lazy(cell) => {
+                    if let LazyState::Ready(value) = &cell.state {
+                        value.handles(&mut pending);
+                    }
+                    &cell.captures
+                }
             };
             for value in values {
                 value.handles(&mut pending);

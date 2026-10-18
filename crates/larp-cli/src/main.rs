@@ -15,9 +15,9 @@ Implemented: scalar types, first-class functions, closures, arrays, options/resu
 archetypes, roles, extensions, constructors, private/public fields, bound methods,
 branches, loops, checked conversions, effect bounds, typed IR,
 verified in-memory bytecode, eager collection pipelines, isolated scenarios,
-and a VM with tracing GC. palantir reports go to stderr.
-Planned: lazy bindings, observation suppression, persisted build artifacts, fmt.
---gc-stress collects at every object/array/closure allocation safepoint.";
+pure memoized lazy bindings, dynamic observation suppression, and tracing GC. palantir reports go to stderr.
+Planned: persisted build artifacts, fmt.
+--gc-stress collects at every object/array/closure/lazy allocation safepoint.";
 
 fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
@@ -36,7 +36,7 @@ fn main() -> ExitCode {
         }
         ["--version"] | ["-V"] => {
             println!(
-                "larp {} (objects, roles, collections, and isolated scenarios)",
+                "larp {} (objects, scenarios, and memoized lazy values)",
                 env!("CARGO_PKG_VERSION")
             );
             ExitCode::SUCCESS

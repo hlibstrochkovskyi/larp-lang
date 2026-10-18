@@ -26,8 +26,9 @@ closures, and dynamic arrays use a tracing collector. Nominal role dispatch,
 concrete receiver extensions, and built-in method extraction preserve identity
 and checked effect bounds. Language-level `larp` blocks now compile to isolated
 scenario frames with checked call graphs, selective final-field commit, and
-`palantir` reports. The separate state model remains an independent experiment;
-lazy bindings and persisted artifacts are still planned.
+`palantir` reports. Read-only `nonchalant` bindings memoize snapshot computations;
+`sybau` suppresses ordinary `yap` output across calls. The separate state model
+remains an independent experiment. Persisted artifacts and formatting are planned.
 
 ## Start here
 
@@ -39,7 +40,8 @@ lazy bindings and persisted artifacts are still planned.
 - [Implementation status](docs/implementation-status.md): supported features and limits.
 - [Research](docs/research.md): primary sources and their limits.
 - [Scenario evaluation](docs/scenario-evaluation.md): executed comparisons and a counterexample.
-- [Scenario validation](docs/validation-scenarios.md): current compiler/runtime acceptance evidence.
+- [Scenario validation](docs/validation-scenarios.md): compiled scenario acceptance evidence.
+- [Lazy and suppression validation](docs/validation-lazy-and-suppression.md): current implementation checks.
 - [Development](CONTRIBUTING.md): local setup and checks.
 - [Git setup](docs/git-setup.md): saved history in this managed workspace.
 - [Conformance corpus](tests/conformance/README.md): required programs and failures.
@@ -57,6 +59,7 @@ cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
 cargo run -p larp-cli -- run examples/collections.larp --gc-stress
 cargo run -p larp-cli -- run examples/objects.larp --gc-stress
 cargo run -p larp-cli -- run examples/roles.larp --gc-stress
+cargo run -p larp-cli -- run examples/lazy.larp --gc-stress
 cargo run -p larp-cli -- run tests/conformance/pass/scenario.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo test --workspace --locked --offline
@@ -71,8 +74,9 @@ in memory; there is no persisted `.larpbc` format yet.
 
 The compiler implementation direction is Rust → typed IR → bytecode → LARP VM.
 The language semantics do not depend on Rust, LLVM, or any particular collector.
-Specification v0.1 defines the broader target; implementation coverage is tracked
-separately and must not be inferred from syntax in the design examples.
+All 77 current conformance fixtures are active; the corpus is a finite acceptance
+suite, not a proof that every language rule is implemented. Specification v0.1
+defines the broader target, and M6 developer-preview gates remain open.
 
 No remote or distribution license has been selected. Private design material is
 excluded from version control.

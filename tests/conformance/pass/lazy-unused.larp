@@ -1,0 +1,6 @@
+main_character {
+    mf zero = 0;
+    nonchalant mf unused = 1 / zero;
+    nonchalant mf fatal = crashout("must not run");
+    yap("ready");
+}

@@ -4,7 +4,7 @@ mod heap;
 mod scenario;
 mod value;
 
-use heap::{Array, Closure, Heap, Instance};
+use heap::{Array, Closure, Handle, Heap, Instance, LazyCell, LazyState};
 use larp_bytecode::{Op, VerifiedModule};
 use larp_diagnostics::Diagnostic;
 use larp_source::Span;
@@ -45,6 +45,8 @@ struct Frame {
     locals: Vec<Option<Value>>,
     stack_base: usize,
     iteration: Option<Iteration>,
+    return_to_lazy: Option<Handle>,
+    silence_entry: usize,
 }
 
 #[derive(Clone, Copy)]
@@ -76,6 +78,12 @@ fn collect(heap: &mut Heap, stack: &[Value], frames: &[Frame], scenario: Option<
             roots.extend(&iteration.output);
         }
     }
+    let forcing: Vec<_> = frames
+        .iter()
+        .filter_map(|frame| frame.return_to_lazy)
+        .map(Value::Lazy)
+        .collect();
+    roots.extend(&forcing);
     let root = scenario.map(|scenario| Value::Object(scenario.root));
     roots.extend(root.iter());
     if let Some(scenario) = scenario {
@@ -138,10 +146,13 @@ fn execute_runtime(
         locals: vec![None; entry.locals.len()],
         stack_base: 0,
         iteration: None,
+        return_to_lazy: None,
+        silence_entry: 0,
     }];
     let mut stack: Vec<Value> = Vec::new();
     let mut scenario: Option<Scenario> = None;
     let mut fuel = limits.instructions;
+    let mut silence_depth = 0usize;
     while !frames.is_empty() {
         // A suspended collection resumes only after its callback frame returns.
         // This keeps arbitrarily nested higher-order calls off the Rust stack.
@@ -195,6 +206,8 @@ fn execute_runtime(
                     locals,
                     stack_base: stack.len(),
                     iteration: None,
+                    return_to_lazy: None,
+                    silence_entry: silence_depth,
                 });
             } else {
                 // The unfinished output is still an explicit root at this safepoint.
@@ -233,6 +246,7 @@ fn execute_runtime(
         if matches!(
             instruction.op,
             Op::MakeClosure(_)
+                | Op::MakeLazy(_)
                 | Op::NewObject(_)
                 | Op::Intrinsic(Intrinsic::ArrayNew { .. } | Intrinsic::Sorted(_))
         ) && heap.should_collect(limits.gc_stress)
@@ -242,6 +256,56 @@ fn execute_runtime(
         let frame = frames.last_mut().unwrap();
         frame.pc += 1;
         match &instruction.op {
+            Op::SilenceEnter => {
+                silence_depth = silence_depth.checked_add(1).ok_or_else(|| {
+                    error(
+                        "LARP-R006",
+                        "Observation suppression depth exhausted".into(),
+                    )
+                })?;
+            }
+            Op::SilenceExit => {
+                silence_depth = silence_depth
+                    .checked_sub(1)
+                    .expect("verified observation suppression depth");
+            }
+            Op::MakeLazy(target) => {
+                let count = module.functions[*target].captures.len();
+                let captures = stack.split_off(stack.len() - count);
+                let handle = heap
+                    .allocate(LazyCell {
+                        function: *target,
+                        captures,
+                        state: LazyState::Pending,
+                    })
+                    .map_err(|message| error("LARP-R006", message.into()))?;
+                stack.push(Value::Lazy(handle));
+            }
+            Op::Force(_) => {
+                let Value::Lazy(handle) = stack.pop().unwrap() else {
+                    unreachable!("verified lazy cell")
+                };
+                match force_lazy(heap, handle, frames.len() < limits.call_frames, span)? {
+                    Forced::Ready(value) => stack.push(value),
+                    Forced::Thunk { function, captures } => {
+                        let callee = &module.functions[function];
+                        let mut locals = vec![None; callee.locals.len()];
+                        for (slot, value) in locals.iter_mut().zip(captures) {
+                            *slot = Some(value);
+                        }
+                        frames.push(Frame {
+                            function,
+                            pc: 0,
+                            locals,
+                            stack_base: stack.len(),
+                            iteration: None,
+                            return_to_lazy: Some(handle),
+                            silence_entry: silence_depth,
+                        });
+                    }
+                }
+            }
+
             Op::Scenario { entry, label } => {
                 if frames.len() >= limits.call_frames {
                     return Err(error("LARP-R006", "Call-frame limit exceeded".into()));
@@ -271,6 +335,8 @@ fn execute_runtime(
                     locals,
                     stack_base: stack.len(),
                     iteration: None,
+                    return_to_lazy: None,
+                    silence_entry: silence_depth,
                 });
             }
             Op::Canon { class, field } => {
@@ -344,6 +410,8 @@ fn execute_runtime(
                     locals,
                     stack_base: stack.len(),
                     iteration: None,
+                    return_to_lazy: None,
+                    silence_entry: silence_depth,
                 });
             }
             Op::Constant(value) => stack.push(Value::Scalar(value.clone())),
@@ -414,6 +482,7 @@ fn execute_runtime(
                     })
                     .map_err(|message| error("LARP-R006", message.into()))?;
                 stack.truncate(frame.stack_base);
+                silence_depth = frame.silence_entry;
                 frames.pop();
                 stack.push(Value::Object(handle));
             }
@@ -489,6 +558,8 @@ fn execute_runtime(
                     locals,
                     stack_base: stack.len(),
                     iteration: None,
+                    return_to_lazy: None,
+                    silence_entry: silence_depth,
                 });
             }
             Op::Intrinsic(operation) => {
@@ -546,6 +617,11 @@ fn execute_runtime(
             }
             Op::Return => {
                 let value = stack.pop().expect("verified return value");
+                if let Some(handle) = frame.return_to_lazy {
+                    let cell = heap.lazy_mut(handle).expect("rooted evaluating lazy cell");
+                    cell.state = LazyState::Ready(value.clone());
+                    cell.captures.clear();
+                }
                 if scenario
                     .as_ref()
                     .is_some_and(|state| state.entry == frame.function)
@@ -555,6 +631,7 @@ fn execute_runtime(
                     scenario.take().unwrap().commit(heap);
                 }
                 stack.truncate(frame.stack_base);
+                silence_depth = frame.silence_entry;
                 frames.pop();
                 if !frames.is_empty() {
                     stack.push(value);
@@ -564,8 +641,11 @@ fn execute_runtime(
                 let Value::Scalar(value) = stack.pop().unwrap() else {
                     unreachable!("verified printable scalar")
                 };
-                writeln!(output, "{value}")
-                    .map_err(|failure| error("LARP-R007", format!("Output failed: {failure}")))?;
+                if silence_depth == 0 {
+                    writeln!(output, "{value}").map_err(|failure| {
+                        error("LARP-R007", format!("Output failed: {failure}"))
+                    })?;
+                }
             }
             Op::Assert => {
                 if !matches!(stack.pop(), Some(Value::Scalar(Scalar::Verdict(true)))) {
@@ -588,6 +668,41 @@ fn execute_runtime(
         reclaimed: heap.reclaimed,
         peak_live_objects: heap.peak_live,
     })
+}
+
+enum Forced {
+    Ready(Value),
+    Thunk {
+        function: usize,
+        captures: Vec<Value>,
+    },
+}
+
+fn force_lazy(
+    heap: &mut Heap,
+    handle: Handle,
+    can_enter: bool,
+    span: Span,
+) -> Result<Forced, Box<Diagnostic>> {
+    let cell = heap.lazy_mut(handle).expect("rooted live lazy cell");
+    match &cell.state {
+        LazyState::Ready(value) => Ok(Forced::Ready(value.clone())),
+        LazyState::Evaluating => Err(trap(
+            "LARP-R009",
+            span,
+            "Lazy initializer is already being evaluated",
+        )),
+        LazyState::Pending => {
+            if !can_enter {
+                return Err(trap("LARP-R006", span, "Call-frame limit exceeded"));
+            }
+            cell.state = LazyState::Evaluating;
+            Ok(Forced::Thunk {
+                function: cell.function,
+                captures: cell.captures.clone(),
+            })
+        }
+    }
 }
 
 fn heap_intrinsic(
@@ -740,3 +855,6 @@ fn arithmetic(error: ArithmeticError, span: Span) -> Box<Diagnostic> {
 
 #[cfg(test)]
 mod scenario_tests;
+
+#[cfg(test)]
+mod lazy_tests;

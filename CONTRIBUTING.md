@@ -15,6 +15,7 @@ cargo build --workspace --locked --offline
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked --offline -- -D warnings
 cargo test --workspace --locked --offline
+cargo test -p larp-compiler --release --locked --offline
 python3 tools/check_corpus.py
 python3 tools/run_conformance.py
 python3 tools/run_conformance.py --gc-stress
@@ -27,13 +28,15 @@ require a concrete need, license review, and a lockfile update; offline builds
 will then require a populated Cargo cache.
 
 The compiler runs scalars, closures, option/result recovery, dynamic/fixed arrays,
-nominal classes, roles, extensions, and isolated scenarios through syntax,
+nominal classes, roles, extensions, isolated scenarios, and lazy bindings through syntax,
 semantics, typed IR, bytecode verification, and the VM.
 `tools/run_conformance.py` tests active cases through the CLI. `--gc-stress`
 repeats runtime cases with collection at every object/array/closure allocation
-safepoint; CI runs both modes. `--all` also attempts pending features and is
-expected to fail until the full specification is implemented. Do not change a fixture to active without
-running it and keeping it in CI.
+safepoint, including lazy cells; CI runs both modes. All 77 current fixtures are
+active, so `--all` selects the same cases and passes. If future cases are marked
+pending, `--all` attempts them as well. Do not activate a fixture without running
+it and keeping it in CI. A fully active corpus does not close the developer-preview
+release gates or prove all normative rules.
 
 Run `cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress` for a
 returned closure, option fallback, parsing recovery, and checked conversion.
@@ -53,7 +56,16 @@ Role dispatch and concrete extensions preserve the same visibility and effect
 contracts. Scenario changes must preserve the closed regional call graph, view
 routing to performed state, immutable outer snapshots, and all-or-nothing final
 publication. Run `cargo run -p larp-cli -- run examples/config-tuning.larp --gc-stress`
-for a complete trial; `palantir` output uses stderr. The `execute_with_observers`
+for a complete trial; `palantir` output uses stderr.
+Run `cargo run -p larp-cli -- run examples/lazy.larp --gc-stress` for memoization
+and `sybau`. Lazy initializer captures are SnapshotValues copied at declaration.
+Capturing an existing lazy binding forces it immediately, including when an
+ordinary closure captures it; preserve the resulting abort bound. Lazy cells
+never escape into source-level APIs, fields, captures, or containers. Active
+forcing frames must root their cell across nested allocations. Suppression is
+dynamic across calls and silences only ordinary `yap`; it does not erase
+`observe`, mute `palantir`, or hide diagnostics. Return/break lowering must unwind
+only the scopes crossed, while VM return restores the caller's inherited depth. The `execute_with_observers`
 API exposes separate ordinary-output and inspection sinks. Scenario VM tests
 retain a private heap to check real fields after injected fatal errors.
 

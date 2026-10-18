@@ -56,7 +56,7 @@ impl Builder<'_> {
         let mut imports = Vec::new();
         let mut forbidden = HashSet::new();
         for (name, binding) in visible {
-            if binding.ty.is_snapshot() {
+            if binding.lazy.is_none() && binding.ty.is_snapshot() {
                 imports.push((name, binding));
             } else {
                 forbidden.insert(name);
@@ -98,6 +98,7 @@ impl Builder<'_> {
         child.declare(
             root,
             Binding {
+                lazy: None,
                 slot: 0,
                 ty: binding.ty.clone(),
                 writable: false,
@@ -112,6 +113,7 @@ impl Builder<'_> {
                     span: binding.span,
                 },
                 Binding {
+                    lazy: None,
                     slot: index + 1,
                     ty: binding.ty.clone(),
                     writable: false,
@@ -148,9 +150,9 @@ impl Builder<'_> {
                 .union(child.required),
             span,
         )?;
-        let mut arguments = vec![self.read(&binding, root.span).slot];
+        let mut arguments = vec![self.read(&binding, root.span)?.slot];
         for (_, binding) in imports {
-            arguments.push(self.read(&binding, span).slot);
+            arguments.push(self.read(&binding, span)?.slot);
         }
         self.generated.extend(child.generated);
         self.generated.push(child.function);
@@ -203,7 +205,7 @@ impl Builder<'_> {
         span: Span,
     ) -> Result<()> {
         let (class, field, binding) = self.active_field(root, field, span)?;
-        let receiver = self.read(&binding, span);
+        let receiver = self.read(&binding, span)?;
         let value = self.expression(
             expression,
             Some(self.tables.classes[class].fields[field].ty.clone()),
@@ -227,7 +229,7 @@ impl Builder<'_> {
     pub(super) fn canon(&mut self, root: &Name, field: &Name, span: Span) -> Result<()> {
         let (class, field, binding) = self.active_field(root, field, span)?;
         self.require(Effects::WRITE, span)?;
-        let receiver = self.read(&binding, span);
+        let receiver = self.read(&binding, span)?;
         let destination = self.local(Type::Unit);
         self.emit(
             Inst::Canon {
@@ -302,7 +304,11 @@ fn callable(ty: &Type) -> bool {
 }
 
 fn regional_local(ty: &Type, class: usize) -> bool {
-    ty.is_snapshot() || *ty == Type::Unit || ty.class_id() == Some(class) || callable(ty)
+    ty.is_snapshot()
+        || *ty == Type::Unit
+        || ty.class_id() == Some(class)
+        || callable(ty)
+        || matches!(ty, Type::Lazy(_, _))
 }
 
 /// Each lexical region owns a closed graph of checked function instances.
@@ -365,6 +371,9 @@ pub(super) fn specialize(program: &mut Program) -> Result<()> {
                             ));
                         }
                         Inst::Closure {
+                            function: target, ..
+                        }
+                        | Inst::Lazy {
                             function: target, ..
                         }
                         | Inst::Call {
@@ -436,9 +445,9 @@ pub(super) fn specialize(program: &mut Program) -> Result<()> {
                     cloned
                 };
                 match &mut program.functions[id].blocks[block].instructions[instruction].kind {
-                    Inst::Call { function, .. } | Inst::Closure { function, .. } => {
-                        *function = replacement
-                    }
+                    Inst::Call { function, .. }
+                    | Inst::Closure { function, .. }
+                    | Inst::Lazy { function, .. } => *function = replacement,
                     _ => unreachable!(),
                 }
                 pending.push_back(replacement);

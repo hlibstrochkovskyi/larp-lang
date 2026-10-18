@@ -1,0 +1,18 @@
+archetype Counter {
+    highkey mf value;
+    init() { self.value = 1; }
+}
+main_character {
+    Counter real = new Counter();
+    sybau {
+        larp (real) as LazyTrial {
+            mf base = real.value;
+            nonchalant mf doubled = base * 2;
+            real.value = doubled;
+            canon real.value;
+            yap("muted");
+            palantir(real);
+        }
+    }
+    yap(real.value);
+}

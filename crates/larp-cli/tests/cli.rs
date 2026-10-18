@@ -165,3 +165,43 @@ fn scenario_observations_use_stderr_and_check_does_not_execute_them() {
         );
     }
 }
+
+#[test]
+fn lazy_values_execute_once_and_suppression_does_not_hide_runtime_diagnostics() {
+    for file in ["pass/lazy-capture.larp", "pass/lazy-suppression.larp"] {
+        let file = fixture(file);
+        let checked = larp(&["check", &file]);
+        assert!(checked.status.success());
+        assert!(checked.stdout.is_empty());
+        assert!(checked.stderr.is_empty());
+        for options in [vec![], vec!["--gc-stress"]] {
+            let mut args = vec!["run", &file];
+            args.extend(options);
+            let output = larp(&args);
+            assert!(
+                output.status.success(),
+                "{:?}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let expected = if file.ends_with("lazy-capture.larp") {
+                b"4\n4\n".as_slice()
+            } else {
+                b"49\n49\ncallee\n".as_slice()
+            };
+            assert_eq!(output.stdout, expected);
+            assert!(output.stderr.is_empty());
+        }
+    }
+    let failed = larp(&["run", &fixture("runtime/suppressed-abort.larp")]);
+    assert_eq!(failed.status.code(), Some(1));
+    assert!(failed.stdout.is_empty());
+    let diagnostic = String::from_utf8(failed.stderr).unwrap();
+    assert!(diagnostic.contains("error[LARP-R003]"));
+    assert!(diagnostic.contains("still fatal"));
+    assert!(diagnostic.contains(" --> "));
+    let dump = larp(&["dump", &fixture("pass/lazy-capture.larp")]);
+    assert!(dump.status.success());
+    let dump = String::from_utf8(dump.stdout).unwrap();
+    assert!(dump.contains("MakeLazy("));
+    assert!(dump.contains("Force("));
+}

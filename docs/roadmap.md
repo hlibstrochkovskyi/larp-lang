@@ -1,6 +1,7 @@
 # Implementation roadmap
 
-Status: M1 through the M5 feature set are implemented. M6 remains pending.
+Status: M1 through the M5 feature set are implemented. M6 is in progress; lazy
+bindings and output suppression are implemented, while preview gates remain open.
 This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -117,12 +118,23 @@ statistics. Record code size, explanation burden, and failure modes. Decide
 whether the feature earns its complexity before expanding it. Do not claim
 financial safety or invariant preservation from field-level type safety.
 
-## M6 — Developer preview
+## M6 — Developer preview (in progress)
 
-Persisted versioned bytecode with a bounded loader/verifier; useful source maps,
+Implemented: read-only snapshot-capturing `nonchalant` bindings, memoized forcing
+with preserved abort bounds, local-only lazy cells, checked regional thunks, and
+GC roots across forcing. Capturing another lazy binding forces and copies its
+value immediately. `sybau` dynamically suppresses ordinary `yap` across calls
+without removing observation effects or muting inspection/diagnostics. Source
+return/break lowering and verified control-flow joins preserve nesting.
+
+All 77 current corpus cases are active and executable. This closes the current
+fixture inventory, not the developer-preview release gate or every normative
+rule. See [lazy and suppression validation](validation-lazy-and-suppression.md).
+
+Remaining: persisted versioned bytecode with a bounded loader/verifier; useful source maps,
 CLI integration tests, formatter, examples, reference docs, reproducible builds,
-and minimal host APIs with declared effects. Introduce lazy bindings only once
-effect and capture restrictions are enforced for lazy values.
+and minimal host APIs with declared effects. Fuzzing, resource measurements,
+platform/distribution decisions, and hosted CI also remain release work.
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in
 the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource

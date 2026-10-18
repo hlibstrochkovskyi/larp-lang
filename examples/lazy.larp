@@ -1,0 +1,16 @@
+sidequest square(mf value) -> mf uses(abort) {
+    return value * value;
+}
+
+main_character {
+    mf base = 7;
+    nonchalant mf squared = square(base);
+    base = 99;
+
+    sybau {
+        yap("This observation is suppressed.");
+    }
+
+    yap(squared);
+    yap(squared);
+}

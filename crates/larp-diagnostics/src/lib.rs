@@ -11,6 +11,16 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-T014",
+        title: "Invalid lazy binding",
+        explanation: "A nonchalant binding needs an explicit SnapshotValue result type and can capture only SnapshotValue bindings. Copy immutable inputs before declaring it. Initializers may abort but cannot read/write existing heap state, observe, or use I/O. The binding cannot be assigned after declaration.",
+    },
+    DiagnosticCode {
+        id: "LARP-R009",
+        title: "Reentrant lazy evaluation",
+        explanation: "A lazy cell was forced while its initializer was already running. Lazy evaluation is memoized once and cannot recursively force the same pending cell. Fatal initializer errors terminate execution without retry.",
+    },
+    DiagnosticCode {
         id: "LARP-T013",
         title: "Invalid role implementation",
         explanation: "An archetype must implement each listed role exactly once. Every required method must be public with identical parameter/result types and an effect bound contained in the role declaration. Role conformance is nominal, not inferred from method names.",

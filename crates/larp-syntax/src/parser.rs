@@ -490,6 +490,15 @@ impl Parser<'_> {
         let start = self.current().span;
         let kind = if self.punct("{") {
             StatementKind::Block(self.block()?)
+        } else if self.eat_word("nonchalant") {
+            let ty = self.ty()?;
+            let name = self.name()?;
+            self.expect("=")?;
+            let value = self.expr(0)?;
+            self.expect(";")?;
+            StatementKind::Lazy { ty, name, value }
+        } else if self.eat_word("sybau") {
+            StatementKind::Sybau(self.block()?)
         } else if self.eat_word("larp") {
             self.expect("(")?;
             let root = self.name()?;
@@ -583,7 +592,7 @@ impl Parser<'_> {
                 value,
             }
         } else if matches!(&self.current().kind, Kind::Word(name) if matches!(name.as_str(),
-            "nonchalant" | "sybau" | "archetype" | "role"))
+            "archetype" | "role"))
         {
             return Err(self.error(
                 "LARP-P002",

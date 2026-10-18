@@ -476,3 +476,34 @@ fn region_entry_root_cannot_be_overwritten_and_helper_context_cannot_change_regi
     append(&mut bad, 3, Op::Call(4));
     reject(bad, "cannot cross");
 }
+
+#[test]
+fn regional_lazy_cells_cannot_cross_regions_or_import_an_ordinary_initializer() {
+    let mut good = module();
+    let mut thunk = function(vec![], Type::Mf, Effects::NONE, vec![mf(49), Op::Return]);
+    thunk.scenario = Some(context());
+    good.functions.push(thunk);
+    good.functions[3]
+        .locals
+        .push(Type::lazy(Type::Mf, Effects::NONE));
+    good.functions[3].locals.push(Type::Mf);
+    good.functions[3].code = vec![
+        Op::MakeLazy(4),
+        Op::Store(3),
+        Op::Load(3),
+        Op::Force(Type::lazy(Type::Mf, Effects::NONE)),
+        Op::Store(4),
+        unit(),
+        Op::Return,
+    ]
+    .into_iter()
+    .map(instruction)
+    .collect();
+    verify(good.clone()).unwrap();
+    let mut bad = good.clone();
+    bad.functions[4].scenario = None;
+    reject(bad, "cross scenario regions");
+    let mut bad = good;
+    bad.functions[0].code.push(instruction(Op::MakeLazy(4)));
+    reject(bad, "cross scenario regions");
+}

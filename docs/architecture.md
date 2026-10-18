@@ -3,7 +3,9 @@
 Status: scalar, closure, option/result, collection, and nominal class programs
 compile through typed IR and verified in-memory bytecode to VM execution.
 Object/array/closure tracing is implemented. Role dispatch, concrete extensions,
-and built-in method extraction are implemented. Scenario regions use isolated function instances and VM frames; persisted artifacts remain planned.
+and built-in method extraction are implemented. Scenario regions use isolated
+function instances and VM frames. Lazy bindings use checked memoization cells;
+output suppression has explicit dynamic scope. Persisted artifacts remain planned.
 The pipeline below includes both current contracts and their intended extensions;
 see [implementation status](implementation-status.md) for the supported subset.
 
@@ -64,7 +66,7 @@ flowchart LR
    checks prevent nesting, reference ingress, and value escape. Future host APIs
    will need capability validation alongside their own instructions.
 8. **VM:** explicit value stack and call frames, checked arithmetic, tagged
-   option/result/fixed-array values, and a traced object/array/closure heap.
+   option/result/fixed-array values, and a traced object/array/closure/lazy heap.
    Collection callbacks suspend their caller in explicit continuation state. A LARP runtime
    trap is structured data, not a Rust panic. Active scenario frames are discarded
    when a trap propagates through the VM loop.
@@ -86,7 +88,7 @@ Current crates:
 | `larp-compiler` | Name, type, control-flow, and effect checking |
 | `larp-ir` | Typed basic blocks and bytecode lowering |
 | `larp-bytecode` | In-memory instructions, dataflow verifier, disassembly |
-| `larp-vm` | Iterative frames/callbacks, tagged values, object/array/closure GC, checked execution, observations |
+| `larp-vm` | Iterative frames/callbacks, tagged values, object/array/closure/lazy GC, checked execution, observations |
 | `larp-cli` | `check`, `run`, `dump`, and `explain` |
 | `larp-scenario-model` | Isolated experiment, not linked into the CLI |
 
@@ -119,6 +121,46 @@ Recovery evaluates the result and handler expression before branching. A typed
 success payload, the other the error payload. Only the latter invokes the
 handler. This avoids an unsafe unwrap operation or an artificial abort effect in
 pure recovery. IR block parameters become typed stores at branch entry.
+
+## Lazy binding and suppression lowering
+
+A `nonchalant` declaration outlines a parameterless initializer with only
+SnapshotValue captures/result and an effect bound contained in `abort`. Capture
+analysis copies current values at declaration. Reading an existing lazy binding
+during capture forces it immediately; both a new lazy declaration and an ordinary
+closure capture the resulting snapshot, not the cell. Thus capture-time failures
+and the initializer's actual abort bound remain visible at their correct call
+sites. The source binding is immutable even though its memoization cell changes
+internally.
+
+Typed IR `Lazy` lowers to `MakeLazy`; source reads lower to `Force` annotated with
+the internal lazy type and actual initializer effects. Lazy types are permitted
+only in local slots and their stack operations, never API signatures, fields,
+containers, or closure captures. The verifier checks zero parameters, snapshot
+captures/results, effect bounds, nominal payload validity, and the exact cell
+operand/result of forcing. Regional specialization includes `MakeLazy` targets;
+local cells stay inside the same checked graph, while outside lazy imports are
+rejected rather than silently erasing their provenance.
+
+A heap cell transitions from `Pending` to `Evaluating` to `Ready(value)`. First
+forcing enters an ordinary explicit VM frame; later forcing copies the memoized
+result. Reentering `Evaluating` reports `LARP-R009`. The forcing frame roots its
+cell even after the operand has left the stack. Successful return stores the
+result and discards captured inputs. A fatal initializer terminates execution;
+there is no retry or recoverable lazy failure.
+
+`sybau` lowers to explicit `SilenceEnter`/`SilenceExit` operations. Source return
+and loop break emit the exits for scopes they cross. The verifier tracks local
+silence depth and requires equal depth at control-flow joins; it rejects underflow
+and excessive nesting. Each VM frame saves the dynamic depth at entry and restores
+it on return, so inherited suppression reaches direct, indirect, role, extension,
+and callback calls without leaking when the callee returns.
+
+Only the final ordinary `Print` sink write is suppressed. Argument evaluation and
+all other computation still happen; `Print` retains its `observe` effect. The
+independent inspection sink, diagnostics, fatal errors, and external effects are
+unaffected. `sybau` grants no constructor, lazy-initializer, or regional effect
+exemption.
 
 ## Collections and places
 
@@ -237,7 +279,7 @@ through a saved method cannot erase them or bypass active iteration guards.
 
 The current VM uses tagged Rust `Value` variants: scalar values, tagged
 option/result payloads, fixed arrays, nominal conversion errors, and handles for
-objects, arrays, and closures. Options, results, and fixed arrays own their payloads; tracing walks
+objects, arrays, closures, and lazy cells. Options, results, and fixed arrays own their payloads; tracing walks
 through those wrappers to find contained handles. Text currently uses owned
 immutable storage. Avoid NaN boxing until profiling proves a need.
 
@@ -248,29 +290,31 @@ Nested and returned closures retain their captured values after the creating
 frame exits. Capture bindings are snapshots; no source-level capture reassignment
 is allowed. Captured objects and dynamic arrays retain shared identity when copied.
 
-Objects, arrays, and closures share a non-moving arena of optional typed entries
+Objects, arrays, closures, and lazy cells share a non-moving arena of optional typed entries
 with a generation in each reusable handle. Stale generations cannot resolve to a newly
 allocated entry; generation overflow is a checked resource failure. The collector
 uses iterative marking and sweeping, including transitive handles in captured
 options/results/fixed arrays. Object fields, mutable arrays, and closures can
 form cycles; unreachable cycles are reclaimed without recursive graph destruction.
 
-Collection occurs before object/closure/array construction and sorting while
+Collection occurs before object/closure/array/lazy construction and sorting while
 operands are still on the VM value stack, and before publishing completed callback
 outputs while their continuation is still rooted. The complete stack,
 initialized locals of all active frames, and each suspended iteration's receiver,
-callback, current element, and output buffer are roots. Object fields, array
-elements, and closure captures are traced edges. Stress mode collects at every
+callback, current element, and output buffer are roots. A forcing frame also
+roots its active lazy cell. Object fields, array elements, closure captures, and
+lazy inputs/cached results are traced edges. Stress mode collects at every
 such safepoint; the normal threshold adapts to the live heap. CLI `run --gc-stress` and the Rust
 `Limits::gc_stress` option select stress mode. `execute_with_stats` exposes allocation,
 collection, reclamation, and peak-live counts for tests. A final collection after
-successful program exit reclaims the remaining object/array/closure heap. Trap
+successful program exit reclaims the remaining object/array/closure/lazy heap. Trap
 paths release the owning Rust heap as execution unwinds.
 
 Role dispatch tables are immutable module metadata; role values trace their
 object receiver. Active scenarios additionally root their ordinary object,
-baseline/performed buffers, and last claims. Lazy cells remain planned; their
-storage must become roots or traced edges before allocation can run. Preserve stable language identity across collection and allow
+baseline/performed buffers, and last claims. Lazy cells retain their inputs until
+forcing succeeds, then trace their cached result instead. Preserve stable
+language identity across collection and allow
 unreachable cycles to be reclaimed. Reclamation timing is unobservable; bounded
 pause times are not promised.
 
@@ -278,17 +322,19 @@ pause times are not promised.
 
 A lexical `larp` block is outlined into a generated entry function. Its first
 parameter is the root class and its remaining parameters are immutable outer
-SnapshotValue imports. Other outer references/functions cannot be read or stored.
+SnapshotValue imports. Other outer references/functions and outside lazy
+bindings cannot be read or stored.
 The compiler's regional environment prevents first-class root copies, bound root
 methods, outer stores, nested scenarios, and crossing return/break statements.
 Ordinary local scopes and loops wholly within the entry remain usable.
 
 The entry and all transitive direct/closure targets form a closed group of
 regional function instances. Specialization uses a worklist and memoized target
-mapping, including recursive edges. Every instance retains its source ownership,
+mapping, including recursive edges and lazy initializer targets. Every instance
+retains its source ownership,
 signature, effects, and an ordinary origin identity where applicable. Eligibility
 checks the complete bodies rather than trusting a `uses()` annotation: no
-reference allocation, reference captures/returns, role dispatch, foreign roots,
+object/dynamic-array allocation, reference captures/returns, role dispatch, foreign roots,
 I/O, or reference-bearing containers. Calls may pass the active view as their
 sole class argument. Value-only closures created in the region may be passed to
 helpers and invoked indirectly; their parameters/results are snapshots and their
@@ -358,7 +404,7 @@ an actionable explanation. A formatter must operate on parsed syntax with commen
 preservation; it is not a regex substitution pass.
 
 Commands already available: `explain`, `check`, compiler-to-VM `run`, and
-IR/bytecode `dump`. Disassembly includes role method signatures, class
-implementation tables, and concrete extension metadata. Next: verified artifact `build`/`run`; `fmt`; tooling integrations. No language
+IR/bytecode `dump`. Disassembly includes role method signatures, class implementation tables,
+concrete extension metadata, lazy construction/forcing, and silence operations. Next: verified artifact `build`/`run`; `fmt`; tooling integrations. No language
 server, incremental query engine, package manager, or optimizer is needed before
 basic programs pass conformance.

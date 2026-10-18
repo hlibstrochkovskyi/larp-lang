@@ -2,7 +2,9 @@
 
 Cases in `manifest.json` are either **active** or **pending**. Active cases run
 through the real compiler and VM. Pending cases specify future milestones and
-must not be reported as passing tests.
+must not be reported as passing tests. The current inventory contains 77 cases,
+all active, with no pending fixtures. This finite corpus is not a proof that
+every normative rule or developer-preview release gate is complete.
 
 `python3 tools/check_corpus.py` validates metadata, paths, diagnostic IDs, and
 inventory completeness. It does not parse, type-check, compile, or run LARP.
@@ -16,10 +18,11 @@ inventory completeness. It does not parse, type-check, compile, or run LARP.
 
 `python3 tools/run_conformance.py` builds the CLI and executes every active case
 through both `check` and `run`. It checks exit codes, exact stdout/declared inspection output, primary error
-codes, and presence of source locations. `--all` also attempts pending cases and
-currently fails as expected. An optional `--bin PATH` selects an existing binary.
-`--gc-stress` requests collection before every object/array/closure allocation; CI executes
-the active corpus both with normal collection and this stress mode.
+codes, and presence of source locations. `--all` includes pending cases when
+any exist; currently it selects the same 77 active cases and passes. An optional
+`--bin PATH` selects an existing binary. `--gc-stress` requests collection at
+every object, array, closure, and lazy-cell allocation safepoint; CI executes the
+corpus with both normal collection and this stress mode.
 
 The harness must fail if an unsupported case is silently skipped within a release's
 declared subset. Report fixtures pin the current deterministic renderer; its

@@ -8,6 +8,7 @@ pub(crate) enum Value {
     Result(Result<Box<Value>, Box<Value>>),
     ConversionError(String),
     Closure(Handle),
+    Lazy(Handle),
     Array(Handle),
     Object(Handle),
     View { entry: usize },
@@ -39,9 +40,10 @@ impl Value {
         let mut values = vec![self];
         while let Some(value) = values.pop() {
             match value {
-                Self::Closure(handle) | Self::Array(handle) | Self::Object(handle) => {
-                    pending.push(*handle)
-                }
+                Self::Closure(handle)
+                | Self::Lazy(handle)
+                | Self::Array(handle)
+                | Self::Object(handle) => pending.push(*handle),
                 Self::Role { object, .. } => pending.push(*object),
                 Self::FixedArray(elements) => values.extend(elements),
                 Self::Option(Some(value)) | Self::Result(Ok(value)) | Self::Result(Err(value)) => {

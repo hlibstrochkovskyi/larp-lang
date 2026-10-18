@@ -54,7 +54,9 @@ pub(super) fn validate_type(
                     ));
                 }
             }
-            Type::Array(ty) | Type::FixedArray(ty, _) | Type::Baddie(ty) => pending.push(ty),
+            Type::Array(ty) | Type::FixedArray(ty, _) | Type::Baddie(ty) | Type::Lazy(ty, _) => {
+                pending.push(ty)
+            }
             Type::Result(types) => {
                 pending.push(&types.0);
                 pending.push(&types.1);
@@ -111,6 +113,13 @@ pub(super) fn preflight_types(module: &Module) -> Result<(), VerifyError> {
     }
     for extension in &module.extensions {
         validate_type(module, &extension.receiver, extension.function, None)?;
+        if matches!(extension.receiver, Type::Lazy(..)) {
+            return Err(invalid(
+                extension.function,
+                None,
+                "Lazy cells cannot be extension receivers",
+            ));
+        }
     }
     for class in &module.classes {
         members = members
@@ -129,6 +138,13 @@ pub(super) fn preflight_types(module: &Module) -> Result<(), VerifyError> {
         }
         for field in &class.fields {
             validate_type(module, &field.ty, class.constructor, None)?;
+            if matches!(field.ty, Type::Lazy(..)) {
+                return Err(invalid(
+                    class.constructor,
+                    None,
+                    "Lazy cells cannot be class fields",
+                ));
+            }
             if field.ty == Type::Unit {
                 return Err(invalid(
                     class.constructor,
@@ -139,6 +155,19 @@ pub(super) fn preflight_types(module: &Module) -> Result<(), VerifyError> {
         }
     }
     for (index, function) in module.functions.iter().enumerate() {
+        if function
+            .parameters
+            .iter()
+            .chain(&function.captures)
+            .chain(std::iter::once(&function.result))
+            .any(|ty| matches!(ty, Type::Lazy(..)))
+        {
+            return Err(invalid(
+                index,
+                None,
+                "Lazy cells cannot escape through function signatures or captures",
+            ));
+        }
         for ty in function
             .parameters
             .iter()
@@ -152,6 +181,7 @@ pub(super) fn preflight_types(module: &Module) -> Result<(), VerifyError> {
             match &instruction.op {
                 Op::Unary(_, ty)
                 | Op::Binary(_, ty)
+                | Op::Force(ty)
                 | Op::CallIndirect(ty)
                 | Op::MatchResult { ty, .. } => validate_type(module, ty, index, Some(pc))?,
                 Op::Intrinsic(operation) => {

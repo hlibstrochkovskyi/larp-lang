@@ -75,7 +75,7 @@
       "id": "lazy-capture",
       "path": "pass/lazy-capture.larp",
       "milestone": "M6",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "4\n4\n"
@@ -176,7 +176,7 @@
       "id": "lazy-observation",
       "path": "fail/lazy-observation.larp",
       "milestone": "M6",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-E001"
@@ -693,6 +693,88 @@
         "kind": "runtime_error",
         "code": "LARP-R003",
         "stdout": "observed\n"
+      }
+    },
+    {
+      "id": "lazy-unused",
+      "path": "pass/lazy-unused.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "ready\n"
+      }
+    },
+    {
+      "id": "lazy-suppression",
+      "path": "pass/lazy-suppression.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "49\n49\ncallee\n"
+      }
+    },
+    {
+      "id": "lazy-scenario",
+      "path": "pass/lazy-scenario.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "2\n",
+        "stderr": "PALANTIR [LazyTrial]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvalue | 1 | 2 | - | true\n"
+      }
+    },
+    {
+      "id": "lazy-array-capture",
+      "path": "fail/lazy-array-capture.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T014"
+      }
+    },
+    {
+      "id": "lazy-effect-erasure",
+      "path": "fail/lazy-effect-erasure.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-E001"
+      }
+    },
+    {
+      "id": "lazy-reassignment",
+      "path": "fail/lazy-reassignment.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T008"
+      }
+    },
+    {
+      "id": "lazy-division",
+      "path": "runtime/lazy-division.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R002",
+        "stdout": "before force\n"
+      }
+    },
+    {
+      "id": "suppressed-abort",
+      "path": "runtime/suppressed-abort.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R003"
       }
     }
   ]

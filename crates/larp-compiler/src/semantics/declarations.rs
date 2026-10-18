@@ -425,6 +425,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 if let Err(error) = builder.declare(
                     name,
                     Binding {
+                        lazy: None,
                         slot,
                         ty: header.parameters[slot].clone(),
                         writable: name.text != "self",
@@ -442,6 +443,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 {
                     let slot = builder.local(field.ty.clone());
                     builder.constructor_fields.push(Binding {
+                        lazy: None,
                         slot,
                         ty: field.ty.clone(),
                         writable: true,

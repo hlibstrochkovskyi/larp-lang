@@ -96,6 +96,10 @@ pub struct Instruction {
 
 #[derive(Clone, Debug)]
 pub enum Op {
+    MakeLazy(usize),
+    Force(Type),
+    SilenceEnter,
+    SilenceExit,
     Scenario {
         entry: usize,
         label: String,
@@ -258,10 +262,12 @@ impl VerifiedModule {
 struct State {
     stack: Vec<Type>,
     initialized: Vec<bool>,
+    silence: usize,
 }
 
 pub fn operation_effect(op: &Op) -> Effects {
     match op {
+        Op::Force(Type::Lazy(_, effects)) => *effects,
         Op::Canon { .. } | Op::Flex { .. } => Effects::WRITE,
         Op::Palantir { .. } => Effects::OBSERVE,
         Op::Print => Effects::OBSERVE,
@@ -338,6 +344,7 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
             match &instruction.op {
                 Op::Unary(_, ty)
                 | Op::Binary(_, ty)
+                | Op::Force(ty)
                 | Op::CallIndirect(ty)
                 | Op::MatchResult { ty, .. } => validate(ty, Some(pc))?,
                 Op::Intrinsic(operation) => {
@@ -476,12 +483,28 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                     ));
                 }
             }
-            Op::MakeClosure(target) => {
+            Op::MakeClosure(target) | Op::MakeLazy(target) => {
                 if *target >= module.functions.len() {
                     return Err(error(Some(pc), "Closure target out of bounds".into()));
                 }
                 classes::call_access(module, function, *target)
                     .map_err(|message| error(Some(pc), message))?;
+                if matches!(instruction.op, Op::MakeLazy(_)) {
+                    let callee = &module.functions[*target];
+                    if !callee.parameters.is_empty()
+                        || !callee.result.is_snapshot()
+                        || !Effects::ABORT.contains(callee.effects)
+                        || callee.captures.iter().any(|ty| !ty.is_snapshot())
+                    {
+                        return Err(error(Some(pc), "Lazy thunks require no parameters, snapshot captures/results, and only abort effects".into()));
+                    }
+                }
+            }
+            Op::Force(ty) if !matches!(ty, Type::Lazy(..)) => {
+                return Err(error(
+                    Some(pc),
+                    "Force requires an internal lazy cell type".into(),
+                ));
             }
             Op::Construct(class) => {
                 let layout = module
@@ -565,6 +588,7 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
     let mut initial = State {
         stack: Vec::new(),
         initialized: vec![false; function.locals.len()],
+        silence: 0,
     };
     initial.initialized[..capture_end].fill(true);
     let mut states: Vec<Option<State>> = vec![None; function.code.len()];
@@ -587,6 +611,32 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
         };
         let mut successors = Vec::with_capacity(2);
         match &function.code[pc].op {
+            Op::SilenceEnter => {
+                state.silence += 1;
+                if state.silence > 65_536 {
+                    return Err(failure("Silence nesting limit exceeded".into()).resource());
+                }
+            }
+            Op::SilenceExit => {
+                state.silence = state
+                    .silence
+                    .checked_sub(1)
+                    .ok_or_else(|| failure("Silence region underflow".into()))?;
+            }
+            Op::MakeLazy(target) => {
+                let callee = &module.functions[*target];
+                for capture in callee.captures.iter().rev() {
+                    pop(&mut state, capture.clone())?;
+                }
+                state
+                    .stack
+                    .push(Type::lazy(callee.result.clone(), callee.effects));
+            }
+            Op::Force(ty @ Type::Lazy(result, _)) => {
+                pop(&mut state, ty.clone())?;
+                state.stack.push(result.as_ref().clone());
+            }
+            Op::Force(_) => unreachable!("validated lazy cell type"),
             Op::Scenario { entry, .. } => {
                 for parameter in module.functions[*entry].parameters.iter().rev() {
                     pop(&mut state, parameter.clone())?;
@@ -666,6 +716,11 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                 state.stack.push(constructor.result.clone());
             }
             Op::NewObject(class) => {
+                if state.silence != 0 {
+                    return Err(failure(
+                        "Object completion leaves an open silence region".into(),
+                    ));
+                }
                 let layout = &module.classes[*class];
                 for field in layout.fields.iter().rev() {
                     pop(&mut state, field.ty.clone())?;
@@ -741,6 +796,9 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                 continue;
             }
             Op::Return => {
+                if state.silence != 0 {
+                    return Err(failure("Return leaves an open silence region".into()));
+                }
                 pop(&mut state, function.result.clone())?;
                 if !state.stack.is_empty() {
                     return Err(failure("Return leaves extra operands on the stack".into()));
@@ -774,6 +832,11 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
                     queue.push_back(next);
                 }
                 Some(previous) => {
+                    if previous.silence != state.silence {
+                        return Err(failure(
+                            "Incompatible silence depth at control-flow merge".into(),
+                        ));
+                    }
                     if previous.stack != state.stack {
                         return Err(failure(
                             "Incompatible operand stacks at control-flow merge".into(),

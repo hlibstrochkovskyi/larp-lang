@@ -1,0 +1,6 @@
+main_character {
+    mf zero = 0;
+    nonchalant mf value = 1 / zero;
+    yap("before force");
+    yap(value);
+}

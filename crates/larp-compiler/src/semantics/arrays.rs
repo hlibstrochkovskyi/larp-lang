@@ -334,7 +334,7 @@ impl Builder<'_> {
 
     fn read_place(&mut self, place: &Place, span: Span) -> Result<Value> {
         match place {
-            Place::Local(binding) => Ok(self.read(binding, span)),
+            Place::Local(binding) => self.read(binding, span),
             Place::Field {
                 receiver,
                 class,

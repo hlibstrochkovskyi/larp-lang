@@ -15,6 +15,8 @@ pub enum Type {
     Text,
     Unit,
     Function(Arc<Signature>),
+    /// Internal memoized binding cell; never a surface parameter or payload type.
+    Lazy(Arc<Type>, Effects),
     Baddie(Arc<Type>),
     Result(Arc<(Type, Type)>),
     Array(Arc<Type>),
@@ -82,6 +84,10 @@ impl Type {
         }))
     }
 
+    pub fn lazy(result: Type, effects: Effects) -> Self {
+        Self::Lazy(Arc::new(result), effects)
+    }
+
     pub fn option(payload: Type) -> Self {
         Self::Baddie(Arc::new(payload))
     }
@@ -136,7 +142,7 @@ impl Type {
 
     pub fn supports_equality(&self) -> bool {
         match self {
-            Self::Unit | Self::Function(_) | Self::Array(_) => false,
+            Self::Unit | Self::Function(_) | Self::Lazy(..) | Self::Array(_) => false,
             Self::FixedArray(element, _) => element.supports_equality(),
             Self::Baddie(payload) => payload.supports_equality(),
             Self::Result(payloads) => {
@@ -169,9 +175,10 @@ impl Type {
                             .map(|parameter| (parameter, depth + 1)),
                     );
                 }
-                Self::Baddie(payload) | Self::Array(payload) | Self::FixedArray(payload, _) => {
-                    pending.push((payload, depth + 1))
-                }
+                Self::Baddie(payload)
+                | Self::Array(payload)
+                | Self::FixedArray(payload, _)
+                | Self::Lazy(payload, _) => pending.push((payload, depth + 1)),
                 Self::Result(payloads) => {
                     pending.push((&payloads.0, depth + 1));
                     pending.push((&payloads.1, depth + 1));
@@ -186,9 +193,13 @@ impl Type {
         if !self.within_limits() {
             return false;
         }
+        if let Self::Lazy(result, effects) = self {
+            return Effects::ABORT.contains(*effects) && result.is_snapshot();
+        }
         let mut pending = vec![self];
         while let Some(ty) = pending.pop() {
             match ty {
+                Self::Lazy(..) => return false,
                 Self::Function(signature) => {
                     if signature.parameters.contains(&Self::Unit) {
                         return false;
@@ -237,6 +248,7 @@ impl fmt::Display for Type {
                 write!(f, ") -> {} {}", signature.result, signature.effects)
             }
             Self::Baddie(payload) => write!(f, "baddie<{payload}>"),
+            Self::Lazy(result, effects) => write!(f, "lazy<{result}> {effects}"),
             Self::Result(payloads) => write!(f, "result<{}, {}>", payloads.0, payloads.1),
             Self::Array(element) => write!(f, "mfs<{element}>"),
             Self::FixedArray(element, length) => write!(f, "hediJeans<{element}, {length}>"),

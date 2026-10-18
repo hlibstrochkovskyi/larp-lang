@@ -121,6 +121,33 @@ The M5 local acceptance suite passes; see [scenario validation](validation-scena
 The standalone state model is not used to execute these programs. See [scenario evaluation](scenario-evaluation.md)
 for explicit-copy comparisons and the invariant counterexample.
 
+## Memoized bindings and output suppression
+
+`nonchalant T name = expression;` declares a read-only binding with a
+SnapshotValue result. It captures SnapshotValue bindings by value at declaration,
+and its initializer may only have the `abort` effect. The compiler retains its
+actual effect bound for every later force. An unused initializer does not run;
+the first read computes and caches the value, and later reads reuse it. A fatal
+initializer terminates execution. Reentry reports `LARP-R009`.
+
+Capturing another lazy binding forces that binding immediately and copies its
+value. This also applies to ordinary closure captures, so capture itself may
+abort even when the new closure or lazy initializer is never invoked. Cells are
+an internal local representation: source function signatures, fields, containers,
+and captures contain values, never exported lazy handles. A region may create
+its own pure snapshot lazy binding; importing an outside lazy binding is rejected
+with `LARP-S002`. Its initializer belongs to the same checked regional call graph.
+
+`sybau { ... }` suppresses ordinary `yap` output dynamically, including direct,
+indirect, role, extension, and callback calls made within it. Nested blocks nest
+suppression. Return/break unwinds the scopes crossed; returning from a VM frame
+restores its inherited depth. Suppressed calls still require `observe`, still
+evaluate their arguments, and still execute their computation. `palantir`,
+diagnostics, fatal errors, and external effects are not muted.
+
+These features are the first M6 slice; artifacts, formatting, host APIs, and
+release gates remain pending. See [lazy and suppression validation](validation-lazy-and-suppression.md).
+
 ## CLI
 
 ```sh
@@ -131,6 +158,7 @@ cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
 cargo run -p larp-cli -- run examples/collections.larp --gc-stress
 cargo run -p larp-cli -- run examples/objects.larp --gc-stress
 cargo run -p larp-cli -- run examples/roles.larp --gc-stress
+cargo run -p larp-cli -- run examples/lazy.larp --gc-stress
 cargo run -p larp-cli -- run tests/conformance/pass/scenario.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo run -p larp-cli -- dump examples/primes.larp --ir
@@ -138,25 +166,26 @@ cargo run -p larp-cli -- explain LARP-T041
 ```
 
 `check` compiles and verifies without execution. `run` recompiles source and
-executes in-memory bytecode. `--gc-stress` collects at every object/array/closure
-allocation safepoint and may be combined with `--fuel`. `dump` emits disassembly
+executes in-memory bytecode. `--gc-stress` collects at every object, array,
+closure, and lazy-cell allocation safepoint and may be combined with `--fuel`. `dump` emits disassembly
 or typed IR. `build` and `fmt` explicitly report that they are unavailable. Input
 is one UTF-8 file.
 Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 ## Not implemented yet
 
-Lazy bindings, `sybau`, persisted artifacts,
-modules, host I/O APIs, and formatting. These are tracked by the existing roadmap,
+Persisted artifacts, modules, host I/O APIs, and formatting. These are tracked by
+the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
 
 The scenario model remains independent and is not a substitute for compiling
-scenario programs. GC manages objects, closures, and dynamic arrays, including
-cycles between them. Option/result/fixed-array wrappers are owned values that
-trace any contained handles. Role values trace their underlying object handle;
+scenario programs. GC manages objects, closures, dynamic arrays, and lazy cells,
+including cycles among reference values. Option/result/fixed-array wrappers are
+owned values that trace any contained handles. Role values trace their underlying object handle;
 extracted methods retain that handle through closure captures. Text uses owned
 immutable storage. Active scenario frames root the original object and their
-snapshot/claim buffers. Lazy cells still need collector integration.
+snapshot/claim buffers. Active forcing frames root their lazy cell across nested
+allocations, and memoized cells release captured initializer inputs.
 
 ## Current limits and conservative checks
 
@@ -233,7 +262,8 @@ a fixed array still retain their shared identity.
 
 ## Evidence
 
-See [scenario validation](validation-scenarios.md) and
+See [lazy and suppression validation](validation-lazy-and-suppression.md) for the
+current M6 slice. See [scenario validation](validation-scenarios.md) and
 [scenario evaluation](scenario-evaluation.md) for the current M5 acceptance gate, [roles and extensions validation](validation-roles-and-extensions.md)
 for the preceding completed gate, and [objects validation](validation-objects.md) for
 the preceding executed class checks. [Collections validation](validation-collections.md) and
@@ -247,5 +277,7 @@ coverage-guided fuzzing.
 
 `python3 tools/run_conformance.py` executes every active fixture through `check`
 and `run`, comparing stdout, explicitly declared inspection output, or primary diagnostic codes and source locations.
-`--gc-stress` repeats execution with collection at every object/array/closure
-allocation safepoint. Pending cases remain explicit. `--all` attempts the full corpus and currently fails on unimplemented features; this is not a complete v0.1 release.
+`--gc-stress` repeats execution with collection at every object, array, closure,
+and lazy-cell allocation safepoint. All 77 current fixtures are active; `--all`
+selects the same complete inventory and passes. A finite corpus with no pending
+cases does not establish full language conformance or complete the M6 release.

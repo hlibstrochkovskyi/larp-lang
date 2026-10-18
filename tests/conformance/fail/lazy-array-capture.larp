@@ -1,0 +1,5 @@
+main_character {
+    mfs<mf> values = [49];
+    nonchalant mf size = values.size();
+    yap(size);
+}

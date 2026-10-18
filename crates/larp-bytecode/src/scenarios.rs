@@ -108,11 +108,9 @@ pub(super) fn validate_contexts(module: &Module) -> Result<(), VerifyError> {
                 "Scenario functions cannot return references or function values",
             ));
         }
-        if function
-            .locals
-            .iter()
-            .any(|ty| *ty != root && !value_result(ty) && !value_callable(ty))
-        {
+        if function.locals.iter().any(|ty| {
+            *ty != root && !value_result(ty) && !value_callable(ty) && !matches!(ty, Type::Lazy(..))
+        }) {
             return Err(bad(
                 "Scenario locals cannot contain external reference types",
             ));
@@ -152,7 +150,7 @@ pub(super) fn validate_instruction(
                 return Err(bad("Scenario entry must preserve lexical ownership"));
             }
         }
-        Op::Call(target_index) | Op::MakeClosure(target_index) => {
+        Op::Call(target_index) | Op::MakeClosure(target_index) | Op::MakeLazy(target_index) => {
             let target = module.functions.get(*target_index).ok_or_else(|| {
                 bad(if matches!(op, Op::Call(_)) {
                     "Call target out of bounds"

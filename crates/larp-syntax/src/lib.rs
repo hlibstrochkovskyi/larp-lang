@@ -97,34 +97,39 @@ pub enum TypeExprKind {
     },
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LambdaParameter {
     pub ty: Option<TypeExpr>,
     pub name: Name,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum LambdaBody {
     Expression(Box<Expr>),
     Block(Block),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Block {
     pub statements: Vec<Statement>,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Statement {
     pub kind: StatementKind,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum StatementKind {
     Binding {
         ty: Option<TypeExpr>,
+        name: Name,
+        value: Expr,
+    },
+    Lazy {
+        ty: TypeExpr,
         name: Name,
         value: Expr,
     },
@@ -135,6 +140,7 @@ pub enum StatementKind {
     },
     Expression(Expr),
     Block(Block),
+    Sybau(Block),
     Scenario {
         root: Name,
         label: Name,
@@ -170,13 +176,13 @@ pub enum StatementKind {
     Break,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Expr {
     pub kind: ExprKind,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ExprKind {
     Integer(String),
     Float(String),

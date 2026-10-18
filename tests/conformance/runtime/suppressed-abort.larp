@@ -1,0 +1,6 @@
+main_character {
+    sybau {
+        yap("muted");
+        crashout("still fatal");
+    }
+}

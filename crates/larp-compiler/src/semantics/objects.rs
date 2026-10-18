@@ -24,7 +24,7 @@ impl Builder<'_> {
                 "self is available only in an instance method or its lexical closures",
             )
         })?;
-        Ok(self.read(&binding, span))
+        self.read(&binding, span)
     }
 
     pub(super) fn class_field(&self, class: usize, name: &Name) -> Result<usize> {
@@ -72,7 +72,7 @@ impl Builder<'_> {
     pub(super) fn constructor_field_read(&mut self, name: &Name, span: Span) -> Result<Value> {
         let field = self.constructor_field(name)?;
         self.require(Effects::READ, span)?;
-        Ok(self.read(&field, span))
+        self.read(&field, span)
     }
 
     pub(super) fn construct(
