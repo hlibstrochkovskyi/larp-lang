@@ -33,3 +33,23 @@ jobs:
           name: resource-evidence
           path: artifacts/ci-resources/
           retention-days: 14
+
+  reproducible-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python3 tools/check_reproducible_build.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reproducibility-evidence
+          path: |
+            artifacts/reproducible-builds/*/report.json
+            artifacts/reproducible-builds/*/*/build.stdout.txt
+            artifacts/reproducible-builds/*/*/build.stderr.txt
+          retention-days: 14

@@ -162,7 +162,13 @@ eight standalone examples. Checked-in contracts execute every LARP code fence
 through normal/stress source runs, formatting, and independently loaded artifacts
 in CI; see [reference validation](validation-reference.md).
 
-Remaining: reproducible distribution builds, additional host APIs,
+Implemented build baseline: two distinct clean source/target trees from one
+tracked commit produce identical release CLI bytes with controlled path
+remapping. Both binaries execute source and loaded-artifact smoke programs.
+The [reproducible-build check](reproducible-builds.md) runs in a separate hosted
+CI job; its local evidence does not establish cross-machine reproducibility.
+
+Remaining: distribution packaging, additional host APIs,
 and platform/distribution decisions. The maintainer selected the
 [MIT License](../LICENSE). Hosted compiler CI and
 bounded fuzz campaigns passed on `cc1354d`; see

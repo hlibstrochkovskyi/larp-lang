@@ -22,6 +22,7 @@ python3 tools/run_conformance.py --gc-stress
 python3 tools/run_conformance.py --artifacts --gc-stress
 python3 tools/run_conformance.py --formatted --artifacts --gc-stress
 python3 tools/run_reference.py
+python3 tools/check_reproducible_build.py
 git diff --check
 ```
 
