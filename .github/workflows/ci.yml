@@ -25,6 +25,7 @@ jobs:
       - run: python3 tools/run_conformance.py --gc-stress
       - run: python3 tools/run_conformance.py --artifacts --gc-stress
       - run: python3 tools/run_conformance.py --formatted --artifacts --gc-stress
+      - run: python3 tools/run_reference.py
       - run: python3 tools/measure_resources.py --samples 1 --output artifacts/ci-resources
       - uses: actions/upload-artifact@v4
         if: always()

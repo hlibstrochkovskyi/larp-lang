@@ -157,10 +157,16 @@ See [fuzz validation](validation-fuzzing.md) and
 [resource measurements](validation-resources.md). These bounded measurements do
 not establish sandboxing, sustained fuzz coverage, or a VM-wide byte budget.
 
-Remaining: expanded reference docs, reproducible distribution builds, additional
-host APIs, platform/distribution decisions, and a license choice. Hosted compiler
-CI passed for the preceding input slice; new robustness workflow results must be
-checked on their exact commit before being reported as passed.
+Implemented reference slice: an [implemented-language guide](reference.md) with
+eight standalone examples. Checked-in contracts execute every LARP code fence
+through normal/stress source runs, formatting, and independently loaded artifacts
+in CI; see [reference validation](validation-reference.md).
+
+Remaining: reproducible distribution builds, additional host APIs,
+platform/distribution decisions, and a license choice. Hosted compiler CI and
+bounded fuzz campaigns passed on `cc1354d`; see
+[the exact-commit evidence](validation-fuzzing.md#hosted-verification). Later
+changes require their own results before being reported as passed.
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in
 the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource

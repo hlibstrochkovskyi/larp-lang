@@ -41,6 +41,7 @@ provide explicitly effect-checked CLI input through host capabilities.
 - [Compiler architecture](docs/architecture.md): pipeline, memory, and runtime boundaries.
 - [Roadmap](docs/roadmap.md): milestones with acceptance gates.
 - [Implementation status](docs/implementation-status.md): supported features and limits.
+- [Practical reference](docs/reference.md): implemented syntax and executable examples.
 - [Research](docs/research.md): primary sources and their limits.
 - [Scenario evaluation](docs/scenario-evaluation.md): executed comparisons and a counterexample.
 - [Scenario validation](docs/validation-scenarios.md): compiled scenario acceptance evidence.

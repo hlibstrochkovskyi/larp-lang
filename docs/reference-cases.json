@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {"id": "numbers", "stdout": "79\n0\n1\n2\nfr\n"},
+    {"id": "captures", "stdout": "12\n14\n59\n"},
+    {"id": "array-values", "stdout": "1\n2\n"},
+    {"id": "recovery", "stdout": "20\n49\n20\n"},
+    {"id": "roles", "stdout": "12\n"},
+    {
+      "id": "scenario",
+      "stdout": "20\n3\n",
+      "stderr": "PALANTIR [Trial]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 20 | 1000000000 | 1000000000 | false\naura | 0 | 3 | - | true\n"
+    },
+    {"id": "lazy", "stdout": "8\n10\n"},
+    {
+      "id": "input",
+      "stdout": "demo\n--literal\nhello\n\nEOF\n",
+      "input": {"stdin": "hello\n\n", "args": ["demo", "--literal"]}
+    }
+  ]
+}

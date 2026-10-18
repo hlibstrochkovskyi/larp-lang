@@ -21,6 +21,7 @@ python3 tools/run_conformance.py
 python3 tools/run_conformance.py --gc-stress
 python3 tools/run_conformance.py --artifacts --gc-stress
 python3 tools/run_conformance.py --formatted --artifacts --gc-stress
+python3 tools/run_reference.py
 git diff --check
 ```
 
@@ -116,6 +117,13 @@ are ignored by Git. Builds publish complete sibling temporary files by rename.
 Use [the roadmap](docs/roadmap.md) to choose a vertical slice. Keep the checked-in
 implementation status accurate, including when tests are only design fixtures.
 All repository prose and commits use English. Do not add assistant attribution.
+
+The [practical reference](docs/reference.md) has complete runnable examples.
+`tools/run_reference.py` extracts every LARP code fence and checks the ordered
+contracts in `docs/reference-cases.json` through normal/stress source execution,
+formatting, and loaded artifacts. Update the contract when changing a sample;
+never claim execution from a syntax-only check. Evidence remains in ignored
+`artifacts/reference-validation/`; use a fresh `--output` for another run.
 
 Coverage-guided targets have their own [fuzz workspace](fuzz/README.md), pinned
 tooling, and lockfile. The main workspace retains no third-party dependencies;
