@@ -13,6 +13,7 @@ fn function(
     let span = source.span(0..0).unwrap();
     let locals = parameters.iter().chain(&captures).cloned().collect();
     Function {
+        scenario: None,
         owner: None,
         constructor: None,
         name: "test".into(),

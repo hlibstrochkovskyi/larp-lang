@@ -3,7 +3,7 @@
 Status: scalar, closure, option/result, collection, and nominal class programs
 compile through typed IR and verified in-memory bytecode to VM execution.
 Object/array/closure tracing is implemented. Role dispatch, concrete extensions,
-and built-in method extraction are implemented. Scenario regions and persisted artifacts remain planned.
+and built-in method extraction are implemented. Scenario regions use isolated function instances and VM frames; persisted artifacts remain planned.
 The pipeline below includes both current contracts and their intended extensions;
 see [implementation status](implementation-status.md) for the supported subset.
 
@@ -36,19 +36,22 @@ flowchart LR
    direct and indirect calls, nominal class/access checks, and constructor field
    initialization. Role implementation contracts, contextual class-to-role
    conversion, and exact extension resolution are checked before lowering.
-   Scenario eligibility summaries and region restrictions are planned.
+   Scenario outlining and transitive call-graph specialization enforce region
+   restrictions before lowering.
 5. **Typed IR:** explicit basic blocks, typed local slots, temporaries, calls,
    branch targets, and terminators. Initially use mutable slots rather than SSA.
-   Preserve source locations and effect signatures; future region qualifiers
-   must survive until all relevant checks run.
+   Preserve source locations, effect signatures, and lexical region metadata.
+   Within a region, snapshot locals implicitly carry `S_r(T)` and the single
+   concrete class denotes `View_r(C)`; this qualification survives in bytecode
+   function metadata until the verifier has checked every call edge.
    A later SSA optimization pass must not redefine language semantics.
 6. **Lowering:** emit typed instructions for numeric widths, locals, branches,
    closures, direct/indirect calls, intrinsics, total result-tag dispatch, and
    observations. Array operations use typed built-in intrinsics with validated
    element/callback signatures. Object operations encode class, field, and method
    identities instead of performing VM source-name lookup. Role conversion and
-   dispatch use explicit class/role/method indices. Scenario instructions
-   remain future extensions.
+   dispatch use explicit class/role/method indices. Scenario entry, claims,
+   field selection, and inspection use dedicated operations.
 7. **Verification:** check instruction indices, stack types at joins, initialized
    locals, branch targets, closure capture layouts, immutable capture slots,
    intrinsic types, call signatures, effect bounds, nominal layout/member access,
@@ -57,13 +60,14 @@ flowchart LR
    as well. Before dataflow, preflight every type in the module,
    including forward-call targets. Bound depth to 128 edges and expanded size
    to 4096 nodes per type, counting shared subtrees repeatedly, so structural
-   comparisons and diagnostic formatting remain bounded. Scenario nesting/escape
-   and host capability validation must be added alongside those features.
+   comparisons and diagnostic formatting remain bounded. Regional frame/call
+   checks prevent nesting, reference ingress, and value escape. Future host APIs
+   will need capability validation alongside their own instructions.
 8. **VM:** explicit value stack and call frames, checked arithmetic, tagged
    option/result/fixed-array values, and a traced object/array/closure heap.
    Collection callbacks suspend their caller in explicit continuation state. A LARP runtime
-   trap is structured data, not a Rust panic. Future scenario frames must be
-   discarded when a trap propagates through the VM loop.
+   trap is structured data, not a Rust panic. Active scenario frames are discarded
+   when a trap propagates through the VM loop.
 
 The parser may be temporarily exercised without a backend, but the first
 executable language slice must go all the way through typed IR and bytecode.
@@ -264,43 +268,71 @@ successful program exit reclaims the remaining object/array/closure heap. Trap
 paths release the owning Rust heap as execution unwinds.
 
 Role dispatch tables are immutable module metadata; role values trace their
-object receiver. Lazy cells and scenario snapshots remain planned. Their fields
-and temporary allocation buffers must become roots or traced edges before their
-allocation instructions can run. Preserve stable language identity across collection and allow
+object receiver. Active scenarios additionally root their ordinary object,
+baseline/performed buffers, and last claims. Lazy cells remain planned; their
+storage must become roots or traced edges before allocation can run. Preserve stable language identity across collection and allow
 unreachable cycles to be reclaimed. Reclamation timing is unobservable; bounded
 pause times are not promised.
 
 ## Scenario implementation
 
-A frame owns root identity, B, P, selected-field bits, claim values, and the
-scenario label. Copy immutable/scalar field values at entry. Reference-bearing
-roots are rejected. No recursive graph copying is hidden behind this operation.
+A lexical `larp` block is outlined into a generated entry function. Its first
+parameter is the root class and its remaining parameters are immutable outer
+SnapshotValue imports. Other outer references/functions cannot be read or stored.
+The compiler's regional environment prevents first-class root copies, bound root
+methods, outer stores, nested scenarios, and crossing return/break statements.
+Ordinary local scopes and loops wholly within the entry remain usable.
 
-The root name resolves to a `View_r` in the region environment. Value qualifiers
-are propagated statically. Method invocation passes a tagged view receiver;
-`self` access then uses the performed field vector. Never hand a scenario method
-an ordinary root handle and hope it will avoid real mutations. Root-derived
-references and other outer aliases cannot be passed, stored, or captured.
+The entry and all transitive direct/closure targets form a closed group of
+regional function instances. Specialization uses a worklist and memoized target
+mapping, including recursive edges. Every instance retains its source ownership,
+signature, effects, and an ordinary origin identity where applicable. Eligibility
+checks the complete bodies rather than trusting a `uses()` annotation: no
+reference allocation, reference captures/returns, role dispatch, foreign roots,
+I/O, or reference-bearing containers. Calls may pass the active view as their
+sole class argument. Value-only closures created in the region may be passed to
+helpers and invoked indirectly; their parameters/results are snapshots and their
+captures are snapshots. An outer arbitrary callback cannot enter the group.
 
-Finite effect flags alone cannot prove a call safe: `uses()` does not encode
-reference allocation or a closure's reference captures. Compute transitive
-scenario-eligibility summaries as well: reference allocation, receiver/argument
-footprints, captures, returns, dispatch targets, and escaping stores. For v0.1,
-reject unresolved cases. An indirect function type without a verified eligible
-target set cannot be called from a scenario. Avoid pretending this is a complete
-borrow checker or a general effect calculus.
+`ScenarioContext { entry, class, origin }` is explicit IR/bytecode metadata.
+It qualifies every snapshot local as `S_entry(T)` and each class local as
+`View_entry(C)`, including copied temporaries and helper parameters. There is no
+unqualified value inside such a frame. The only ordinary-to-regional entrance is
+`Scenario`; it creates the view and imports value snapshots. Ordinary calls and
+closure construction cannot cross groups or invoke a regional entry. Region
+functions cannot return references/functions; the entry returns only unit.
+Consequently no instruction can silently erase provenance into an ordinary slot.
+The verifier independently checks this closure of the graph, including unreachable
+instructions. Specialized method access checks delegate to the verified ordinary
+origin, preserving public/private boundaries rather than granting every clone
+public access. Origins must preserve signatures, effects, captures, and ownership.
 
-Compile `flex`, `canon`, and `palantir` to dedicated operations. A final commit
-validates the complete prepared state, then replaces the selected real values
-without any intervening user code, allocation, or GC. Drop the frame on a VM trap.
-Observation sinks are independent of field storage, so output is never rolled
-back. Do not implement speculative writes by mutating the live object and trying
-to reverse them afterward.
+The runtime owns one active scenario state: entry identity, original root handle,
+class, label, baseline B, performed P, selected-field bits, and last claims F.
+All fields must be SnapshotValues, including private fields. `Value::View` contains
+regional identity rather than an ordinary object handle. Ordinary field opcodes
+on that receiver access P, including inside specialized helper/method frames;
+ordinary object receivers outside the group still access the live object.
 
-The separate model tests only immutable baseline, performed writes, last claims,
-field selection, fallthrough commit, and discard. Rust borrowing in the model is
-stronger than the future VM's identity model. It does not prove alias soundness
-in LARP, effect inference, or region erasure safety.
+`Flex` updates P and F; normal writes leave F intact. `Canon` selects final values,
+including selection before a write. `Palantir` carries verified visible field
+indices in declaration order and writes to a separate observation sink. The
+public `execute_with_observers` API accepts stdout and inspection sinks; legacy
+execution APIs discard inspection output, and the CLI directs it to stderr.
+Neither sink output is rolled back. Sink failures are fatal runtime diagnostics.
+
+Only return from the outlined entry publishes its selection. The VM first
+prepares the complete next vector from B and selected P, then replaces the root's
+fields once, with no user code, observation, callbacks, or collection during
+publication. Helper returns do not commit. Traps, failed observations, and budget
+exhaustion discard the trial and preserve B. Already committed sequential trials
+remain committed. Active root/snapshot/claim storage is included in GC roots,
+even if ordinary root slots have been overwritten in crafted verified code.
+
+The separate model still tests the transition rule independently; it is not
+linked into CLI execution. Selective field commit preserves types, not correlated
+application invariants. See [scenario evaluation](scenario-evaluation.md) for
+compiled explicit-copy comparisons, failure modes, and measured costs.
 
 ## Bytecode artifacts
 

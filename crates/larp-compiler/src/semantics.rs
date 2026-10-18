@@ -12,6 +12,7 @@ mod closures;
 mod declarations;
 mod objects;
 mod roles;
+mod scenarios;
 use std::collections::HashMap;
 
 type Result<T> = std::result::Result<T, Box<Diagnostic>>;
@@ -24,6 +25,7 @@ struct Header {
     effects: Effects,
     owner: Option<usize>,
     constructor: Option<usize>,
+    scenario: Option<larp_bytecode::ScenarioContext>,
 }
 
 struct Tables {
@@ -183,12 +185,17 @@ struct Builder<'a> {
     generated_base: usize,
     required: Effects,
     inferred_result: Option<Option<Type>>,
+    scenario_boundary: bool,
+    scenario_outer: std::collections::HashSet<Local>,
+    scenario_forbidden: std::collections::HashSet<String>,
+    view_access: usize,
 }
 
 impl<'a> Builder<'a> {
     fn new(header: &Header, tables: &'a Tables, span: Span, generated_base: usize) -> Self {
         Self {
             function: Function {
+                scenario: header.scenario,
                 owner: header.owner,
                 constructor: header.constructor,
                 name: header.name.text.clone(),
@@ -215,6 +222,10 @@ impl<'a> Builder<'a> {
             generated_base,
             required: Effects::NONE,
             inferred_result: None,
+            scenario_boundary: false,
+            scenario_outer: Default::default(),
+            scenario_forbidden: Default::default(),
+            view_access: 0,
         }
     }
     fn finish(&mut self) {
@@ -387,6 +398,11 @@ impl<'a> Builder<'a> {
     fn statement(&mut self, statement: &ast::Statement) -> Result<()> {
         let span = statement.span;
         match &statement.kind {
+            StatementKind::Scenario { root, label, body } => {
+                self.scenario(root, label, body, span)?
+            }
+            StatementKind::Flex { root, field, value } => self.flex(root, field, value, span)?,
+            StatementKind::Canon { root, field } => self.canon(root, field, span)?,
             StatementKind::Binding {
                 ty: declared,
                 name,
@@ -402,6 +418,13 @@ impl<'a> Builder<'a> {
                         "LARP-T001",
                         name.span,
                         "A local binding cannot have type unit",
+                    ));
+                }
+                if self.function.scenario.is_some() && value.ty.class_id().is_some() {
+                    return Err(error(
+                        "LARP-S004",
+                        name.span,
+                        "A scenario view cannot be copied into a first-class binding",
                     ));
                 }
                 let binding_type = declared.unwrap_or(value.ty.clone());
@@ -567,6 +590,13 @@ impl<'a> Builder<'a> {
                 self.current = done;
             }
             StatementKind::Return(expression) => {
+                if self.scenario_boundary {
+                    return Err(error(
+                        "LARP-S005",
+                        span,
+                        "return cannot cross a scenario boundary",
+                    ));
+                }
                 if let Some(class) = self.function.constructor {
                     if expression.is_some() {
                         return Err(error(
@@ -613,7 +643,15 @@ impl<'a> Builder<'a> {
             }
             StatementKind::Break => {
                 let target = self.breaks.last().copied().ok_or_else(|| {
-                    error("LARP-T009", span, "touch_grass requires an enclosing loop")
+                    error(
+                        if self.scenario_boundary {
+                            "LARP-S005"
+                        } else {
+                            "LARP-T009"
+                        },
+                        span,
+                        "touch_grass requires a loop inside the current execution boundary",
+                    )
                 })?;
                 self.terminate(Terminator::Goto(target), span);
                 self.current = self.new_block(span);
@@ -744,7 +782,12 @@ impl<'a> Builder<'a> {
         expected: Option<Type>,
         evaluate: bool,
     ) -> Result<Value> {
-        let mut value = self.expression_value(expression, expected.clone(), evaluate)?;
+        let view_context = self.function.scenario.is_some()
+            && expected.as_ref().is_some_and(|ty| ty.class_id().is_some());
+        self.view_access += usize::from(view_context);
+        let value = self.expression_value(expression, expected.clone(), evaluate);
+        self.view_access -= usize::from(view_context);
+        let mut value = value?;
         if let Some(expected) = &expected {
             value = self.coerce_role(value, expected, expression.span)?;
         }
@@ -802,7 +845,23 @@ impl<'a> Builder<'a> {
             }
             ExprKind::Name(name) => {
                 if let Some(binding) = self.resolve(&name.text) {
+                    if self.function.scenario.is_some()
+                        && binding.ty.class_id().is_some()
+                        && self.view_access == 0
+                    {
+                        return Err(error(
+                            "LARP-S004",
+                            span,
+                            "The scenario root is a view usable only for field access or a verified call",
+                        ));
+                    }
                     self.read(&binding, span)
+                } else if self.scenario_forbidden.contains(&name.text) {
+                    return Err(error(
+                        "LARP-S002",
+                        span,
+                        "Outer reference and function bindings cannot be read inside a scenario",
+                    ));
                 } else if name.text == "fortnine" && !self.tables.names.contains_key(&name.text) {
                     self.literal(Scalar::Unc(49), span)
                 } else if let Some(index) = self.tables.names.get(&name.text).copied() {
@@ -898,6 +957,17 @@ impl<'a> Builder<'a> {
                 self.short_circuit(*op, left, right, span, evaluate)?
             }
             ExprKind::Binary { op, left, right } => {
+                if self.function.scenario.is_some()
+                    && [left.as_ref(), right.as_ref()]
+                        .iter()
+                        .any(|operand| self.hint(operand).is_some_and(|ty| ty.class_id().is_some()))
+                {
+                    return Err(error(
+                        "LARP-S004",
+                        span,
+                        "A scenario view is not a first-class comparison operand",
+                    ));
+                }
                 if let (Some(left_type), Some(right_type)) = (self.hint(left), self.hint(right))
                     && left_type != right_type
                 {
@@ -960,7 +1030,7 @@ impl<'a> Builder<'a> {
                 {
                     return self.constructor_field_read(name, span);
                 }
-                let receiver = self.expression(receiver, None, evaluate)?;
+                let receiver = self.view_expression(receiver, evaluate)?;
                 if receiver.ty == Type::ConversionError && name.text == "message" {
                     self.intrinsic(Intrinsic::ConversionMessage, vec![receiver.slot], span)?
                 } else {

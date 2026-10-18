@@ -137,3 +137,31 @@ fn gc_stress_runs_real_closures_and_composes_with_instruction_limits() {
         assert!(output.stdout.is_empty());
     }
 }
+
+#[test]
+fn scenario_observations_use_stderr_and_check_does_not_execute_them() {
+    let file = fixture("pass/scenario.larp");
+    let checked = larp(&["check", &file]);
+    assert!(
+        checked.status.success(),
+        "{:?}",
+        String::from_utf8(checked.stderr.clone())
+    );
+    assert!(checked.stdout.is_empty());
+    assert!(checked.stderr.is_empty());
+    for options in [vec![], vec!["--gc-stress"]] {
+        let mut args = vec!["run", &file];
+        args.extend(options);
+        let output = larp(&args);
+        assert!(
+            output.status.success(),
+            "{:?}",
+            String::from_utf8(output.stderr.clone())
+        );
+        assert_eq!(output.stdout, b"20\n3\n");
+        assert_eq!(
+            String::from_utf8(output.stderr).unwrap(),
+            "PALANTIR [PeterThiel]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 20 | 1000000000 | 1000000000 | false\naura | 0 | 3 | - | true\n"
+        );
+    }
+}

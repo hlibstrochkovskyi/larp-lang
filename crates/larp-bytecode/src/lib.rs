@@ -7,6 +7,7 @@ use std::fmt::Write;
 
 mod classes;
 mod roles;
+mod scenarios;
 
 #[derive(Clone, Debug)]
 pub struct Module {
@@ -66,6 +67,7 @@ pub struct Method {
 
 #[derive(Clone, Debug)]
 pub struct Function {
+    pub scenario: Option<ScenarioContext>,
     pub owner: Option<usize>,
     pub constructor: Option<usize>,
     pub name: String,
@@ -78,6 +80,14 @@ pub struct Function {
     pub span: Span,
 }
 
+/// A statically isolated region shared by its entry and specialized helpers.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ScenarioContext {
+    pub entry: usize,
+    pub class: usize,
+    pub origin: Option<usize>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Instruction {
     pub op: Op,
@@ -86,6 +96,22 @@ pub struct Instruction {
 
 #[derive(Clone, Debug)]
 pub enum Op {
+    Scenario {
+        entry: usize,
+        label: String,
+    },
+    Canon {
+        class: usize,
+        field: usize,
+    },
+    Flex {
+        class: usize,
+        field: usize,
+    },
+    Palantir {
+        class: usize,
+        fields: Vec<usize>,
+    },
     IntoRole {
         class: usize,
         role: usize,
@@ -208,6 +234,13 @@ impl VerifiedModule {
                 "function {index} {}({:?}) -> {} {}",
                 function.name, function.parameters, function.result, function.effects
             );
+            if let Some(context) = function.scenario {
+                let _ = writeln!(
+                    result,
+                    "  region entry={} class={} origin={:?}",
+                    context.entry, context.class, context.origin
+                );
+            }
             for (pc, instruction) in function.code.iter().enumerate() {
                 let _ = writeln!(
                     result,
@@ -229,6 +262,8 @@ struct State {
 
 pub fn operation_effect(op: &Op) -> Effects {
     match op {
+        Op::Canon { .. } | Op::Flex { .. } => Effects::WRITE,
+        Op::Palantir { .. } => Effects::OBSERVE,
         Op::Print => Effects::OBSERVE,
         Op::GetField { .. } => Effects::READ,
         Op::SetField { .. } => Effects::WRITE,
@@ -261,7 +296,7 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
     if !entry.parameters.is_empty() || !entry.captures.is_empty() || entry.result != Type::Unit {
         return Err(invalid("Entry must take no parameters and return unit"));
     }
-    if entry.owner.is_some() || entry.constructor.is_some() {
+    if entry.owner.is_some() || entry.constructor.is_some() || entry.scenario.is_some() {
         return Err(invalid("Entry cannot belong to a class"));
     }
     classes::preflight_types(&module)?;
@@ -322,6 +357,7 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
     }
     classes::validate_layouts(&module)?;
     roles::validate_layouts(&module)?;
+    scenarios::validate_contexts(&module)?;
     for index in 0..module.functions.len() {
         verify_function(&module, index)?;
     }
@@ -358,18 +394,35 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
             "Capture slots do not match the closure signature".into(),
         ));
     }
-    let receiver_readonly = module
-        .classes
-        .iter()
-        .any(|class| class.methods.iter().any(|method| method.function == index))
+    let original = function
+        .scenario
+        .and_then(|context| context.origin)
+        .unwrap_or(index);
+    let receiver_readonly = function
+        .scenario
+        .is_some_and(|context| context.entry == index)
+        || module.classes.iter().any(|class| {
+            class
+                .methods
+                .iter()
+                .any(|method| method.function == original)
+        })
         || module
             .extensions
             .iter()
-            .any(|extension| extension.function == index);
+            .any(|extension| extension.function == original);
     // Validate structural indices and capabilities even in unreachable code.
     for (pc, instruction) in function.code.iter().enumerate() {
         let mut effects = operation_effect(&instruction.op);
+        scenarios::validate_instruction(module, index, pc)?;
         match &instruction.op {
+            Op::Scenario { entry, .. } => {
+                effects = effects
+                    .union(Effects::READ)
+                    .union(Effects::WRITE)
+                    .union(Effects::ABORT)
+                    .union(module.functions[*entry].effects);
+            }
             Op::IntoRole { class, role } => {
                 let layout = module
                     .classes
@@ -534,6 +587,27 @@ fn verify_function(module: &Module, index: usize) -> Result<(), VerifyError> {
         };
         let mut successors = Vec::with_capacity(2);
         match &function.code[pc].op {
+            Op::Scenario { entry, .. } => {
+                for parameter in module.functions[*entry].parameters.iter().rev() {
+                    pop(&mut state, parameter.clone())?;
+                }
+                state.stack.push(Type::Unit);
+            }
+            Op::Canon { class, .. } | Op::Palantir { class, .. } => {
+                pop(
+                    &mut state,
+                    Type::class(*class, module.classes[*class].name.as_str()),
+                )?;
+                state.stack.push(Type::Unit);
+            }
+            Op::Flex { class, field } => {
+                pop(&mut state, module.classes[*class].fields[*field].ty.clone())?;
+                pop(
+                    &mut state,
+                    Type::class(*class, module.classes[*class].name.as_str()),
+                )?;
+                state.stack.push(Type::Unit);
+            }
             Op::IntoRole { class, role } => {
                 pop(
                     &mut state,

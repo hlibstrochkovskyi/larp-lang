@@ -135,6 +135,20 @@ pub enum StatementKind {
     },
     Expression(Expr),
     Block(Block),
+    Scenario {
+        root: Name,
+        label: Name,
+        body: Block,
+    },
+    Flex {
+        root: Name,
+        field: Name,
+        value: Expr,
+    },
+    Canon {
+        root: Name,
+        field: Name,
+    },
     If {
         condition: Expr,
         then_block: Block,

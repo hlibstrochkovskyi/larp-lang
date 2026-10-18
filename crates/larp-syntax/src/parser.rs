@@ -490,6 +490,31 @@ impl Parser<'_> {
         let start = self.current().span;
         let kind = if self.punct("{") {
             StatementKind::Block(self.block()?)
+        } else if self.eat_word("larp") {
+            self.expect("(")?;
+            let root = self.name()?;
+            self.expect(")")?;
+            self.expect_word("as")?;
+            let label = self.name()?;
+            StatementKind::Scenario {
+                root,
+                label,
+                body: self.block()?,
+            }
+        } else if self.eat_word("flex") {
+            let root = self.name()?;
+            self.expect(".")?;
+            let field = self.name()?;
+            self.expect("=")?;
+            let value = self.expr(0)?;
+            self.expect(";")?;
+            StatementKind::Flex { root, field, value }
+        } else if self.eat_word("canon") {
+            let root = self.name()?;
+            self.expect(".")?;
+            let field = self.name()?;
+            self.expect(";")?;
+            StatementKind::Canon { root, field }
         } else if self.eat_word("if") {
             self.expect("(")?;
             let condition = self.expr(0)?;
@@ -558,7 +583,7 @@ impl Parser<'_> {
                 value,
             }
         } else if matches!(&self.current().kind, Kind::Word(name) if matches!(name.as_str(),
-            "larp" | "flex" | "canon" | "nonchalant" | "sybau" | "archetype" | "role"))
+            "nonchalant" | "sybau" | "archetype" | "role"))
         {
             return Err(self.error(
                 "LARP-P002",

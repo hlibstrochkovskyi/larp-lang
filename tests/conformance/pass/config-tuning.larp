@@ -1,0 +1,29 @@
+archetype Plan {
+    highkey mf workers;
+    highkey mf retryDelayMs;
+
+    init(mf workers, mf retryDelayMs) {
+        self.workers = workers;
+        self.retryDelayMs = retryDelayMs;
+    }
+}
+
+main_character {
+    Plan current = new Plan(2, 1000);
+    mf budget = 100;
+
+    // Begin trial.
+    larp (current) as CapacityTrial {
+        flex current.workers = 8;
+        current.retryDelayMs = 250;
+        mf estimatedCost = current.workers * 12;
+        if (estimatedCost <= budget) {
+            canon current.workers;
+        }
+        palantir(current);
+    }
+    // End trial.
+
+    yap(current.workers);
+    yap(current.retryDelayMs);
+}

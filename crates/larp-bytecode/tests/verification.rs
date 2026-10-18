@@ -6,6 +6,7 @@ fn function(code: Vec<Op>, locals: Vec<Type>, effects: Effects) -> Function {
     let source = SourceFile::new(SourceId(0), "test", "");
     let span = source.span(0..0).unwrap();
     Function {
+        scenario: None,
         owner: None,
         constructor: None,
         name: "test".into(),

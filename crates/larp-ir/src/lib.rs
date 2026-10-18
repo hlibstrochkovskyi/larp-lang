@@ -6,7 +6,7 @@ use larp_types::{Binary, Effects, Intrinsic, Scalar, Type, Unary};
 pub type Local = usize;
 pub type BlockId = usize;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Program {
     pub roles: Vec<larp_bytecode::Role>,
     pub extensions: Vec<larp_bytecode::Extension>,
@@ -15,8 +15,9 @@ pub struct Program {
     pub entry: usize,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Function {
+    pub scenario: Option<larp_bytecode::ScenarioContext>,
     pub owner: Option<usize>,
     pub constructor: Option<usize>,
     pub name: String,
@@ -29,7 +30,7 @@ pub struct Function {
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Block {
     pub parameter: Option<Local>,
     pub instructions: Vec<Instruction>,
@@ -37,14 +38,39 @@ pub struct Block {
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Instruction {
     pub kind: InstructionKind,
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum InstructionKind {
+    Scenario {
+        destination: Local,
+        entry: usize,
+        label: String,
+        arguments: Vec<Local>,
+    },
+    Canon {
+        destination: Local,
+        receiver: Local,
+        class: usize,
+        field: usize,
+    },
+    Flex {
+        destination: Local,
+        receiver: Local,
+        class: usize,
+        field: usize,
+        value: Local,
+    },
+    Palantir {
+        destination: Local,
+        receiver: Local,
+        class: usize,
+        fields: Vec<usize>,
+    },
     IntoRole {
         destination: Local,
         receiver: Local,
@@ -119,7 +145,7 @@ pub enum InstructionKind {
     Assert(Local),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Terminator {
     ConstructReturn {
         class: usize,
@@ -196,6 +222,62 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                     let span = instruction.span;
                     let mut emit = |op| code.push(ByteInstruction { op, span });
                     match &instruction.kind {
+                        InstructionKind::Scenario {
+                            destination,
+                            entry,
+                            label,
+                            arguments,
+                        } => {
+                            for argument in arguments {
+                                emit(Op::Load(*argument));
+                            }
+                            emit(Op::Scenario {
+                                entry: *entry,
+                                label: label.clone(),
+                            });
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::Canon {
+                            destination,
+                            receiver,
+                            class,
+                            field,
+                        } => {
+                            emit(Op::Load(*receiver));
+                            emit(Op::Canon {
+                                class: *class,
+                                field: *field,
+                            });
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::Flex {
+                            destination,
+                            receiver,
+                            class,
+                            field,
+                            value,
+                        } => {
+                            emit(Op::Load(*receiver));
+                            emit(Op::Load(*value));
+                            emit(Op::Flex {
+                                class: *class,
+                                field: *field,
+                            });
+                            emit(Op::Store(*destination));
+                        }
+                        InstructionKind::Palantir {
+                            destination,
+                            receiver,
+                            class,
+                            fields,
+                        } => {
+                            emit(Op::Load(*receiver));
+                            emit(Op::Palantir {
+                                class: *class,
+                                fields: fields.clone(),
+                            });
+                            emit(Op::Store(*destination));
+                        }
                         InstructionKind::IntoRole {
                             destination,
                             receiver,
@@ -449,6 +531,7 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                 }
             }
             ByteFunction {
+                scenario: function.scenario,
                 owner: function.owner,
                 constructor: function.constructor,
                 name: function.name.clone(),

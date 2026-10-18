@@ -1,6 +1,6 @@
 # Implementation roadmap
 
-Status: M1 through the M4 feature set are implemented. M5 and M6 remain pending.
+Status: M1 through the M5 feature set are implemented. M6 remains pending.
 This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -88,9 +88,20 @@ aliasing, constructor escape rejection, and collection under stress mode pass.
 Tests distinguish live cycles from unreachable cycles and exercise temporary
 roots during nested allocations.
 
-## M5 — Controlled alternative state
+## M5 — Controlled alternative state (implemented, experimental)
 
-Review model findings first. Implement region qualification, transitive scenario
+The compiler now outlines lexical region entries and specializes their checked
+call graphs. Dedicated VM view/snapshot frames implement claims, final-field
+selection, inspection, and single-publication commit. Outer aliases/stores,
+unsafe transitive calls, reference roots, crossing exits, and nested entries are
+rejected by the frontend and independently constrained in bytecode verification.
+Runtime tests inspect the retained real heap after injected failure and stress
+collection. The local acceptance suite and practical comparisons are complete;
+see [scenario validation](validation-scenarios.md) and
+[scenario evaluation](scenario-evaluation.md). The feature remains experimental,
+with value-only roots and no application-invariant guarantee.
+
+Original acceptance scope: review model findings first. Implement region qualification, transitive scenario
 eligibility, view receivers, snapshot frames, claim history, selected final-field
 commit, and observation. Keep roots value-only and scenarios non-nested.
 

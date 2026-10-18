@@ -231,6 +231,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 effects: effects(&function.effects)?,
                 owner: None,
                 constructor: None,
+                scenario: None,
             });
             bodies.push(&function.body);
             parameter_names.push(function_names);
@@ -248,6 +249,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 effects: constructor_effects(),
                 owner: Some(index),
                 constructor: Some(index),
+                scenario: None,
             });
             bodies.push(&constructor.body);
             parameter_names.push(
@@ -276,6 +278,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                     effects: effects(&method.effects)?,
                     owner: Some(index),
                     constructor: None,
+                    scenario: None,
                 });
                 bodies.push(&method.body);
                 let mut names = vec![Name {
@@ -364,6 +367,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
             effects: Effects::ALL,
             owner: None,
             constructor: None,
+            scenario: None,
         });
         bodies.push(&ast.main);
         parameter_names.push(Vec::new());
@@ -460,13 +464,15 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
             return Err(Box::new(first));
         }
         functions.extend(generated);
-        Ok(Program {
+        let mut program = Program {
             classes: tables.classes,
             roles: tables.roles,
             extensions: tables.extensions,
             functions,
             entry,
-        })
+        };
+        scenarios::specialize(&mut program)?;
+        Ok(program)
     })();
     result.map_err(|error| {
         if body_errors.is_empty() {

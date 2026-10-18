@@ -12,10 +12,11 @@ Usage:
   larp dump FILE.larp [--ir]
 
 Implemented: scalar types, first-class functions, closures, arrays, options/results,
-archetypes, constructors, private/public fields, instance and bound methods,
+archetypes, roles, extensions, constructors, private/public fields, bound methods,
 branches, loops, checked conversions, effect bounds, typed IR,
-verified in-memory bytecode, eager collection pipelines, and a VM with tracing GC.
-Planned: roles, extensions, scenarios, persisted build artifacts, fmt.
+verified in-memory bytecode, eager collection pipelines, isolated scenarios,
+and a VM with tracing GC. palantir reports go to stderr.
+Planned: lazy bindings, observation suppression, persisted build artifacts, fmt.
 --gc-stress collects at every object/array/closure allocation safepoint.";
 
 fn main() -> ExitCode {
@@ -35,7 +36,7 @@ fn main() -> ExitCode {
         }
         ["--version"] | ["-V"] => {
             println!(
-                "larp {} (objects, collections, and recovery core)",
+                "larp {} (objects, roles, collections, and isolated scenarios)",
                 env!("CARGO_PKG_VERSION")
             );
             ExitCode::SUCCESS
@@ -125,9 +126,12 @@ fn process(path: &str, mode: Mode) -> ExitCode {
         Mode::Dump => print!("{}", compilation.bytecode.disassemble()),
         Mode::Ir => println!("{:#?}", compilation.ir),
         Mode::Run(limits) => {
-            if let Err(diagnostic) =
-                larp_vm::execute(&compilation.bytecode, &mut std::io::stdout().lock(), limits)
-            {
+            if let Err(diagnostic) = larp_vm::execute_with_observers(
+                &compilation.bytecode,
+                &mut std::io::stdout().lock(),
+                &mut std::io::stderr().lock(),
+                limits,
+            ) {
                 eprint!("{}", larp_diagnostics::render(&diagnostic, &source));
                 return ExitCode::from(1);
             }

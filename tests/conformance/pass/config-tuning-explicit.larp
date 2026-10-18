@@ -1,0 +1,27 @@
+archetype Plan {
+    highkey mf workers;
+    highkey mf retryDelayMs;
+
+    init(mf workers, mf retryDelayMs) {
+        self.workers = workers;
+        self.retryDelayMs = retryDelayMs;
+    }
+}
+
+main_character {
+    Plan current = new Plan(2, 1000);
+    mf budget = 100;
+
+    // Begin trial.
+    Plan trial = new Plan(current.workers, current.retryDelayMs);
+    trial.workers = 8;
+    trial.retryDelayMs = 250;
+    mf estimatedCost = trial.workers * 12;
+    if (estimatedCost <= budget) {
+        current.workers = trial.workers;
+    }
+    // End trial.
+
+    yap(current.workers);
+    yap(current.retryDelayMs);
+}

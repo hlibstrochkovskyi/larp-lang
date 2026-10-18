@@ -3,7 +3,8 @@ use super::*;
 pub(super) fn is_builtin(name: &str) -> bool {
     matches!(
         name,
-        "yap"
+        "palantir"
+            | "yap"
             | "no_cap"
             | "crashout"
             | "some"
@@ -124,6 +125,28 @@ impl Builder<'_> {
         span: Span,
         evaluate: bool,
     ) -> Result<Value> {
+        if let ExprKind::Name(name) = &callee.kind {
+            if self.resolve(&name.text).is_none() && self.scenario_forbidden.contains(&name.text) {
+                return Err(error(
+                    "LARP-S002",
+                    span,
+                    "An outer function binding cannot be called inside a scenario",
+                ));
+            }
+            if name.text == "palantir"
+                && self.resolve(&name.text).is_none()
+                && !self.tables.names.contains_key(&name.text)
+            {
+                if !type_arguments.is_empty() {
+                    return Err(error(
+                        "LARP-S006",
+                        span,
+                        "palantir does not accept type arguments",
+                    ));
+                }
+                return self.palantir(arguments, span, evaluate);
+            }
+        }
         if let ExprKind::Member { receiver, name } = &callee.kind {
             if !type_arguments.is_empty() {
                 return Err(error(
@@ -205,6 +228,13 @@ impl Builder<'_> {
         expected: Option<Type>,
         span: Span,
     ) -> Result<Value> {
+        if name.text == "palantir" {
+            return Err(error(
+                "LARP-S006",
+                span,
+                "palantir must be called directly with the active scenario view",
+            ));
+        }
         let context = match &expected {
             Some(Type::Function(signature)) => Some(signature.clone()),
             Some(other) => {
@@ -330,6 +360,7 @@ impl Builder<'_> {
             effects,
             owner: None,
             constructor: None,
+            scenario: self.function.scenario,
         };
         let mut child = Builder::new(
             &header,
@@ -541,7 +572,7 @@ impl Builder<'_> {
                 "A partially initialized self cannot call a method",
             ));
         }
-        let receiver = self.expression(receiver, None, evaluate)?;
+        let receiver = self.view_expression(receiver, evaluate)?;
         if receiver.ty.class_id().is_some() {
             return self.object_call(receiver, name, arguments, span, evaluate);
         }

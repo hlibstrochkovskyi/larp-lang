@@ -118,6 +118,7 @@ impl Builder<'_> {
             effects,
             owner: self.function.owner,
             constructor: None,
+            scenario: self.function.scenario,
         };
         let mut child = Builder::new(&header, self.tables, span, id);
         let capture = child.local(receiver.ty.clone());

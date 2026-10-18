@@ -165,6 +165,16 @@ impl Heap {
         }
     }
 
+    #[cfg(test)]
+    pub fn instances(&self) -> impl Iterator<Item = &Instance> {
+        self.slots
+            .iter()
+            .filter_map(|slot| match slot.object.as_ref()? {
+                Object::Instance(instance) => Some(instance),
+                _ => None,
+            })
+    }
+
     pub fn collect<'a>(&mut self, roots: impl Iterator<Item = &'a Value>) {
         let mut pending = Vec::new();
         for root in roots {

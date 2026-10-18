@@ -109,6 +109,31 @@ impl Type {
         )
     }
 
+    /// Values that can be copied into an isolated scenario without heap aliases.
+    pub fn is_snapshot(&self) -> bool {
+        if !self.is_well_formed() {
+            return false;
+        }
+        let mut pending = vec![self];
+        while let Some(ty) = pending.pop() {
+            match ty {
+                Self::Mf
+                | Self::Unc
+                | Self::Geeked
+                | Self::Verdict
+                | Self::Text
+                | Self::ConversionError => {}
+                Self::Baddie(payload) | Self::FixedArray(payload, _) => pending.push(payload),
+                Self::Result(payloads) => {
+                    pending.push(&payloads.0);
+                    pending.push(&payloads.1);
+                }
+                _ => return false,
+            }
+        }
+        true
+    }
+
     pub fn supports_equality(&self) -> bool {
         match self {
             Self::Unit | Self::Function(_) | Self::Array(_) => false,

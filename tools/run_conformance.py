@@ -56,11 +56,11 @@ def main() -> int:
                 if checked.returncode != 0 or checked.stdout or checked.stderr:
                     errors.append(f"check failed or observed output: {checked.stderr}")
                 if kind == "run":
-                    if output.returncode != 0 or output.stdout != expectation["stdout"] or output.stderr:
+                    if output.returncode != 0 or output.stdout != expectation["stdout"] or output.stderr != expectation.get("stderr", ""):
                         errors.append(f"run mismatch: exit={output.returncode}, stdout={output.stdout!r}, stderr={output.stderr!r}")
                 else:
                     match = re.search(r"error\[(LARP-[A-Z][0-9]{3})\]", output.stderr)
-                    if output.returncode != 1 or output.stdout or not match or match[1] != expectation["code"]:
+                    if output.returncode != 1 or output.stdout != expectation.get("stdout", "") or not match or match[1] != expectation["code"]:
                         errors.append(f"expected runtime {expectation['code']}: {output.stderr}")
             if kind != "run":
                 if not re.search(r" --> .+:[0-9]+:[0-9]+", output.stderr):

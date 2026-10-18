@@ -81,6 +81,13 @@ impl Builder<'_> {
         }
         for name in free {
             if let Some(binding) = self.resolve(&name) {
+                if self.function.scenario.is_some() && !binding.ty.is_snapshot() {
+                    return Err(error(
+                        "LARP-E002",
+                        span,
+                        "A scenario closure may capture only SnapshotValues",
+                    ));
+                }
                 let copied = self.read(&binding, span);
                 captures.push((name, binding, copied.slot));
             }
@@ -99,6 +106,7 @@ impl Builder<'_> {
                 .map_or(Effects::ALL, |signature| signature.effects),
             owner: self.function.owner,
             constructor: None,
+            scenario: self.function.scenario,
         };
         let mut child = Builder::new(
             &header,
@@ -106,6 +114,7 @@ impl Builder<'_> {
             span,
             self.generated_base + self.generated.len(),
         );
+        child.scenario_forbidden = self.scenario_forbidden.clone();
         if signature.is_none() || infer_result {
             child.inferred_result = Some(None);
         }
@@ -271,6 +280,15 @@ fn free_names(parameters: &[ast::LambdaParameter], body: &ast::LambdaBody) -> BT
         }
         fn statement(&mut self, statement: &ast::Statement) {
             match &statement.kind {
+                StatementKind::Scenario { root, body, .. } => {
+                    self.name(root);
+                    self.block(body);
+                }
+                StatementKind::Flex { root, value, .. } => {
+                    self.name(root);
+                    self.expr(value);
+                }
+                StatementKind::Canon { root, .. } => self.name(root),
                 StatementKind::Binding { name, value, .. } => {
                     self.expr(value);
                     self.bound.last_mut().unwrap().insert(name.text.clone());

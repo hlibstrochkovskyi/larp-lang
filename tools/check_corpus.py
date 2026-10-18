@@ -54,12 +54,15 @@ def main() -> None:
         require(isinstance(expect, dict), f"Invalid expectation: {case_id}")
         kind = expect.get("kind")
         if kind == "run":
-            require(set(expect) == {"kind", "stdout"}, f"Invalid run fields: {case_id}")
+            require({"kind", "stdout"} <= set(expect) <= {"kind", "stdout", "stderr"}, f"Invalid run fields: {case_id}")
             require(isinstance(expect["stdout"], str), f"Invalid stdout: {case_id}")
+            require(isinstance(expect.get("stderr", ""), str), f"Invalid stderr: {case_id}")
         else:
             require(kind in {"compile_error", "runtime_error"},
                     f"Unknown expectation kind: {case_id}")
-            require(set(expect) == {"kind", "code"}, f"Invalid error fields: {case_id}")
+            require({"kind", "code"} <= set(expect) <= ({"kind", "code", "stdout"} if kind == "runtime_error" else {"kind", "code"}),
+                    f"Invalid error fields: {case_id}")
+            require(isinstance(expect.get("stdout", ""), str), f"Invalid runtime stdout: {case_id}")
             require(expect["code"] in codes, f"Unknown diagnostic: {case_id}")
             require((kind == "runtime_error") == expect["code"].startswith("LARP-R"),
                     f"Wrong diagnostic family: {case_id}")

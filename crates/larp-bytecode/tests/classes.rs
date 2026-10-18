@@ -18,6 +18,7 @@ fn instruction(op: Op) -> Instruction {
 fn function(parameters: Vec<Type>, result: Type, effects: Effects, code: Vec<Op>) -> Function {
     let span = instruction(Op::Return).span;
     Function {
+        scenario: None,
         owner: None,
         constructor: None,
         name: "test".into(),

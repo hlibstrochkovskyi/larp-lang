@@ -255,7 +255,7 @@ impl Builder<'_> {
                 {
                     return Ok(Place::Local(self.constructor_field(name)?));
                 }
-                let receiver = self.expression(receiver, None, true)?;
+                let receiver = self.view_expression(receiver, true)?;
                 let class = receiver.ty.class_id().ok_or_else(|| {
                     error(
                         "LARP-T001",
@@ -272,13 +272,28 @@ impl Builder<'_> {
                     ty,
                 })
             }
-            ExprKind::Name(name) => self.resolve(&name.text).map(Place::Local).ok_or_else(|| {
-                error(
-                    "LARP-N001",
-                    name.span,
-                    format!("Unknown binding '{}'", name.text),
-                )
-            }),
+            ExprKind::Name(name) => {
+                if self.function.scenario.is_some()
+                    && (self.scenario_forbidden.contains(&name.text)
+                        && self.resolve(&name.text).is_none()
+                        || self
+                            .resolve(&name.text)
+                            .is_some_and(|binding| self.scenario_outer.contains(&binding.slot)))
+                {
+                    return Err(error(
+                        "LARP-S004",
+                        name.span,
+                        "A scenario cannot assign an outer binding",
+                    ));
+                }
+                self.resolve(&name.text).map(Place::Local).ok_or_else(|| {
+                    error(
+                        "LARP-N001",
+                        name.span,
+                        format!("Unknown binding '{}'", name.text),
+                    )
+                })
+            }
             ExprKind::Index { receiver, index } => {
                 let parent = self.prepare_place(receiver)?;
                 let container = self.read_place(&parent, receiver.span)?;

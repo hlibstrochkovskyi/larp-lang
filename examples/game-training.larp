@@ -1,0 +1,28 @@
+archetype Stats {
+    highkey mf power;
+    highkey mf visualBonus;
+
+    init(mf power, mf visualBonus) {
+        self.power = power;
+        self.visualBonus = visualBonus;
+    }
+}
+
+main_character {
+    Stats stats = new Stats(10, 0);
+
+    // Begin trial.
+    larp (stats) as TrainingTrial {
+        stats.power += 5;
+        flex stats.visualBonus = 500;
+        mf projectedScore = stats.power * 2;
+        if (projectedScore >= 30) {
+            canon stats.power;
+        }
+        palantir(stats);
+    }
+    // End trial.
+
+    yap(stats.power);
+    yap(stats.visualBonus);
+}

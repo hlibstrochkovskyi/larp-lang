@@ -85,17 +85,18 @@
       "id": "scenario",
       "path": "pass/scenario.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
-        "stdout": "20\n3\n"
+        "stdout": "20\n3\n",
+        "stderr": "PALANTIR [PeterThiel]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 20 | 1000000000 | 1000000000 | false\naura | 0 | 3 | - | true\n"
       }
     },
     {
       "id": "scenario-method",
       "path": "pass/scenario-method.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "1\n"
@@ -105,7 +106,7 @@
       "id": "scenario-result-is-data",
       "path": "pass/scenario-result-is-data.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "run",
         "stdout": "7\n"
@@ -185,7 +186,7 @@
       "id": "scenario-alias",
       "path": "fail/scenario-alias.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-S002"
@@ -195,7 +196,7 @@
       "id": "scenario-escape",
       "path": "fail/scenario-escape.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-S004"
@@ -205,7 +206,7 @@
       "id": "scenario-nested",
       "path": "fail/scenario-nested.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-S003"
@@ -215,7 +216,7 @@
       "id": "scenario-return",
       "path": "fail/scenario-return.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-S005"
@@ -225,7 +226,7 @@
       "id": "scenario-reference-field",
       "path": "fail/scenario-reference-field.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-S001"
@@ -235,7 +236,7 @@
       "id": "canon-outside",
       "path": "fail/canon-outside.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-S006"
@@ -245,7 +246,7 @@
       "id": "scenario-hidden-allocation",
       "path": "fail/scenario-hidden-allocation.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "compile_error",
         "code": "LARP-E002"
@@ -265,7 +266,7 @@
       "id": "scenario-abort",
       "path": "runtime/scenario-abort.larp",
       "milestone": "M5",
-      "status": "pending",
+      "status": "active",
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R003"
@@ -639,6 +640,59 @@
       "expect": {
         "kind": "compile_error",
         "code": "LARP-T001"
+      }
+    },
+    {
+      "id": "config-tuning",
+      "path": "pass/config-tuning.larp",
+      "milestone": "M5",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "8\n1000\n",
+        "stderr": "PALANTIR [CapacityTrial]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nworkers | 2 | 8 | 8 | true\nretryDelayMs | 1000 | 250 | - | false\n"
+      }
+    },
+    {
+      "id": "config-tuning-explicit",
+      "path": "pass/config-tuning-explicit.larp",
+      "milestone": "M5",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "8\n1000\n"
+      }
+    },
+    {
+      "id": "game-training",
+      "path": "pass/game-training.larp",
+      "milestone": "M5",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "15\n0\n",
+        "stderr": "PALANTIR [TrainingTrial]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\npower | 10 | 15 | - | true\nvisualBonus | 0 | 500 | 500 | false\n"
+      }
+    },
+    {
+      "id": "game-training-explicit",
+      "path": "pass/game-training-explicit.larp",
+      "milestone": "M5",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "15\n0\n"
+      }
+    },
+    {
+      "id": "scenario-observed-abort",
+      "path": "runtime/scenario-observed-abort.larp",
+      "milestone": "M5",
+      "status": "active",
+      "expect": {
+        "kind": "runtime_error",
+        "code": "LARP-R003",
+        "stdout": "observed\n"
       }
     }
   ]

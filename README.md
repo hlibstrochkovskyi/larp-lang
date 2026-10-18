@@ -16,7 +16,7 @@ main_character {
 }
 ```
 
-**Status: executable core with objects, roles, extensions, collections, and closures.**
+**Status: executable core with objects, roles, collections, and isolated scenarios.**
 The example above compiles to verified in-memory bytecode and runs on the LARP VM, printing
 `1009`. Functions, recursion, loops, checked arithmetic, effect bounds, first-class
 functions, snapshot captures, options/results, checked conversions, dynamic/fixed
@@ -24,8 +24,10 @@ arrays, and eager collection pipelines work today. Nominal classes support
 constructors, public/private fields and methods, and bound methods. Objects,
 closures, and dynamic arrays use a tracing collector. Nominal role dispatch,
 concrete receiver extensions, and built-in method extraction preserve identity
-and checked effect bounds. Language-level scenarios remain in
-development; the separate scenario model is still an experiment.
+and checked effect bounds. Language-level `larp` blocks now compile to isolated
+scenario frames with checked call graphs, selective final-field commit, and
+`palantir` reports. The separate state model remains an independent experiment;
+lazy bindings and persisted artifacts are still planned.
 
 ## Start here
 
@@ -36,7 +38,8 @@ development; the separate scenario model is still an experiment.
 - [Roadmap](docs/roadmap.md): milestones with acceptance gates.
 - [Implementation status](docs/implementation-status.md): supported features and limits.
 - [Research](docs/research.md): primary sources and their limits.
-- [Scenario evaluation](docs/scenario-evaluation.md): practical cases and a counterexample.
+- [Scenario evaluation](docs/scenario-evaluation.md): executed comparisons and a counterexample.
+- [Scenario validation](docs/validation-scenarios.md): current compiler/runtime acceptance evidence.
 - [Development](CONTRIBUTING.md): local setup and checks.
 - [Git setup](docs/git-setup.md): saved history in this managed workspace.
 - [Conformance corpus](tests/conformance/README.md): required programs and failures.
@@ -54,6 +57,7 @@ cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
 cargo run -p larp-cli -- run examples/collections.larp --gc-stress
 cargo run -p larp-cli -- run examples/objects.larp --gc-stress
 cargo run -p larp-cli -- run examples/roles.larp --gc-stress
+cargo run -p larp-cli -- run tests/conformance/pass/scenario.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo test --workspace --locked --offline
 python3 tools/run_conformance.py

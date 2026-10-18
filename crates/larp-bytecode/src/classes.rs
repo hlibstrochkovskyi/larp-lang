@@ -255,6 +255,11 @@ pub(super) fn validate_layouts(module: &Module) -> Result<(), VerifyError> {
 
 pub(super) fn call_access(module: &Module, caller: &Function, target: usize) -> Result<(), String> {
     let callee = &module.functions[target];
+    if let Some(context) = callee.scenario
+        && let Some(origin) = context.origin
+    {
+        return call_access(module, caller, origin);
+    }
     if callee.constructor.is_some() {
         return Err("Constructors require the Construct instruction".into());
     }

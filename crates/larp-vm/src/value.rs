@@ -10,6 +10,7 @@ pub(crate) enum Value {
     Closure(Handle),
     Array(Handle),
     Object(Handle),
+    View { entry: usize },
     Role { object: Handle, role: usize },
     FixedArray(Vec<Value>),
 }

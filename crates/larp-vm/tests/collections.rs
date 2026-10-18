@@ -20,6 +20,7 @@ fn function(
         .cloned()
         .collect();
     Function {
+        scenario: None,
         owner: None,
         constructor: None,
         name: "test".into(),

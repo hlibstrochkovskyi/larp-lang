@@ -1,6 +1,7 @@
 //! Iterative execution of verified bytecode with checked values and a traced heap.
 
 mod heap;
+mod scenario;
 mod value;
 
 use heap::{Array, Closure, Heap, Instance};
@@ -8,6 +9,7 @@ use larp_bytecode::{Op, VerifiedModule};
 use larp_diagnostics::Diagnostic;
 use larp_source::Span;
 use larp_types::{ArithmeticError, Binary, Intrinsic, Scalar, Type};
+use scenario::Scenario;
 use std::io::Write;
 use value::Value;
 
@@ -63,7 +65,7 @@ struct Iteration {
     span: Span,
 }
 
-fn collect(heap: &mut Heap, stack: &[Value], frames: &[Frame]) {
+fn collect(heap: &mut Heap, stack: &[Value], frames: &[Frame], scenario: Option<&Scenario>) {
     let mut roots: Vec<&Value> = stack.iter().collect();
     for frame in frames {
         roots.extend(frame.locals.iter().filter_map(Option::as_ref));
@@ -73,6 +75,13 @@ fn collect(heap: &mut Heap, stack: &[Value], frames: &[Frame]) {
             roots.extend(iteration.current.iter());
             roots.extend(&iteration.output);
         }
+    }
+    let root = scenario.map(|scenario| Value::Object(scenario.root));
+    roots.extend(root.iter());
+    if let Some(scenario) = scenario {
+        roots.extend(&scenario.baseline);
+        roots.extend(&scenario.performed);
+        roots.extend(scenario.claims.iter().filter_map(Option::as_ref));
     }
     heap.collect(roots.into_iter());
 }
@@ -94,6 +103,26 @@ pub fn execute_with_stats(
     output: &mut impl Write,
     limits: Limits,
 ) -> Result<ExecutionStats, Box<Diagnostic>> {
+    execute_with_observers(module, output, &mut std::io::sink(), limits)
+}
+
+/// Execute with independent ordinary-output and state-inspection sinks.
+pub fn execute_with_observers(
+    module: &VerifiedModule,
+    output: &mut dyn Write,
+    inspection: &mut dyn Write,
+    limits: Limits,
+) -> Result<ExecutionStats, Box<Diagnostic>> {
+    execute_runtime(module, output, inspection, limits, &mut Heap::default())
+}
+
+fn execute_runtime(
+    module: &VerifiedModule,
+    output: &mut dyn Write,
+    inspection: &mut dyn Write,
+    limits: Limits,
+    heap: &mut Heap,
+) -> Result<ExecutionStats, Box<Diagnostic>> {
     let module = module.module();
     let entry = &module.functions[module.entry];
     if limits.call_frames == 0 {
@@ -111,7 +140,7 @@ pub fn execute_with_stats(
         iteration: None,
     }];
     let mut stack: Vec<Value> = Vec::new();
-    let mut heap = Heap::default();
+    let mut scenario: Option<Scenario> = None;
     let mut fuel = limits.instructions;
     while !frames.is_empty() {
         // A suspended collection resumes only after its callback frame returns.
@@ -170,7 +199,7 @@ pub fn execute_with_stats(
             } else {
                 // The unfinished output is still an explicit root at this safepoint.
                 if heap.should_collect(limits.gc_stress) {
-                    collect(&mut heap, &stack, &frames);
+                    collect(heap, &stack, &frames, scenario.as_ref());
                 }
                 let iteration = frames.last_mut().unwrap().iteration.take().unwrap();
                 heap.array_mut(receiver)
@@ -208,11 +237,70 @@ pub fn execute_with_stats(
                 | Op::Intrinsic(Intrinsic::ArrayNew { .. } | Intrinsic::Sorted(_))
         ) && heap.should_collect(limits.gc_stress)
         {
-            collect(&mut heap, &stack, &frames);
+            collect(heap, &stack, &frames, scenario.as_ref());
         }
         let frame = frames.last_mut().unwrap();
         frame.pc += 1;
         match &instruction.op {
+            Op::Scenario { entry, label } => {
+                if frames.len() >= limits.call_frames {
+                    return Err(error("LARP-R006", "Call-frame limit exceeded".into()));
+                }
+                let callee = &module.functions[*entry];
+                let mut arguments = stack.split_off(stack.len() - callee.parameters.len());
+                let Value::Object(root) = arguments[0] else {
+                    unreachable!("verified ordinary scenario root")
+                };
+                debug_assert!(scenario.is_none());
+                let instance = heap.instance(root).expect("rooted live scenario root");
+                scenario = Some(Scenario::new(
+                    *entry,
+                    instance.class,
+                    label.clone(),
+                    root,
+                    instance.fields.clone(),
+                ));
+                arguments[0] = Value::View { entry: *entry };
+                let mut locals = vec![None; callee.locals.len()];
+                for (slot, value) in locals.iter_mut().zip(arguments) {
+                    *slot = Some(value);
+                }
+                frames.push(Frame {
+                    function: *entry,
+                    pc: 0,
+                    locals,
+                    stack_base: stack.len(),
+                    iteration: None,
+                });
+            }
+            Op::Canon { class, field } => {
+                let receiver = stack.pop().unwrap();
+                let state = scenario.as_mut().expect("verified active scenario");
+                state.check_receiver(receiver, *class);
+                state.selected[*field] = true;
+                stack.push(Value::Scalar(Scalar::Unit));
+            }
+            Op::Flex { class, field } => {
+                let value = stack.pop().unwrap();
+                let receiver = stack.pop().unwrap();
+                let state = scenario.as_mut().expect("verified active scenario");
+                state.check_receiver(receiver, *class);
+                state.claims[*field] = Some(value.clone());
+                state.performed[*field] = value;
+                stack.push(Value::Scalar(Scalar::Unit));
+            }
+            Op::Palantir { class, fields } => {
+                let receiver = stack.pop().unwrap();
+                let state = scenario.as_ref().expect("verified active scenario");
+                state.check_receiver(receiver, *class);
+                state
+                    .inspect(&module.classes[*class], fields, inspection)
+                    .map_err(|failure| {
+                        error("LARP-R007", format!("Inspection output failed: {failure}"))
+                    })?;
+                stack.push(Value::Scalar(Scalar::Unit));
+            }
+
             Op::IntoRole { role, .. } => {
                 let Value::Object(object) = stack.pop().unwrap() else {
                     unreachable!("verified class-to-role coercion")
@@ -330,21 +418,38 @@ pub fn execute_with_stats(
                 stack.push(Value::Object(handle));
             }
             Op::GetField { class, field } => {
-                let Value::Object(handle) = stack.pop().unwrap() else {
-                    unreachable!("verified object receiver")
+                let receiver = stack.pop().unwrap();
+                let value = match receiver {
+                    Value::Object(handle) => {
+                        let instance = heap.instance(handle).expect("rooted live object");
+                        debug_assert_eq!(instance.class, *class);
+                        instance.fields[*field].clone()
+                    }
+                    Value::View { .. } => {
+                        let state = scenario.as_ref().expect("verified active scenario");
+                        state.check_receiver(receiver, *class);
+                        state.performed[*field].clone()
+                    }
+                    _ => unreachable!("verified object receiver"),
                 };
-                let instance = heap.instance(handle).expect("rooted live object");
-                debug_assert_eq!(instance.class, *class);
-                stack.push(instance.fields[*field].clone());
+                stack.push(value);
             }
             Op::SetField { class, field } => {
                 let value = stack.pop().unwrap();
-                let Value::Object(handle) = stack.pop().unwrap() else {
-                    unreachable!("verified object receiver")
-                };
-                let instance = heap.instance_mut(handle).expect("rooted live object");
-                debug_assert_eq!(instance.class, *class);
-                instance.fields[*field] = value;
+                let receiver = stack.pop().unwrap();
+                match receiver {
+                    Value::Object(handle) => {
+                        let instance = heap.instance_mut(handle).expect("rooted live object");
+                        debug_assert_eq!(instance.class, *class);
+                        instance.fields[*field] = value;
+                    }
+                    Value::View { .. } => {
+                        let state = scenario.as_mut().expect("verified active scenario");
+                        state.check_receiver(receiver, *class);
+                        state.performed[*field] = value;
+                    }
+                    _ => unreachable!("verified object receiver"),
+                }
                 stack.push(Value::Scalar(Scalar::Unit));
             }
             Op::Call(_) | Op::CallIndirect(_) | Op::Construct(_) => {
@@ -419,7 +524,7 @@ pub fn execute_with_stats(
                     });
                 } else {
                     stack.push(
-                        heap_intrinsic(operation, arguments, &mut heap)
+                        heap_intrinsic(operation, arguments, heap)
                             .map_err(|(code, message)| error(code, message))?,
                     );
                 }
@@ -441,6 +546,14 @@ pub fn execute_with_stats(
             }
             Op::Return => {
                 let value = stack.pop().expect("verified return value");
+                if scenario
+                    .as_ref()
+                    .is_some_and(|state| state.entry == frame.function)
+                {
+                    // Prepare the complete state before one publication with no
+                    // intervening allocation, observation, callbacks, or GC.
+                    scenario.take().unwrap().commit(heap);
+                }
                 stack.truncate(frame.stack_base);
                 frames.pop();
                 if !frames.is_empty() {
@@ -624,3 +737,6 @@ fn arithmetic(error: ArithmeticError, span: Span) -> Box<Diagnostic> {
     };
     Box::new(Diagnostic::error(code, span, message))
 }
+
+#[cfg(test)]
+mod scenario_tests;

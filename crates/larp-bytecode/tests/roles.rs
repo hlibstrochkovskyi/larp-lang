@@ -23,6 +23,7 @@ fn instruction(op: Op) -> Instruction {
 
 fn function(parameters: Vec<Type>, result: Type, effects: Effects, code: Vec<Op>) -> Function {
     Function {
+        scenario: None,
         name: "test".into(),
         owner: None,
         constructor: None,

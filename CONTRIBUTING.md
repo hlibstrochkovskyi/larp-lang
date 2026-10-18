@@ -27,8 +27,8 @@ require a concrete need, license review, and a lockfile update; offline builds
 will then require a populated Cargo cache.
 
 The compiler runs scalars, closures, option/result recovery, dynamic/fixed arrays,
-and nominal classes through syntax, semantics, typed IR, bytecode verification,
-and the VM.
+nominal classes, roles, extensions, and isolated scenarios through syntax,
+semantics, typed IR, bytecode verification, and the VM.
 `tools/run_conformance.py` tests active cases through the CLI. `--gc-stress`
 repeats runtime cases with collection at every object/array/closure allocation
 safepoint; CI runs both modes. `--all` also attempts pending features and is
@@ -49,7 +49,22 @@ cycles across objects/arrays/closures, fixed-array payloads, and unfinished
 callback outputs. Constructor initialization uses control-flow analysis before
 bytecode lowering. Changes must preserve constructor escape restrictions, member
 visibility, immutable `self` bindings, and effect checks through bound methods.
-Roles and extension dispatch remain pending.
+Role dispatch and concrete extensions preserve the same visibility and effect
+contracts. Scenario changes must preserve the closed regional call graph, view
+routing to performed state, immutable outer snapshots, and all-or-nothing final
+publication. Run `cargo run -p larp-cli -- run examples/config-tuning.larp --gc-stress`
+for a complete trial; `palantir` output uses stderr. The `execute_with_observers`
+API exposes separate ordinary-output and inspection sinks. Scenario VM tests
+retain a private heap to check real fields after injected fatal errors.
+
+For the reproducible scenario/explicit-copy comparison, run:
+
+```sh
+cargo run --release -p larp-compiler --example scenario_comparison --locked --offline
+```
+
+See [scenario evaluation](docs/scenario-evaluation.md) for methodology and limits.
+Managed arena counters do not measure all host allocations or total memory.
 
 `experiments/scenario-model` tests a state transition model in Rust. It does not
 validate LARP region typing, scenario effects, GC, or scenario bytecode.

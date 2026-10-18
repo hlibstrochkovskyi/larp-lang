@@ -40,6 +40,7 @@ fn function(
     let source = SourceFile::new(SourceId(0), "roles.larp", "role dispatch");
     let span = source.span(0..source.text().len()).unwrap();
     Function {
+        scenario: None,
         name: "test".into(),
         owner: None,
         constructor: None,

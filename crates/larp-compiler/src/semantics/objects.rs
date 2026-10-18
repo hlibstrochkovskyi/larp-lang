@@ -10,6 +10,13 @@ impl Builder<'_> {
                 "A partially initialized self cannot be used as a value, called, or captured",
             ));
         }
+        if self.scenario_forbidden.contains("self") && self.resolve("self").is_none() {
+            return Err(error(
+                "LARP-S002",
+                span,
+                "An outer self reference cannot be read inside a scenario",
+            ));
+        }
         let binding = self.resolve("self").ok_or_else(|| {
             error(
                 "LARP-T001",
@@ -75,6 +82,13 @@ impl Builder<'_> {
         span: Span,
         evaluate: bool,
     ) -> Result<Value> {
+        if self.function.scenario.is_some() {
+            return Err(error(
+                "LARP-E002",
+                span,
+                "Reference allocation is forbidden inside a scenario",
+            ));
+        }
         let ty = self.tables.types.get(&name.text).cloned().ok_or_else(|| {
             error(
                 "LARP-T005",
@@ -228,6 +242,13 @@ impl Builder<'_> {
             Some(id) => id,
             None => self.extension_id(&receiver.ty, name)?,
         };
+        if self.function.scenario.is_some() {
+            return Err(error(
+                "LARP-S004",
+                span,
+                "A scenario root method cannot be extracted as a bound function",
+            ));
+        }
         self.bound_method(receiver, method, span)
     }
 
@@ -273,6 +294,7 @@ impl Builder<'_> {
             effects: target.effects,
             owner: self.function.owner,
             constructor: None,
+            scenario: self.function.scenario,
         };
         let mut child = Builder::new(
             &header,

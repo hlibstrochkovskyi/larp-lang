@@ -1,6 +1,6 @@
 # Implementation status
 
-The compiler currently implements algorithmic programs and nominal objects from
+The compiler currently implements algorithmic programs, nominal objects, and isolated scenarios from
 Specification v0.1. Programs are lexed, parsed, name/type/effect checked, lowered
 into typed control-flow IR, compiled to stack bytecode, verified, and executed by LARP's VM.
 No host `eval`, source-to-Python/JavaScript translation, or AST execution is used.
@@ -84,6 +84,43 @@ executed checks, coverage, and limits of the completed local acceptance gate.
   object/role views preserve shared identity; fixed arrays and tagged values are
   snapshots. Saved methods retain their original receiver after reassignment.
 
+## Isolated scenarios
+
+`larp (root) as Label` outlines a lexical region with a concrete value-only class
+root. Entry copies its fields into baseline/performed storage and imports outer
+SnapshotValue bindings as immutable copies. Other outer references and functions
+are unavailable. The root is a non-exportable view; field reads/writes and
+eligible method/helper calls operate on performed fields.
+
+`flex` updates the performed value and last explicit claim. Ordinary writes do
+not erase that claim. `canon` selects a visible field's final value and may appear
+before its write. Only normal block fallthrough commits. The VM prepares the
+complete next field vector and publishes it without callbacks or collection
+between selected updates. Fatal errors discard the trial; observations remain.
+`palantir` writes visible fields in declaration order to a separate inspection
+sink (stderr in the CLI), with baseline, performed, last claim, and selection.
+
+Region identity is explicit in IR and bytecode function metadata. All snapshot
+locals in such a frame carry implicit `S_r(T)`; its sole concrete class denotes
+`View_r(C)`. The compiler specializes the transitive call/closure graph per
+lexical region. The verifier independently checks frame boundaries, signatures,
+visibility, effect bounds, capture layouts, and every instruction, including
+unreachable code. A regional value has no path into an ordinary result/store.
+Value-only closures created inside may be called or passed to eligible helpers;
+outer function bindings, reference captures/returns, reference allocation, role
+dispatch, and unverified indirect targets are rejected.
+
+Roots may contain scalar/text/ConversionError values and recursive
+option/result/fixed SnapshotValues. Nested scenarios, root-bound method
+extraction, copied first-class root bindings, crossing return/break, and external
+I/O are rejected. Loops wholly inside a scenario may break. Ordinary error
+results are data and do not cancel selected commit. Selective commit preserves
+field types, not relationships between fields.
+
+The M5 local acceptance suite passes; see [scenario validation](validation-scenarios.md).
+The standalone state model is not used to execute these programs. See [scenario evaluation](scenario-evaluation.md)
+for explicit-copy comparisons and the invariant counterexample.
+
 ## CLI
 
 ```sh
@@ -94,6 +131,7 @@ cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
 cargo run -p larp-cli -- run examples/collections.larp --gc-stress
 cargo run -p larp-cli -- run examples/objects.larp --gc-stress
 cargo run -p larp-cli -- run examples/roles.larp --gc-stress
+cargo run -p larp-cli -- run tests/conformance/pass/scenario.larp --gc-stress
 cargo run -p larp-cli -- dump examples/primes.larp
 cargo run -p larp-cli -- dump examples/primes.larp --ir
 cargo run -p larp-cli -- explain LARP-T041
@@ -108,8 +146,7 @@ Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 ## Not implemented yet
 
-Scenario regions,
-`larp/flex/canon/palantir`, lazy bindings, `sybau`, persisted artifacts,
+Lazy bindings, `sybau`, persisted artifacts,
 modules, host I/O APIs, and formatting. These are tracked by the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
 
@@ -118,8 +155,8 @@ scenario programs. GC manages objects, closures, and dynamic arrays, including
 cycles between them. Option/result/fixed-array wrappers are owned values that
 trace any contained handles. Role values trace their underlying object handle;
 extracted methods retain that handle through closure captures. Text uses owned
-immutable storage. Lazy cells and scenario roots need additional GC integration
-when those features are implemented.
+immutable storage. Active scenario frames root the original object and their
+snapshot/claim buffers. Lazy cells still need collector integration.
 
 ## Current limits and conservative checks
 
@@ -155,8 +192,12 @@ when those features are implemented.
   block/field cells. Constructor calls conservatively carry `read,write,abort`;
   ordinary operations/callbacks with `write` bounds are rejected during
   construction, even when a particular call might only affect fresh storage.
-- Function types track effects but do not yet carry scenario-eligibility summaries.
-  Region restrictions will need their own checks before scenarios can run.
+- Function types retain effect bounds but do not by themselves prove scenario
+  eligibility. Regional function instances form a closed verified graph; only
+  value-signature closures created in that graph can reach an indirect call.
+  Specialization shares the 4096 function limit with ordinary code and closures.
+  Scenario imports and closure captures are SnapshotValues; no reference graphs,
+  outer callbacks, function returns, or opaque host targets are admitted.
 
 ## Closure and recovery example
 
@@ -192,8 +233,9 @@ a fixed array still retain their shared identity.
 
 ## Evidence
 
-See [roles and extensions validation](validation-roles-and-extensions.md) for
-the current acceptance gate, and [objects validation](validation-objects.md) for
+See [scenario validation](validation-scenarios.md) and
+[scenario evaluation](scenario-evaluation.md) for the current M5 acceptance gate, [roles and extensions validation](validation-roles-and-extensions.md)
+for the preceding completed gate, and [objects validation](validation-objects.md) for
 the preceding executed class checks. [Collections validation](validation-collections.md) and
 [functions and recovery validation](validation-functions-and-recovery.md) record
 preceding milestones.
@@ -204,6 +246,6 @@ malformed-input tests are included; they are not a substitute for sustained
 coverage-guided fuzzing.
 
 `python3 tools/run_conformance.py` executes every active fixture through `check`
-and `run`, comparing stdout or primary diagnostic codes and source locations.
+and `run`, comparing stdout, explicitly declared inspection output, or primary diagnostic codes and source locations.
 `--gc-stress` repeats execution with collection at every object/array/closure
 allocation safepoint. Pending cases remain explicit. `--all` attempts the full corpus and currently fails on unimplemented features; this is not a complete v0.1 release.
