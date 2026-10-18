@@ -1,0 +1,5 @@
+main_character {
+    no_cap(!readLine().cope(err => some(err)).isSome());
+    no_cap(!readLine().cope(err => some(err)).isSome());
+    yap("EOF");
+}

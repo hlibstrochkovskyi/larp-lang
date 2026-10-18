@@ -1,0 +1,3 @@
+main_character {
+    fn() -> result<baddie<text>, text> uses() reader = readLine;
+}

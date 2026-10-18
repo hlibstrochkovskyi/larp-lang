@@ -145,7 +145,23 @@ restores its inherited depth. Suppressed calls still require `observe`, still
 evaluate their arguments, and still execute their computation. `palantir`,
 diagnostics, fatal errors, and external effects are not muted.
 
-These features are part of M6; host APIs and release gates remain pending. See [lazy and suppression validation](validation-lazy-and-suppression.md).
+These features are part of M6; additional host APIs and release gates remain pending. See [lazy and suppression validation](validation-lazy-and-suppression.md).
+
+## Host input
+
+`args() -> mfs<text> uses(io)` returns a fresh array of program arguments.
+`readLine() -> result<baddie<text>,text> uses(io)` returns a UTF-8 record, a
+separate EOF value, or an ordinary read/UTF-8 error. Host argument/stdin permissions
+are supplied independently to `execute_with_host`; legacy execution APIs deny
+both with `LARP-R010`. A source effect does not itself grant authority.
+
+I/O bounds survive named/prelude function values, callbacks, roles, extensions,
+and suppression. Constructors/lazy initializers and transitive scenario graphs
+reject input. The VM separately checks active regional state before host access.
+Input and argument budgets produce `LARP-R006`; EOF/error/resource states persist
+with the borrowed host. See [API and limits](host-input.md) and
+[executed validation](validation-host-input.md).
+
 
 ## CLI
 
@@ -171,19 +187,21 @@ is the source path with that extension. Artifacts embed complete source text and
 validated spans. `check` compiles source or loads artifacts and verifies without
 execution. `run` compiles source or independently verifies loaded bytecode, then
 executes it. Original source files are unnecessary when running an artifact.
-`--gc-stress` collects at every object, array, closure, and lazy-cell allocation
+`run` accepts program arguments after `--` and supplies stdin only during
+execution. `--gc-stress` collects at every object, array, closure, and lazy-cell allocation
 safepoint and may be combined with `--fuel`. `dump` emits disassembly
 or typed IR; `--ir` requires source because artifacts contain bytecode. Input is
 one UTF-8 source or versioned artifact. `fmt SOURCE [--check|--stdout]` formats
 syntactically valid source without requiring type validity. It preserves raw
 tokens/comments and checks its result before publication. Default mode writes
 atomically; check/preview modes never write. See [formatter policy](formatter.md)
-and the [artifact format](bytecode-format-v1.md) for wire tables, limits, and output publication.
+and the [artifact format](bytecode-format-v1.md) for baseline wire tables, limits, and output publication. The encoder now writes
+[wire version 2](bytecode-format-v2.md), with version-1 loading retained.
 Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 ## Not implemented yet
 
-Modules and host I/O APIs. These are tracked by the existing roadmap,
+Modules and additional host I/O APIs beyond arguments/stdin. These are tracked by the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
 
 The scenario model remains independent and is not a substitute for compiling
@@ -291,7 +309,7 @@ coverage-guided fuzzing.
 `python3 tools/run_conformance.py` executes every active fixture through `check`
 and `run`, comparing stdout, explicitly declared inspection output, or primary diagnostic codes and source locations.
 `--gc-stress` repeats execution with collection at every object, array, closure,
-and lazy-cell allocation safepoint. All 77 current fixtures are active; `--all`
+and lazy-cell allocation safepoint. All 84 current fixtures are active; `--all`
 selects the same complete inventory and passes. `--artifacts` also builds valid
 programs, loads/verifies them, and compares execution with source; invalid source
 must fail build without producing output. `--formatted` formats temporary copies,

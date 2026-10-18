@@ -1,0 +1,10 @@
+archetype State {
+    highkey mf value;
+    init() { self.value = 0; }
+}
+main_character {
+    let root = new State();
+    larp (root) as InputTrial {
+        readLine();
+    }
+}

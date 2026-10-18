@@ -19,7 +19,7 @@ def require(condition: bool, message: str) -> None:
 def main() -> None:
     manifest = json.loads((CORPUS / "manifest.json").read_text(encoding="utf-8"))
     require(set(manifest) == {"schema_version", "cases"}, "Invalid manifest keys")
-    require(type(manifest["schema_version"]) is int and manifest["schema_version"] == 1,
+    require(type(manifest["schema_version"]) is int and manifest["schema_version"] == 2,
             "Unsupported schema version")
     cases = manifest["cases"]
     require(isinstance(cases, list) and bool(cases), "No corpus cases")
@@ -29,7 +29,7 @@ def main() -> None:
     seen_paths: set[Path] = set()
     for case in cases:
         require(isinstance(case, dict), "Case must be an object")
-        require(set(case) == {"id", "path", "milestone", "status", "expect"},
+        require({"id", "path", "milestone", "status", "expect"} <= set(case) <= {"id", "path", "milestone", "status", "expect", "input"},
                 "Invalid case keys")
         case_id = case["id"]
         require(isinstance(case_id, str) and re.fullmatch(r"[a-z][a-z0-9-]*", case_id)
@@ -53,6 +53,19 @@ def main() -> None:
         expect = case["expect"]
         require(isinstance(expect, dict), f"Invalid expectation: {case_id}")
         kind = expect.get("kind")
+        if "input" in case:
+            supplied = case["input"]
+            require(kind != "compile_error", f"Compile-error case cannot consume host input: {case_id}")
+            require(isinstance(supplied, dict) and bool(supplied) and set(supplied) <= {"stdin", "args"},
+                    f"Invalid input fields: {case_id}")
+            require(isinstance(supplied.get("stdin", ""), str), f"Invalid stdin: {case_id}")
+            arguments = supplied.get("args", [])
+            require(isinstance(arguments, list) and all(isinstance(arg, str) and "\0" not in arg for arg in arguments),
+                    f"Invalid program arguments: {case_id}")
+            # JSON permits surrogate escapes; subprocess input and arguments need real UTF-8.
+            supplied.get("stdin", "").encode("utf-8")
+            for argument in arguments:
+                argument.encode("utf-8")
         if kind == "run":
             require({"kind", "stdout"} <= set(expect) <= {"kind", "stdout", "stderr"}, f"Invalid run fields: {case_id}")
             require(isinstance(expect["stdout"], str), f"Invalid stdout: {case_id}")

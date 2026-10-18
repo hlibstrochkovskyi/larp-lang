@@ -1,0 +1,19 @@
+sidequest nextLine() -> baddie<text> uses(io, observe) {
+    return readLine().cope(err => {
+        yap(err);
+        return no_bitches;
+    });
+}
+
+main_character {
+    args().forEach(argument => yap(argument));
+    mf total = 0;
+    goon {
+        baddie<text> line = nextLine();
+        if (!line.isSome()) {
+            touch_grass;
+        }
+        total += parseScore(line.copium("")).cope(err => 0);
+    }
+    yap(total);
+}

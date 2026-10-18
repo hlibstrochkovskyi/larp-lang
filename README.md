@@ -30,7 +30,8 @@ scenario frames with checked call graphs, selective final-field commit, and
 `sybau` suppresses ordinary `yap` output across calls. The separate state model
 remains an independent experiment. Versioned `.larpbc` artifacts embed source maps
 and pass verification again on loading. The syntax-aware formatter preserves
-comments, original token spellings, and program order.
+comments, original token spellings, and program order. `args()` and `readLine()`
+provide explicitly effect-checked CLI input through host capabilities.
 
 ## Start here
 
@@ -44,8 +45,9 @@ comments, original token spellings, and program order.
 - [Scenario evaluation](docs/scenario-evaluation.md): executed comparisons and a counterexample.
 - [Scenario validation](docs/validation-scenarios.md): compiled scenario acceptance evidence.
 - [Lazy and suppression validation](docs/validation-lazy-and-suppression.md): current implementation checks.
+- [Host input](docs/host-input.md): arguments, stdin, EOF/errors, and embedding.
 - [Source formatter](docs/formatter.md): layout, preservation, and CLI modes.
-- [Bytecode artifacts](docs/bytecode-format-v1.md): wire format, limits, and CLI behavior.
+- [Bytecode artifacts](docs/bytecode-format-v1.md): baseline wire format and limits; [version 2](docs/bytecode-format-v2.md) adds host input.
 - [Development](CONTRIBUTING.md): local setup and checks.
 - [Git setup](docs/git-setup.md): saved history in this managed workspace.
 - [Conformance corpus](tests/conformance/README.md): required programs and failures.
@@ -69,6 +71,7 @@ cargo run -p larp-cli -- dump examples/primes.larp
 cargo run -p larp-cli -- build examples/objects.larp -o /tmp/objects.larpbc
 cargo run -p larp-cli -- run /tmp/objects.larpbc --gc-stress
 cargo run -p larp-cli -- fmt examples/objects.larp --stdout
+cargo run -p larp-cli -- run examples/input-sum.larp -- total < scores.txt
 cargo test --workspace --locked --offline
 python3 tools/run_conformance.py
 python3 tools/run_conformance.py --gc-stress
@@ -77,7 +80,7 @@ python3 tools/run_conformance.py --formatted --artifacts --gc-stress
 ```
 
 The implemented CLI commands are `--help`, `--version`, `explain CODE`,
-`build SOURCE [-o OUTPUT]`, `check FILE`, `run FILE [--fuel N] [--gc-stress]`,
+`build SOURCE [-o OUTPUT]`, `check FILE`, `run FILE [--fuel N] [--gc-stress] [-- ARG...]`,
 `dump FILE [--ir]`, and `fmt SOURCE [--check|--stdout]`. Source and artifact input
 are supported by `check`, `run`, and bytecode `dump`; `--ir` requires source. Artifacts contain full source text
 for diagnostics and run without the original source file. `fmt` updates source
@@ -85,7 +88,7 @@ by default; `--stdout` previews and `--check` verifies formatting without change
 
 The compiler implementation direction is Rust → typed IR → bytecode → LARP VM.
 The language semantics do not depend on Rust, LLVM, or any particular collector.
-All 77 current conformance fixtures are active; the corpus is a finite acceptance
+All 84 current conformance fixtures are active; the corpus is a finite acceptance
 suite, not a proof that every language rule is implemented. Specification v0.1
 defines the broader target, and M6 developer-preview gates remain open.
 

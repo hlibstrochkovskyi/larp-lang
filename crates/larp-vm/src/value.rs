@@ -60,6 +60,9 @@ pub(crate) fn intrinsic(
     mut arguments: Vec<Value>,
 ) -> Result<Value, (&'static str, String)> {
     let value = match operation {
+        Intrinsic::Arguments | Intrinsic::ReadLine => {
+            unreachable!("host intrinsics require explicit capabilities")
+        }
         Intrinsic::None(_) => Value::Option(None),
         Intrinsic::Some(_) => Value::Option(Some(Box::new(arguments.remove(0)))),
         Intrinsic::Ok(_) => Value::Result(Ok(Box::new(arguments.remove(0)))),

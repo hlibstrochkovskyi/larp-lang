@@ -128,7 +128,7 @@ value immediately. `sybau` dynamically suppresses ordinary `yap` across calls
 without removing observation effects or muting inspection/diagnostics. Source
 return/break lowering and verified control-flow joins preserve nesting.
 
-All 77 current corpus cases are active and executable. This closes the current
+All 84 current corpus cases are active and executable. This closes the current
 fixture inventory, not the developer-preview release gate or every normative
 rule. See [lazy and suppression validation](validation-lazy-and-suppression.md).
 
@@ -143,8 +143,14 @@ invariant checking, idempotence tests, and CLI write/check/stdout modes. Corpus
 contracts also run after formatting, artifact loading, and GC stress. See
 [formatter validation](validation-formatter.md).
 
-Remaining: expanded examples/reference docs, reproducible distribution builds,
-and minimal host APIs with declared effects. Fuzzing, resource measurements,
+Implemented input slice: effect-checked `args` and `readLine`, independently
+borrowed host capabilities, bounded physical UTF-8 records, typed EOF/errors,
+zero-argument prelude function values, CLI argument separation, and source/artifact
+input corpus cases. Wire version 2 adds input intrinsics and still loads version 1.
+See [host input validation](validation-host-input.md).
+
+Remaining: expanded reference docs, reproducible distribution builds, and
+additional host APIs. Fuzzing, resource measurements,
 platform/distribution decisions, and hosted CI also remain release work.
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in

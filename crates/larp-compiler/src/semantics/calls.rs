@@ -11,6 +11,8 @@ pub(super) fn is_builtin(name: &str) -> bool {
             | "win"
             | "fumble"
             | "parseScore"
+            | "args"
+            | "readLine"
             | "ascend"
             | "fraud"
     )
@@ -255,6 +257,8 @@ impl Builder<'_> {
         };
         let operation = match name.text.as_str() {
             "parseScore" => Some(Intrinsic::ParseScore),
+            "args" => Some(Intrinsic::Arguments),
+            "readLine" => Some(Intrinsic::ReadLine),
             "some" | "win" | "fumble" => {
                 let signature = context.as_ref().ok_or_else(inferred)?;
                 if signature.parameters.len() != 1 {
@@ -369,7 +373,8 @@ impl Builder<'_> {
             self.generated_base + self.generated.len(),
         );
         if let Some(operation) = operation {
-            let value = child.intrinsic(operation, vec![0], span)?;
+            let arguments = (0..header.parameters.len()).collect();
+            let value = child.intrinsic(operation, arguments, span)?;
             child.terminate(Terminator::Return(Some(value.slot)), span);
         } else {
             match name.text.as_str() {
@@ -415,6 +420,25 @@ impl Builder<'_> {
         span: Span,
         evaluate: bool,
     ) -> Result<Value> {
+        if matches!(name.text.as_str(), "args" | "readLine") {
+            self.arity(arguments, 0, span)?;
+            if !type_arguments.is_empty() {
+                return Err(error(
+                    "LARP-P002",
+                    span,
+                    "Host input functions do not accept type arguments",
+                ));
+            }
+            return self.intrinsic(
+                if name.text == "args" {
+                    Intrinsic::Arguments
+                } else {
+                    Intrinsic::ReadLine
+                },
+                Vec::new(),
+                span,
+            );
+        }
         self.arity(arguments, 1, span)?;
         if matches!(name.text.as_str(), "ascend" | "fraud") {
             if type_arguments.len() != 1 {

@@ -37,7 +37,7 @@ repeats runtime cases with collection at every object/array/closure allocation
 safepoint, including lazy cells. `--artifacts` additionally builds each valid
 program, loads/verifies it, and compares execution with the source path; invalid
 source must fail without producing an artifact. CI includes artifact stress runs.
-All 77 current fixtures are active, so `--all` selects the same cases and passes. If future cases are marked
+All 84 current fixtures are active, so `--all` selects the same cases and passes. If future cases are marked
 pending, `--all` attempts them as well. Do not activate a fixture without running
 it and keeping it in CI. A fully active corpus does not close the developer-preview
 release gates or prove all normative rules.
@@ -86,6 +86,16 @@ Managed arena counters do not measure all host allocations or total memory.
 validate LARP region typing, scenario effects, GC, or scenario bytecode.
 `tools/check_corpus.py` validates fixture metadata and paths only.
 
+Run `cargo run -p larp-cli -- run examples/input-sum.larp -- total < scores.txt`
+for arguments and line-based stdin. `io` is checked through direct/indirect calls,
+roles, extensions, and callbacks; suppression does not remove it. Embedding uses
+`execute_with_host` and independent optional argument/stdin capabilities. Legacy
+execution APIs deny input. Preserve EOF/blank-line distinctions, record boundaries
+after UTF-8 errors, failure latching, input budgets, and the runtime regional guard.
+Argument array allocation must retain VM roots at GC safepoints. The conformance
+schema supports declared UTF-8 stdin and argument arrays; harness runs always
+provide stdin explicitly. See [host input](docs/host-input.md).
+
 `larp fmt SOURCE --stdout` previews canonical source; `--check` checks without
 writing, and no flag updates the source. The formatter requires valid syntax,
 not valid types. Preserve raw token/comment sequences, parentheses, and program
@@ -100,7 +110,7 @@ does not reformat checked-in fixtures. See [formatter policy](docs/formatter.md)
 Persisted bytecode goes through `larp-artifact`, including complete source maps
 and explicit wire tags. Preserve shared loader budgets and mandatory independent
 verification; never hand an unchecked module to the VM. See the
-[version 1 format](docs/bytecode-format-v1.md). Artifacts embed source text and
+[version 2 format](docs/bytecode-format-v2.md). Artifacts embed source text and
 are ignored by Git. Builds publish complete sibling temporary files by rename.
 
 Use [the roadmap](docs/roadmap.md) to choose a vertical slice. Keep the checked-in

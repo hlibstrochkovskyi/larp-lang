@@ -19,7 +19,7 @@ use std::rc::Rc;
 mod codec;
 
 pub const MAGIC: &[u8; 8] = b"LARPBC\r\n";
-pub const VERSION: u16 = 1;
+pub const VERSION: u16 = 2;
 pub const MAX_FILE_BYTES: usize = 16 * 1024 * 1024;
 const MAX_ALLOCATED: usize = 64 * 1024 * 1024;
 const MAX_STRING_BYTES: usize = 1024 * 1024;
@@ -132,6 +132,7 @@ impl Budget {
 }
 
 struct Reader<'a> {
+    version: u16,
     bytes: &'a [u8],
     pos: usize,
     base: usize,
@@ -140,6 +141,7 @@ struct Reader<'a> {
 impl<'a> Reader<'a> {
     fn new(bytes: &'a [u8]) -> Self {
         Self {
+            version: VERSION,
             bytes,
             pos: 0,
             base: 0,
@@ -330,6 +332,7 @@ impl<'a> Reader<'a> {
         let base = self.base + self.pos;
         let bytes = self.take(length)?;
         Ok(Self {
+            version: self.version,
             bytes,
             pos: 0,
             base,
@@ -810,9 +813,11 @@ pub fn decode(bytes: &[u8]) -> Result<Artifact> {
     if r.take(8)? != MAGIC {
         return Err(r.invalid("Invalid artifact magic"));
     }
-    if r.u16()? != VERSION {
+    let version = r.u16()?;
+    if version != 1 && version != VERSION {
         return Err(r.invalid("Unsupported artifact version"));
     }
+    r.version = version;
     if r.u16()? != 0 {
         return Err(r.invalid("Unsupported artifact flags"));
     }
@@ -1121,7 +1126,7 @@ mod tests {
         for end in 0..bytes.len() {
             assert!(decode(&bytes[..end]).is_err(), "prefix {end}");
         }
-        for (index, value) in [(0, b'X'), (8, 2), (10, 1), (16, 7)] {
+        for (index, value) in [(0, b'X'), (8, 3), (10, 1), (16, 7)] {
             let mut changed = bytes.clone();
             changed[index] = value;
             assert_eq!(
@@ -1368,5 +1373,76 @@ mod tests {
             bytes: std::io::Cursor::new(artifact()),
         };
         assert!(read(&mut input).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod version_tests {
+    use super::*;
+    use larp_bytecode::Op;
+    use larp_types::{Intrinsic, Scalar};
+
+    #[test]
+    fn version_one_modules_still_load_but_cannot_claim_version_two_host_intrinsics() {
+        let source = SourceFile::new(SourceId(0), "version.larp", "");
+        let span = source.span(0..0).unwrap();
+        let function = Function {
+            scenario: None,
+            owner: None,
+            constructor: None,
+            name: "main".into(),
+            parameters: vec![],
+            captures: vec![],
+            result: Type::Unit,
+            effects: Effects::IO,
+            locals: vec![Type::array(Type::Text)],
+            span,
+            code: vec![
+                Instruction {
+                    op: Op::Constant(Scalar::Unit),
+                    span,
+                },
+                Instruction {
+                    op: Op::Return,
+                    span,
+                },
+            ],
+        };
+        let module = |function| {
+            larp_bytecode::verify(Module {
+                roles: vec![],
+                classes: vec![],
+                extensions: vec![],
+                functions: vec![function],
+                entry: 0,
+            })
+            .unwrap()
+        };
+        let mut old = encode(&module(function.clone()), &[source]).unwrap();
+        assert_eq!(u16::from_le_bytes(old[8..10].try_into().unwrap()), VERSION);
+        old[8..10].copy_from_slice(&1u16.to_le_bytes());
+        decode(&old).unwrap();
+        for intrinsic in [Intrinsic::Arguments, Intrinsic::ReadLine] {
+            let mut function = function.clone();
+            function.locals[0] = intrinsic.signature().unwrap().result;
+            function.code.splice(
+                0..0,
+                [
+                    Instruction {
+                        op: Op::Intrinsic(intrinsic),
+                        span,
+                    },
+                    Instruction {
+                        op: Op::Store(0),
+                        span,
+                    },
+                ],
+            );
+            let source = SourceFile::new(SourceId(0), "version.larp", "");
+            let mut bytes = encode(&module(function), &[source]).unwrap();
+            decode(&bytes).unwrap();
+            bytes[8..10].copy_from_slice(&1u16.to_le_bytes());
+            assert_eq!(decode(&bytes).unwrap_err().kind(), ErrorKind::InvalidFormat);
+        }
     }
 }

@@ -68,8 +68,8 @@ flowchart LR
    including forward-call targets. Bound depth to 128 edges and expanded size
    to 4096 nodes per type, counting shared subtrees repeatedly, so structural
    comparisons and diagnostic formatting remain bounded. Regional frame/call
-   checks prevent nesting, reference ingress, and value escape. Future host APIs
-   will need capability validation alongside their own instructions.
+   checks prevent nesting, reference ingress, and value escape. Host input intrinsics retain `io` through signatures and call graphs;
+   runtime capabilities are supplied independently of effect declarations.
 8. **VM:** explicit value stack and call frames, checked arithmetic, tagged
    option/result/fixed-array values, and a traced object/array/closure/lazy heap.
    Collection callbacks suspend their caller in explicit continuation state. A LARP runtime
@@ -393,7 +393,8 @@ compiled explicit-copy comparisons, failure modes, and measured costs.
 bytecode. Header magic/version/flags and seven ordered bounded sections contain
 source text/spans, topological types, roles, classes, extensions, functions, and
 entry identity. No Rust enum discriminants or host object layouts are serialized.
-See the [version 1 format](bytecode-format-v1.md) for exact tags and limits.
+See the [version 1 baseline](bytecode-format-v1.md) and
+[version 2 input additions](bytecode-format-v2.md) for exact tags and limits.
 
 The decoder validates framing, UTF-8/source boundaries, type shape/expanded work,
 counts, and shared logical allocation budgets before independently invoking the
@@ -408,6 +409,25 @@ through the same loader policy. Build writes a fresh sibling temporary file and
 publishes by rename after successful compilation/encoding. Failure preserves
 previous output. This is an internal preview format with explicit version
 rejection, not a promise of long-term binary compatibility.
+
+## Host capabilities
+
+The runtime receives a borrowed `Host` with independent optional argument/stdin
+capabilities. No ambient process lookup occurs in semantic or VM libraries.
+Legacy execution entrypoints supply a denied host; the CLI explicitly grants its
+argument slice and locked stdin reader. Source bounds require `io`, but only the
+host can authorize an operation. Runtime regional checks precede every host input
+operation, even though bytecode verification excludes I/O from regional graphs.
+
+Typed input intrinsics have no parameters. Compiler-generated prelude wrappers
+now derive their argument slots from signature arity, covering zero-parameter
+values as well as the existing one-parameter intrinsics. `args()` initializes a
+fresh traced array, collecting while all ordinary operands remain rooted.
+`readLine()` returns owned result/option/text values, never a reader handle.
+The host preserves its cursor, consumed-byte count, and latched EOF/failure state
+across executions. Physical record and total-byte limits precede consumption;
+UTF-8 is decoded only after a complete record. See [host input](host-input.md).
+
 
 ## Diagnostics and tools
 
@@ -425,6 +445,6 @@ lexical API. See [formatter policy](formatter.md).
 Commands already available: `explain`, artifact `build`, source/artifact `check`
 and `run`, IR/bytecode `dump` (`--ir` requires source), and source `fmt` in
 write/check/stdout modes. Disassembly includes role method signatures, class implementation tables,
-concrete extension metadata, lazy construction/forcing, and silence operations. Next: host APIs and tooling integrations. No language
+concrete extension metadata, lazy construction/forcing, and silence operations. Next: additional host APIs and tooling integrations. No language
 server, incremental query engine, package manager, or optimizer is needed before
 basic programs pass conformance.

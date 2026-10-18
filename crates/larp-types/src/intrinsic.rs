@@ -11,6 +11,8 @@ pub enum Intrinsic {
     IsOk(Type),
     Copium(Type),
     ParseScore,
+    Arguments,
+    ReadLine,
     Convert {
         from: Type,
         to: Type,
@@ -93,6 +95,12 @@ impl Intrinsic {
                 vec![Type::Text],
                 Type::result(Type::Mf, Type::Text),
                 Effects::NONE,
+            ),
+            Self::Arguments => (vec![], Type::array(Type::Text), Effects::IO),
+            Self::ReadLine => (
+                vec![],
+                Type::result(Type::option(Type::Text), Type::Text),
+                Effects::IO,
             ),
             Self::Convert { from, to, fallible } if from.is_integer() && to.is_integer() => (
                 vec![from.clone()],

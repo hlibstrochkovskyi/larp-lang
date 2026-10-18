@@ -736,6 +736,19 @@ impl<'a> Builder<'a> {
                                 Type::result(Type::Mf, Type::Text),
                                 Effects::NONE,
                             ))
+                        } else if matches!(name.text.as_str(), "args" | "readLine") {
+                            let signature = if name.text == "args" {
+                                Intrinsic::Arguments
+                            } else {
+                                Intrinsic::ReadLine
+                            }
+                            .signature()
+                            .unwrap();
+                            Some(Type::function(
+                                signature.parameters,
+                                signature.result,
+                                signature.effects,
+                            ))
                         } else if name.text == "no_cap" {
                             Some(Type::function(
                                 vec![Type::Verdict],

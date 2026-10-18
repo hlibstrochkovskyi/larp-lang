@@ -475,3 +475,90 @@ fn formatter_input_size_is_bounded_before_utf8_decoding_and_source_indexing() {
     assert_eq!(std::fs::read_to_string(&path).unwrap(), text);
     assert_eq!(std::fs::read_dir(&scratch.0).unwrap().count(), 1);
 }
+
+fn larp_with_input(args: &[&str], input: &[u8]) -> Output {
+    use std::io::Write;
+    use std::process::Stdio;
+    let mut child = Command::new(env!("CARGO_BIN_EXE_larp"))
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(input).unwrap();
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn cli_stdin_and_program_arguments_survive_build_format_and_deleted_source() {
+    let scratch = Scratch::new();
+    let source = scratch.path("input.larp");
+    let artifact = scratch.path("input.larpbc");
+    std::fs::copy(fixture("pass/host-input.larp"), &source).unwrap();
+    let checked = larp_with_input(&["check", &source], b"not executed");
+    assert!(checked.status.success());
+    assert!(checked.stdout.is_empty() && checked.stderr.is_empty());
+    let formatted = larp(&["fmt", &source]);
+    assert!(formatted.status.success());
+    let built = larp_with_input(&["build", &source], b"not executed");
+    assert!(built.status.success());
+    assert!(built.stdout.is_empty() && built.stderr.is_empty());
+    let args = [
+        "run",
+        &source,
+        "--gc-stress",
+        "--fuel",
+        "10000",
+        "--",
+        "49",
+        "🦀",
+        "--fuel",
+    ];
+    let expected = larp_with_input(&args, b"one\r\n\n");
+    assert!(
+        expected.status.success(),
+        "{}",
+        String::from_utf8_lossy(&expected.stderr)
+    );
+    assert_eq!(expected.stdout, "49\n🦀\n--fuel\none\n\nEOF\n".as_bytes());
+    assert!(expected.stderr.is_empty());
+    std::fs::remove_file(&source).unwrap();
+    let loaded = larp_with_input(
+        &["run", &artifact, "--gc-stress", "--", "49", "🦀", "--fuel"],
+        b"one\r\n\n",
+    );
+    assert!(loaded.status.success());
+    assert_eq!(loaded.stdout, expected.stdout);
+    assert_eq!(loaded.stderr, expected.stderr);
+}
+
+#[test]
+fn cli_utf8_errors_are_result_data_but_input_resource_exhaustion_is_fatal() {
+    let scratch = Scratch::new();
+    let source = scratch.path("input.larp");
+    std::fs::write(&source, "main_character{yap(readLine().cope(err=>some(err)).copium(\"EOF\"));yap(readLine().cope(err=>some(err)).copium(\"EOF\"));}").unwrap();
+    let output = larp_with_input(&["run", &source], b"\xff\nnext\n");
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"input is not valid UTF-8\nnext\n");
+    assert!(output.stderr.is_empty());
+    let oversized = vec![b'x'; larp_vm::MAX_LINE_BYTES + 1];
+    let failed = larp_with_input(&["run", &source], &oversized);
+    assert_eq!(failed.status.code(), Some(1));
+    assert!(failed.stdout.is_empty());
+    let diagnostic = String::from_utf8(failed.stderr).unwrap();
+    assert!(
+        diagnostic.contains("LARP-R006") && diagnostic.contains(" --> "),
+        "{diagnostic}"
+    );
+    std::fs::write(&source, "main_character{yap(args().size());}").unwrap();
+    assert_eq!(larp(&["run", &source]).stdout, b"0\n");
+    assert_eq!(larp(&["run", &source, "--"]).stdout, b"0\n");
+    assert_eq!(larp(&["run", &source, "--", ""]).stdout, b"1\n");
+    assert_eq!(larp(&["run", &source, "--", "--unknown"]).stdout, b"1\n");
+    let mut arguments = vec!["run", &source, "--"];
+    arguments.extend(std::iter::repeat_n("", larp_vm::MAX_ARGUMENTS + 1));
+    let failed = larp(&arguments);
+    assert_eq!(failed.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&failed.stderr).contains("LARP-R006"));
+}

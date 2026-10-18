@@ -1,0 +1,7 @@
+main_character {
+    args().forEach(value => yap(value));
+    let reader = readLine;
+    yap(reader().cope(err => some(err)).copium("EOF"));
+    yap(reader().cope(err => some(err)).copium("EOF"));
+    yap(reader().cope(err => some(err)).copium("EOF"));
+}

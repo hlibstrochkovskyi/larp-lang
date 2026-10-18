@@ -11,7 +11,7 @@ Usage:
   larp explain CODE
   larp build FILE.larp [-o FILE.larpbc]
   larp check FILE.larp|FILE.larpbc
-  larp run FILE.larp|FILE.larpbc [--fuel INSTRUCTIONS] [--gc-stress]
+  larp run FILE.larp|FILE.larpbc [--fuel INSTRUCTIONS] [--gc-stress] [-- ARG...]
   larp dump FILE.larp|FILE.larpbc [--ir]
   larp fmt FILE.larp [--check|--stdout]
 
@@ -19,7 +19,8 @@ Implemented: scalar types, first-class functions, closures, arrays, options/resu
 archetypes, roles, extensions, constructors, private/public fields, bound methods,
 branches, loops, checked conversions, effect bounds, typed IR,
 verified bytecode and versioned artifacts, eager collection pipelines, isolated scenarios,
-pure memoized lazy bindings, dynamic observation suppression, and tracing GC. palantir reports go to stderr.
+pure memoized lazy bindings, host arguments/stdin, dynamic observation suppression,
+and tracing GC. palantir reports go to stderr.
 Artifacts embed source maps and are verified again when loaded. --ir requires source.
 fmt preserves tokens and comments; its default mode updates the source file.
 --gc-stress collects at every object/array/closure/lazy allocation safepoint.";
@@ -59,8 +60,8 @@ fn main() -> ExitCode {
         ["check", path] => process(path, Mode::Check),
         ["build", path] => process(path, Mode::Build(Path::new(path).with_extension("larpbc"))),
         ["build", path, "-o", output] => process(path, Mode::Build(PathBuf::from(output))),
-        ["run", path, options @ ..] => match run_limits(options) {
-            Ok(limits) => process(path, Mode::Run(limits)),
+        ["run", path, options @ ..] => match run_options(options) {
+            Ok(run) => process(path, Mode::Run(run)),
             Err(message) => {
                 eprintln!("error: {message}");
                 ExitCode::from(2)
@@ -82,11 +83,22 @@ fn main() -> ExitCode {
     }
 }
 
-fn run_limits(mut options: &[&str]) -> Result<larp_vm::Limits, &'static str> {
+struct Run {
+    limits: larp_vm::Limits,
+    arguments: Vec<String>,
+}
+
+fn run_options(mut options: &[&str]) -> Result<Run, &'static str> {
     let mut limits = larp_vm::Limits::default();
     let mut fuel_seen = false;
     while !options.is_empty() {
         options = match options {
+            ["--", arguments @ ..] => {
+                return Ok(Run {
+                    limits,
+                    arguments: arguments.iter().map(|arg| (*arg).to_owned()).collect(),
+                });
+            }
             ["--gc-stress", rest @ ..] if !limits.gc_stress => {
                 limits.gc_stress = true;
                 rest
@@ -101,12 +113,15 @@ fn run_limits(mut options: &[&str]) -> Result<larp_vm::Limits, &'static str> {
             _ => return Err("unknown, duplicate, or incomplete run option; see larp --help"),
         };
     }
-    Ok(limits)
+    Ok(Run {
+        limits,
+        arguments: Vec::new(),
+    })
 }
 
 enum Mode {
     Check,
-    Run(larp_vm::Limits),
+    Run(Run),
     Dump,
     Ir,
     Build(PathBuf),
@@ -239,12 +254,15 @@ fn execute(module: &larp_bytecode::VerifiedModule, sources: &[SourceFile], mode:
     match mode {
         Mode::Check => {}
         Mode::Dump => print!("{}", module.disassemble()),
-        Mode::Run(limits) => {
-            if let Err(diagnostic) = larp_vm::execute_with_observers(
+        Mode::Run(run) => {
+            let mut input = std::io::stdin().lock();
+            let mut host = larp_vm::Host::new(Some(&run.arguments), Some(&mut input));
+            if let Err(diagnostic) = larp_vm::execute_with_host(
                 module,
                 &mut std::io::stdout().lock(),
                 &mut std::io::stderr().lock(),
-                limits,
+                &mut host,
+                run.limits,
             ) {
                 if let Some(source) = sources
                     .iter()

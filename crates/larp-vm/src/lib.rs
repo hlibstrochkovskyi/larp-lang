@@ -1,8 +1,10 @@
 //! Iterative execution of verified bytecode with checked values and a traced heap.
 
 mod heap;
+mod host;
 mod scenario;
 mod value;
+pub use host::{Host, MAX_ARGUMENT_BYTES, MAX_ARGUMENTS, MAX_INPUT_BYTES, MAX_LINE_BYTES};
 
 use heap::{Array, Closure, Handle, Heap, Instance, LazyCell, LazyState};
 use larp_bytecode::{Op, VerifiedModule};
@@ -121,13 +123,50 @@ pub fn execute_with_observers(
     inspection: &mut dyn Write,
     limits: Limits,
 ) -> Result<ExecutionStats, Box<Diagnostic>> {
-    execute_runtime(module, output, inspection, limits, &mut Heap::default())
+    execute_with_host(module, output, inspection, &mut Host::default(), limits)
 }
 
+/// Execute with explicitly granted argument/stdin capabilities; legacy APIs deny them.
+pub fn execute_with_host(
+    module: &VerifiedModule,
+    output: &mut dyn Write,
+    inspection: &mut dyn Write,
+    host: &mut Host<'_>,
+    limits: Limits,
+) -> Result<ExecutionStats, Box<Diagnostic>> {
+    execute_host_runtime(
+        module,
+        output,
+        inspection,
+        host,
+        limits,
+        &mut Heap::default(),
+    )
+}
+
+#[cfg(test)]
 fn execute_runtime(
     module: &VerifiedModule,
     output: &mut dyn Write,
     inspection: &mut dyn Write,
+    limits: Limits,
+    heap: &mut Heap,
+) -> Result<ExecutionStats, Box<Diagnostic>> {
+    execute_host_runtime(
+        module,
+        output,
+        inspection,
+        &mut Host::default(),
+        limits,
+        heap,
+    )
+}
+
+fn execute_host_runtime(
+    module: &VerifiedModule,
+    output: &mut dyn Write,
+    inspection: &mut dyn Write,
+    host: &mut Host<'_>,
     limits: Limits,
     heap: &mut Heap,
 ) -> Result<ExecutionStats, Box<Diagnostic>> {
@@ -248,7 +287,9 @@ fn execute_runtime(
             Op::MakeClosure(_)
                 | Op::MakeLazy(_)
                 | Op::NewObject(_)
-                | Op::Intrinsic(Intrinsic::ArrayNew { .. } | Intrinsic::Sorted(_))
+                | Op::Intrinsic(
+                    Intrinsic::ArrayNew { .. } | Intrinsic::Sorted(_) | Intrinsic::Arguments
+                )
         ) && heap.should_collect(limits.gc_stress)
         {
             collect(heap, &stack, &frames, scenario.as_ref());
@@ -563,6 +604,13 @@ fn execute_runtime(
                 });
             }
             Op::Intrinsic(operation) => {
+                if matches!(operation, Intrinsic::Arguments | Intrinsic::ReadLine) {
+                    stack.push(
+                        host_intrinsic(operation, host, heap, scenario.is_some())
+                            .map_err(|(code, message)| error(code, message))?,
+                    );
+                    continue;
+                }
                 let count = operation.signature().unwrap().parameters.len();
                 let mut arguments = stack.split_off(stack.len() - count);
                 if matches!(
@@ -702,6 +750,45 @@ fn force_lazy(
                 captures: cell.captures.clone(),
             })
         }
+    }
+}
+
+fn host_intrinsic(
+    operation: &Intrinsic,
+    host: &mut Host<'_>,
+    heap: &mut Heap,
+    scenario_active: bool,
+) -> Result<Value, (&'static str, String)> {
+    if scenario_active {
+        return Err((
+            "LARP-R010",
+            "Host input is unavailable in an active scenario".into(),
+        ));
+    }
+    match operation {
+        Intrinsic::Arguments => {
+            let arguments = host.arguments().map_err(host::Failure::diagnostic)?;
+            let values = arguments
+                .iter()
+                .map(|value| Value::Scalar(Scalar::Text(value.clone())))
+                .collect();
+            let handle = heap
+                .allocate(Array {
+                    values,
+                    iterations: 0,
+                })
+                .map_err(|message| ("LARP-R006", message.into()))?;
+            Ok(Value::Array(handle))
+        }
+        Intrinsic::ReadLine => Ok(Value::Result(
+            match host.read_line().map_err(host::Failure::diagnostic)? {
+                Ok(line) => Ok(Box::new(Value::Option(
+                    line.map(|text| Box::new(Value::Scalar(Scalar::Text(text)))),
+                ))),
+                Err(message) => Err(Box::new(Value::Scalar(Scalar::Text(message.into())))),
+            },
+        )),
+        _ => unreachable!("host input intrinsic"),
     }
 }
 

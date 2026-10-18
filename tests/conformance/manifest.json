@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "cases": [
     {
       "id": "scalars",
@@ -775,6 +775,93 @@
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R003"
+      }
+    },
+    {
+      "id": "host-input",
+      "path": "pass/host-input.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "49\n🦀\n--fuel\none\n\nEOF\n"
+      },
+      "input": {
+        "args": [
+          "49",
+          "🦀",
+          "--fuel"
+        ],
+        "stdin": "one\r\n\n"
+      }
+    },
+    {
+      "id": "input-sum",
+      "path": "pass/input-sum.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "total\n6\n"
+      },
+      "input": {
+        "args": [
+          "total"
+        ],
+        "stdin": "2\n4\nbad\n"
+      }
+    },
+    {
+      "id": "input-eof",
+      "path": "pass/input-eof.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "EOF\n"
+      },
+      "input": {
+        "stdin": ""
+      }
+    },
+    {
+      "id": "io-indirect",
+      "path": "fail/io-indirect.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-E001"
+      }
+    },
+    {
+      "id": "io-erasure",
+      "path": "fail/io-erasure.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T001"
+      }
+    },
+    {
+      "id": "io-scenario",
+      "path": "fail/io-scenario.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-E002"
+      }
+    },
+    {
+      "id": "io-lazy",
+      "path": "fail/io-lazy.larp",
+      "milestone": "M6",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-E001"
       }
     }
   ]

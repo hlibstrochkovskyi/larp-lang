@@ -1,0 +1,5 @@
+sidequest pure() -> result<baddie<text>, text> uses() {
+    let reader = readLine;
+    return reader();
+}
+main_character {}

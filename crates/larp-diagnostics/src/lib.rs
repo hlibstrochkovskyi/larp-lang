@@ -11,6 +11,11 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-R010",
+        title: "Host input capability denied",
+        explanation: "Execution requested argument or standard-input access that the embedder did not grant. Use execute_with_host with the required capability. Host input is never available inside an active scenario. The io effect describes a requirement; it does not grant a capability.",
+    },
+    DiagnosticCode {
         id: "LARP-C001",
         title: "Formatter invariant failed",
         explanation: "The formatter could not preserve the parsed program's token and comment stream. This is a tooling bug; the source file is left unchanged. Report the input and keep the original source.",

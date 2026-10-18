@@ -1,0 +1,3 @@
+main_character {
+    nonchalant verdict input = readLine().isOk();
+}

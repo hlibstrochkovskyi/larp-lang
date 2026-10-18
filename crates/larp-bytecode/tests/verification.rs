@@ -322,3 +322,31 @@ fn derived_intrinsic_signatures_share_the_verification_type_work_budget() {
     assert_eq!(error.kind, larp_bytecode::VerifyErrorKind::ResourceLimit);
     assert!(error.message.contains("type work"), "{error:?}");
 }
+
+#[test]
+fn host_io_effects_are_verified_even_in_unreachable_instructions() {
+    for operation in [
+        larp_types::Intrinsic::Arguments,
+        larp_types::Intrinsic::ReadLine,
+    ] {
+        let entry = function(
+            vec![
+                Op::Constant(Scalar::Unit),
+                Op::Return,
+                Op::Intrinsic(operation),
+            ],
+            vec![],
+            Effects::NONE,
+        );
+        let error = verify(Module {
+            roles: vec![],
+            extensions: vec![],
+            classes: vec![],
+            functions: vec![entry],
+            entry: 0,
+        })
+        .unwrap_err();
+        assert_eq!(error.kind, larp_bytecode::VerifyErrorKind::Invalid);
+        assert!(error.message.contains("io"), "{error:?}");
+    }
+}

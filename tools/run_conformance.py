@@ -13,20 +13,23 @@ ROOT = Path(__file__).resolve().parents[1]
 CORPUS = ROOT / "tests" / "conformance"
 
 
-def invoke(binary: Path, command: str, path: Path, gc_stress: bool = False) -> subprocess.CompletedProcess[str]:
+def invoke(binary: Path, command: str, path: Path, gc_stress: bool = False, program_input: dict | None = None) -> subprocess.CompletedProcess[str]:
     # Decode explicitly: text=True would normalize CR/CRLF and hide stdout errors.
     options = ["--gc-stress"] if command == "run" and gc_stress else []
-    result = subprocess.run([str(binary), command, str(path), *options], capture_output=True, timeout=10)
+    program_input = program_input or {}
+    arguments = ["--", *program_input["args"]] if command == "run" and "args" in program_input else []
+    stdin = program_input.get("stdin", "").encode("utf-8") if command == "run" else b""
+    result = subprocess.run([str(binary), command, str(path), *options, *arguments], input=stdin, capture_output=True, timeout=10)
     return subprocess.CompletedProcess(result.args, result.returncode,
                                        result.stdout.decode("utf-8"), result.stderr.decode("utf-8"))
 
 
-def artifact_errors(binary: Path, source: Path, expected: dict, source_run: subprocess.CompletedProcess[str], gc_stress: bool) -> list[str]:
+def artifact_errors(binary: Path, source: Path, expected: dict, source_run: subprocess.CompletedProcess[str], gc_stress: bool, program_input: dict | None = None) -> list[str]:
     """Compare the loaded-file path with real compilation, including failures."""
     with tempfile.TemporaryDirectory(prefix="larp-conformance-") as directory:
         artifact = Path(directory) / "program.larpbc"
         built = subprocess.run([str(binary), "build", str(source), "-o", str(artifact)],
-                               capture_output=True, timeout=10)
+                               input=b"", capture_output=True, timeout=10)
         if expected["kind"] == "compile_error":
             match = re.search(rb"error\[(LARP-[A-Z][0-9]{3})\]", built.stderr)
             if (built.returncode != 1 or built.stdout or artifact.exists() or
@@ -36,7 +39,7 @@ def artifact_errors(binary: Path, source: Path, expected: dict, source_run: subp
         if built.returncode != 0 or built.stdout or built.stderr or not artifact.is_file():
             return [f"artifact build failed or observed output: {built.stderr!r}"]
         checked = invoke(binary, "check", artifact)
-        loaded = invoke(binary, "run", artifact, gc_stress)
+        loaded = invoke(binary, "run", artifact, gc_stress, program_input)
         errors = []
         if checked.returncode != 0 or checked.stdout or checked.stderr:
             errors.append(f"artifact check failed or observed output: {checked.stderr}")
@@ -69,7 +72,7 @@ def case_errors(expectation: dict, checked: subprocess.CompletedProcess[str], ou
     return errors
 
 
-def formatted_errors(binary: Path, path: Path, expectation: dict, gc_stress: bool, artifacts: bool) -> list[str]:
+def formatted_errors(binary: Path, path: Path, expectation: dict, gc_stress: bool, artifacts: bool, program_input: dict | None = None) -> list[str]:
     """Format a temporary copy, check idempotence, and execute the same contract."""
     formatted = subprocess.run([str(binary), "fmt", str(path), "--stdout"],
                                capture_output=True, timeout=10)
@@ -91,10 +94,10 @@ def formatted_errors(binary: Path, path: Path, expectation: dict, gc_stress: boo
         if stable.returncode or stable.stdout or stable.stderr:
             errors.append(f"formatted source is not idempotent: {stable.stderr!r}")
         checked = invoke(binary, "check", target)
-        output = invoke(binary, "run", target, gc_stress)
+        output = invoke(binary, "run", target, gc_stress, program_input)
         errors.extend(case_errors(expectation, checked, output))
         if artifacts:
-            errors.extend(artifact_errors(binary, target, expectation, output, gc_stress))
+            errors.extend(artifact_errors(binary, target, expectation, output, gc_stress, program_input))
         return [f"formatted: {error}" for error in errors]
 
 
@@ -124,12 +127,12 @@ def main() -> int:
         expectation = case["expect"]
         try:
             checked = invoke(binary, "check", path)
-            output = invoke(binary, "run", path, args.gc_stress)
+            output = invoke(binary, "run", path, args.gc_stress, case.get("input"))
             errors = case_errors(expectation, checked, output)
             if args.artifacts:
-                errors.extend(artifact_errors(binary, path, expectation, output, args.gc_stress))
+                errors.extend(artifact_errors(binary, path, expectation, output, args.gc_stress, case.get("input")))
             if args.formatted:
-                errors.extend(formatted_errors(binary, path, expectation, args.gc_stress, args.artifacts))
+                errors.extend(formatted_errors(binary, path, expectation, args.gc_stress, args.artifacts, case.get("input")))
             if errors:
                 failures.append(f"FAIL {case['id']}: " + "\n".join(errors))
             else:

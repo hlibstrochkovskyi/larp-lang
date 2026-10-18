@@ -1,4 +1,4 @@
-//! Version 1 explicit wire tags for instructions and their operands.
+//! Explicit wire tags shared by versions 1 and 2. Version 2 adds host input.
 //!
 //! Every tag below is an unsigned byte. Indices and vector/string lengths use
 //! checked u32 values through Reader/Writer; integer payloads use their stated
@@ -13,7 +13,8 @@
 //! Intrinsic: 0 None, 1 Some, 2 Ok, 3 Err, 4 IsSome, 5 IsOk, 6 Copium,
 //! 7 ParseScore, 8 Convert, 9 ConversionMessage, 10 ArrayNew, 11 Size,
 //! 12 Index, 13 CheckIndex, 14 SetIndex, 15 Push, 16 Sorted, 17 Map,
-//! 18 Filter, 19 ForEach. Operand order follows the explicit matches below.
+//! 18 Filter, 19 ForEach; version 2 adds 20 Arguments and 21 ReadLine.
+//! Operand order follows the explicit matches below.
 //! Op: 0 Constant, 1 Load, 2 Store, 3 Unary, 4 Binary, 5 Jump,
 //! 6 JumpIfFalse, 7 Call, 8 MakeClosure, 9 Construct, 10 NewObject,
 //! 11 GetField, 12 SetField, 13 CallIndirect, 14 Intrinsic, 15 MatchResult,
@@ -313,6 +314,8 @@ fn write_intrinsic(w: &mut Writer, types: &TypeTable, operation: &Intrinsic) -> 
         Intrinsic::Map { .. } => 17,
         Intrinsic::Filter { .. } => 18,
         Intrinsic::ForEach { .. } => 19,
+        Intrinsic::Arguments => 20,
+        Intrinsic::ReadLine => 21,
     };
     w.u8(tag)?;
     match operation {
@@ -344,7 +347,10 @@ fn write_intrinsic(w: &mut Writer, types: &TypeTable, operation: &Intrinsic) -> 
             w.ty(types, array)?;
             w.ty(types, callback)
         }
-        Intrinsic::ParseScore | Intrinsic::ConversionMessage => Ok(()),
+        Intrinsic::ParseScore
+        | Intrinsic::ConversionMessage
+        | Intrinsic::Arguments
+        | Intrinsic::ReadLine => Ok(()),
     }
 }
 
@@ -386,7 +392,9 @@ fn read_intrinsic(r: &mut Reader<'_>, types: &[Type]) -> Result<Intrinsic> {
             array: r.ty(types)?,
             callback: r.ty(types)?,
         },
-        _ => return Err(r.invalid("Unknown intrinsic tag")),
+        20 if r.version >= 2 => Intrinsic::Arguments,
+        21 if r.version >= 2 => Intrinsic::ReadLine,
+        _ => return Err(r.invalid("Unknown intrinsic tag for this artifact version")),
     })
 }
 
@@ -504,6 +512,8 @@ mod tests {
                 array,
                 callback: Type::function(vec![Type::Mf], Type::Unit, Effects::OBSERVE),
             },
+            Intrinsic::Arguments,
+            Intrinsic::ReadLine,
         ]
     }
 
