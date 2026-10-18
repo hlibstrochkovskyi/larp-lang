@@ -328,6 +328,71 @@ fn checked_conversions_return_nominal_error_values_or_trap_explicitly() {
 }
 
 #[test]
+fn conversion_results_context_type_literals_without_operand_order_dependence() {
+    run(
+        r#"
+        sidequest mark(mf tag) -> mf uses(observe) { yap(tag); return 1; }
+        sidequest same() -> verdict uses() {
+            return 3_000_000_000 == ascend<unc>(1).cope(err => 0);
+        }
+        main_character {
+            yap(3_000_000_000 + fraud<unc>(1));
+            yap(fraud<unc>(1) + 3_000_000_000);
+            no_cap(3_000_000_000 mogg fraud<unc>(1));
+            no_cap(fraud<unc>(1) < 3_000_000_000);
+            no_cap(1 == fraud<unc>(1));
+            no_cap(fraud<unc>(1) == 1);
+            no_cap(ascend<unc>(1) == win(1));
+            no_cap(win(1) == ascend<unc>(1));
+            yap(3_000_000_000 + ascend<unc>(1).cope(err => 0));
+            yap(ascend<unc>(1).cope(err => 0) + 3_000_000_000);
+            yap(-3_000_000_000 < -fraud<unc>(1));
+            yap(same());
+            yap(fraud<unc>(mark(1)) + fraud<unc>(mark(2)));
+        }
+    "#,
+        "3000000001\n3000000001\n3000000001\n3000000001\nfr\ncap\n1\n2\n2\n",
+    );
+}
+
+#[test]
+fn conversion_result_hints_preserve_numeric_types_effects_and_shadowing() {
+    rejects(
+        "main_character { mf value = 1; yap(value + fraud<unc>(1)); }",
+        "LARP-T001",
+    );
+    for conversion in ["fraud", "ascend"] {
+        rejects(
+            &format!("main_character {{ let value = {conversion}<unc>(3_000_000_000); }}"),
+            "LARP-T004",
+        );
+    }
+    rejects(
+        "sidequest bad() -> verdict uses() { return 1 == fraud<unc>(1); } main_character {}",
+        "LARP-E001",
+    );
+    rejects(
+        "sidequest fraud(mf value) -> mf uses() { return value; } main_character { mf value = 1; yap(value + fraud<unc>(1)); }",
+        "LARP-P002",
+    );
+    rejects(
+        "main_character { fn(mf) -> mf uses() ascend = x => x; mf value = 1; yap(value + ascend<unc>(1)); }",
+        "LARP-P002",
+    );
+    run(
+        r#"
+        sidequest fraud(mf value) -> mf uses() { return value; }
+        main_character {
+            yap(1 + fraud(1));
+            fn(mf) -> mf uses() ascend = x => x;
+            yap(1 + ascend(1));
+        }
+    "#,
+        "2\n2\n",
+    );
+}
+
+#[test]
 fn closure_churn_is_reclaimed_during_execution_and_live_chains_are_not_lost() {
     let source = SourceFile::new(
         SourceId(0),

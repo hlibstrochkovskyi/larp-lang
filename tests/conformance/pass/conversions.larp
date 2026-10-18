@@ -5,4 +5,14 @@ main_character {
     yap(ascend<unc>(49).cope(err => 0));
     unc small = 20;
     yap(fraud<mf>(small));
+    no_cap(3_000_000_000 + fraud<unc>(1) == 3_000_000_001);
+    no_cap(fraud<unc>(1) + 3_000_000_000 == 3_000_000_001);
+    no_cap(3_000_000_000 mogg fraud<unc>(1));
+    no_cap(fraud<unc>(1) < 3_000_000_000);
+    no_cap(1 == fraud<unc>(1));
+    no_cap(fraud<unc>(1) == 1);
+    no_cap(ascend<unc>(1) == win(1));
+    no_cap(win(1) == ascend<unc>(1));
+    no_cap(3_000_000_000 + ascend<unc>(1).cope(err => 0) == 3_000_000_001);
+    no_cap(ascend<unc>(1).cope(err => 0) + 3_000_000_000 == 3_000_000_001);
 }

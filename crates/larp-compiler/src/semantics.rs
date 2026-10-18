@@ -781,7 +781,27 @@ impl<'a> Builder<'a> {
                     self.hint(left).or_else(|| self.hint(right))
                 }
             }
-            ExprKind::Call { callee, .. } => {
+            ExprKind::Call {
+                callee,
+                type_arguments,
+                ..
+            } => {
+                if let ExprKind::Name(name) = &callee.kind
+                    && matches!(name.text.as_str(), "ascend" | "fraud")
+                    && self.resolve(&name.text).is_none()
+                    && !self.tables.names.contains_key(&name.text)
+                    && !self.scenario_forbidden.contains(&name.text)
+                    && type_arguments.len() == 1
+                {
+                    let target = self.resolve_type(&type_arguments[0]).ok()?;
+                    return target.is_integer().then(|| {
+                        if name.text == "ascend" {
+                            Type::result(target, Type::ConversionError)
+                        } else {
+                            target
+                        }
+                    });
+                }
                 if let ExprKind::Member { receiver, name } = &callee.kind {
                     match (self.hint(receiver), name.text.as_str()) {
                         (Some(Type::Baddie(payload)), "copium") => Some(payload.as_ref().clone()),

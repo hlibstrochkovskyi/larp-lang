@@ -45,6 +45,8 @@ No host `eval`, source-to-Python/JavaScript translation, or AST execution is use
   state, observe, or perform I/O. Nested `new` is allowed.
 - `parseScore(text)`, checked `ascend<mf/unc>`, aborting `fraud<mf/unc>`, and
   immutable `ConversionError.message`. Float/integer conversions are rejected.
+  Explicit conversion results supply literal context in either operand order,
+  including recovery through `.cope()`.
 - `if`/`else`, `locked_in while`, `npc loop`, `goon`, and `touch_grass`.
 - Explicit finite `uses(...)` bounds checked through direct and indirect calls,
   including function variables, higher-order parameters, and captured functions.
