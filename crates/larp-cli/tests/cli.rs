@@ -272,6 +272,117 @@ fn built_program_runs_without_source_and_preserves_embedded_runtime_locations() 
 }
 
 #[test]
+fn json_diagnostics_keep_types_help_and_related_declaration_labels() {
+    let output = larp(&[
+        "--diagnostic-format=json",
+        "check",
+        &fixture("fail/narrowing.larp"),
+    ]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    let text = String::from_utf8(output.stderr).unwrap();
+    assert!(text.contains("\"kind\":\"diagnostic\""));
+    assert!(text.contains("\"code\":\"LARP-T041\""));
+    assert!(text.contains("\"expected_type\":\"mf\",\"found_type\":\"unc\""));
+    assert!(text.contains("ascend<mf>"));
+    let scratch = Scratch::new();
+    let source = scratch.path("duplicate.larp");
+    std::fs::write(&source, "main_character { mf x = 1; mf x = 2; }").unwrap();
+    let output = larp(&["--diagnostic-format=json", "check", &source]);
+    assert_eq!(output.status.code(), Some(1));
+    let text = String::from_utf8(output.stderr).unwrap();
+    assert!(text.contains("\"code\":\"LARP-N002\""));
+    assert!(!text.contains("\"related\":[]"));
+}
+
+#[test]
+fn json_runtime_locations_survive_deleted_unicode_crlf_source() {
+    let scratch = Scratch::new();
+    let source = scratch.path("quote\"\n🦀.larp");
+    let artifact = scratch.path("program.larpbc");
+    let code = "main_character {\r\n\tyap(\"🦀\"); crashout(\"bad\\nvalue\\t\");\r\n}\r\n";
+    std::fs::write(&source, code).unwrap();
+    let expected = larp(&["--diagnostic-format=json", "run", &source]);
+    assert_eq!(expected.status.code(), Some(1));
+    assert_eq!(expected.stdout, "🦀\n".as_bytes());
+    let text = String::from_utf8(expected.stderr.clone()).unwrap();
+    assert_eq!(text.bytes().filter(|byte| *byte == b'\n').count(), 1);
+    assert!(text.contains("quote\\\"\\n🦀.larp"));
+    assert!(text.contains("\"message\":\"bad\\nvalue\\t\""));
+    let start = code.find("crashout").unwrap();
+    assert!(text.contains(&format!(
+        "\"start\":{start},\"end\":{}",
+        start + "crashout(\"bad\\nvalue\\t\")".len()
+    )));
+    assert!(text.contains("\"start_location\":{\"line\":2,\"column\":12}"));
+    assert!(
+        larp(&[
+            "--diagnostic-format=json",
+            "build",
+            &source,
+            "-o",
+            &artifact
+        ])
+        .status
+        .success()
+    );
+    std::fs::remove_file(&source).unwrap();
+    let loaded = larp(&["--diagnostic-format=json", "run", &artifact, "--gc-stress"]);
+    assert_eq!(loaded.status.code(), Some(1));
+    assert_eq!(loaded.stdout, expected.stdout);
+    assert_eq!(loaded.stderr, expected.stderr);
+}
+
+#[test]
+fn json_cli_artifact_and_formatter_failures_remain_machine_readable() {
+    let scratch = Scratch::new();
+    let source = scratch.path("format.larp");
+    let artifact = scratch.path("bad.larpbc");
+    std::fs::write(&source, "main_character{yap(49);}").unwrap();
+    std::fs::write(&artifact, b"invalid artifact").unwrap();
+    for (args, status, kind) in [
+        (vec!["check", "missing.larp"], 1, "cli_error"),
+        (vec!["run", &source, "--unknown"], 2, "cli_error"),
+        (
+            vec!["--diagnostic-format=text", "check", &source],
+            2,
+            "cli_error",
+        ),
+        (vec!["check", &artifact], 1, "artifact_error"),
+        (vec!["fmt", &source, "--check"], 1, "format_needed"),
+    ] {
+        let mut command = vec!["--diagnostic-format=json"];
+        command.extend(args);
+        let output = larp(&command);
+        assert_eq!(output.status.code(), Some(status));
+        assert!(output.stdout.is_empty());
+        let text = String::from_utf8(output.stderr).unwrap();
+        assert!(text.contains(&format!("\"kind\":\"{kind}\"")), "{text}");
+        assert_eq!(text.bytes().filter(|byte| *byte == b'\n').count(), 1);
+    }
+    std::fs::write(&source, "main_character { mf value = ; }").unwrap();
+    let output = larp(&["--diagnostic-format=json", "fmt", &source, "--stdout"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert!(
+        String::from_utf8(output.stderr)
+            .unwrap()
+            .contains("\"kind\":\"diagnostic\"")
+    );
+    std::fs::write(&source, "main_character { yap(args()[0]); }").unwrap();
+    let output = larp(&[
+        "--diagnostic-format=json",
+        "run",
+        &source,
+        "--",
+        "--diagnostic-format=text",
+    ]);
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"--diagnostic-format=text\n");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
 fn build_failure_preserves_prior_output_and_rejects_source_overwrite() {
     let scratch = Scratch::new();
     let source = scratch.path("program.larp");

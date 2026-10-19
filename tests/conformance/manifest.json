@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "cases": [
     {
       "id": "fixed-literal-equality",
@@ -269,7 +269,8 @@
       "status": "active",
       "expect": {
         "kind": "runtime_error",
-        "code": "LARP-R001"
+        "code": "LARP-R001",
+        "span": "left + right"
       }
     },
     {
@@ -279,7 +280,8 @@
       "status": "active",
       "expect": {
         "kind": "runtime_error",
-        "code": "LARP-R003"
+        "code": "LARP-R003",
+        "span": "crashout(\"discard the scenario\")"
       }
     },
     {
@@ -289,7 +291,8 @@
       "status": "active",
       "expect": {
         "kind": "runtime_error",
-        "code": "LARP-R005"
+        "code": "LARP-R005",
+        "span": "values.push(x)"
       }
     },
     {
@@ -409,7 +412,8 @@
       "status": "active",
       "expect": {
         "kind": "runtime_error",
-        "code": "LARP-R008"
+        "code": "LARP-R008",
+        "span": "fraud<mf>(large)"
       }
     },
     {
@@ -479,7 +483,8 @@
       "status": "active",
       "expect": {
         "kind": "runtime_error",
-        "code": "LARP-R004"
+        "code": "LARP-R004",
+        "span": "values[-1]"
       }
     },
     {
@@ -489,7 +494,8 @@
       "status": "active",
       "expect": {
         "kind": "runtime_error",
-        "code": "LARP-R004"
+        "code": "LARP-R004",
+        "span": "values[1]"
       }
     },
     {
@@ -579,7 +585,8 @@
       "status": "active",
       "expect": {
         "kind": "runtime_error",
-        "code": "LARP-R003"
+        "code": "LARP-R003",
+        "span": "crashout(\"construction failed\")"
       }
     },
     {
@@ -702,7 +709,9 @@
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R003",
-        "stdout": "observed\n"
+        "stdout": "observed\n",
+        "span": "crashout(\"discard trial\")",
+        "stderr": "PALANTIR [Trial]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvalue | 0 | 49 | - | true\n"
       }
     },
     {
@@ -774,7 +783,8 @@
       "expect": {
         "kind": "runtime_error",
         "code": "LARP-R002",
-        "stdout": "before force\n"
+        "stdout": "before force\n",
+        "span": "1 / zero"
       }
     },
     {
@@ -784,7 +794,8 @@
       "status": "active",
       "expect": {
         "kind": "runtime_error",
-        "code": "LARP-R003"
+        "code": "LARP-R003",
+        "span": "crashout(\"still fatal\")"
       }
     },
     {

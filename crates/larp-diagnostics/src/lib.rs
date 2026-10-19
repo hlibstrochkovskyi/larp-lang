@@ -2,6 +2,8 @@
 
 use larp_source::Span;
 
+pub mod json;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DiagnosticCode {
     pub id: &'static str,

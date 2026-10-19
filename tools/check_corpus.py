@@ -19,7 +19,7 @@ def require(condition: bool, message: str) -> None:
 def main() -> None:
     manifest = json.loads((CORPUS / "manifest.json").read_text(encoding="utf-8"))
     require(set(manifest) == {"schema_version", "cases"}, "Invalid manifest keys")
-    require(type(manifest["schema_version"]) is int and manifest["schema_version"] == 2,
+    require(type(manifest["schema_version"]) is int and manifest["schema_version"] == 3,
             "Unsupported schema version")
     cases = manifest["cases"]
     require(isinstance(cases, list) and bool(cases), "No corpus cases")
@@ -73,12 +73,19 @@ def main() -> None:
         else:
             require(kind in {"compile_error", "runtime_error"},
                     f"Unknown expectation kind: {case_id}")
-            require({"kind", "code"} <= set(expect) <= ({"kind", "code", "stdout"} if kind == "runtime_error" else {"kind", "code"}),
+            required = {"kind", "code", "span"} if kind == "runtime_error" else {"kind", "code"}
+            require(required <= set(expect) <= (required | {"stdout", "stderr"} if kind == "runtime_error" else required),
                     f"Invalid error fields: {case_id}")
             require(isinstance(expect.get("stdout", ""), str), f"Invalid runtime stdout: {case_id}")
+            require(isinstance(expect.get("stderr", ""), str), f"Invalid runtime stderr: {case_id}")
             require(expect["code"] in codes, f"Unknown diagnostic: {case_id}")
             require((kind == "runtime_error") == expect["code"].startswith("LARP-R"),
                     f"Wrong diagnostic family: {case_id}")
+            if kind == "runtime_error":
+                span = expect["span"]
+                require(isinstance(span, str) and bool(span), f"Invalid runtime span: {case_id}")
+                require(path.read_bytes().count(span.encode("utf-8")) == 1,
+                        f"Runtime span text must identify one exact range: {case_id}")
     actual = {path.resolve() for path in CORPUS.rglob("*.larp")}
     require(actual == seen_paths, f"Unlisted fixtures: {sorted(actual - seen_paths)}")
     active = sum(case["status"] == "active" for case in cases)

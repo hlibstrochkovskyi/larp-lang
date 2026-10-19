@@ -8,6 +8,7 @@ main_character {
         real.value = 49;
         canon real.value;
         yap("observed");
+        palantir(real);
         crashout("discard trial");
     }
 }

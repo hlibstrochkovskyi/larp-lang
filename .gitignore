@@ -12,3 +12,4 @@
 /fuzz/artifacts/
 /fuzz/coverage/
 .DS_Store
+__pycache__/

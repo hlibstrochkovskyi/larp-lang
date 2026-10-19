@@ -4,6 +4,8 @@ The compiler currently implements algorithmic programs, nominal objects, and iso
 Specification v0.1. Programs are lexed, parsed, name/type/effect checked, lowered
 into typed control-flow IR, compiled to stack bytecode, verified, and executed by LARP's VM.
 No host `eval`, source-to-Python/JavaScript translation, or AST execution is used.
+The [preview audit](preview-readiness.md) records remaining grammar and
+constant-control-flow mismatches; the finite passing corpus does not close them.
 
 ## Working features
 
@@ -53,6 +55,9 @@ No host `eval`, source-to-Python/JavaScript translation, or AST execution is use
   A function effect bound can widen; it cannot silently narrow.
 - `yap`, always-active `no_cap`, `crashout`, and the `unc` prelude constant `fortnine`.
 - Structured English diagnostics with stable codes and UTF-8 source spans.
+  `--diagnostic-format=json` exposes versioned JSON Lines on stderr, including
+  exact labels, types/help, and encoded inspection events; see the
+  [diagnostic protocol](diagnostics.md).
 - Control-flow bytecode verification, definite slot initialization, stack typing,
   function signature and effect checks; the VM accepts only a verified module.
 - Verified closure capture layouts and immutable capture slots; total result-tag

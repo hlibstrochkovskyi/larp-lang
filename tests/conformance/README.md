@@ -1,6 +1,6 @@
 # Proposed language conformance corpus
 
-Schema version 2 permits an optional `input` object containing UTF-8 `stdin`
+Schema version 3 permits an optional `input` object containing UTF-8 `stdin`
 text and/or an `args` array of UTF-8 strings. NUL is forbidden in OS arguments.
 Run/runtime-error cases can declare input; absent stdin is explicit EOF, absent
 arguments is an empty list. Compile-error cases do not consume host input.
@@ -19,11 +19,19 @@ inventory completeness. It does not parse, type-check, compile, or run LARP.
 - `compile_error`: compilation must fail with the specified primary code.
 - `runtime_error`: compilation must succeed, then execution must fail with the
   specified runtime code. Optional `stdout` declares observations emitted before
-  failure; otherwise stdout must be empty. Host tests also inspect source spans.
+  failure; otherwise stdout must be empty. Required `span` identifies a nonempty
+  source slice appearing exactly once. The harness calculates its UTF-8 byte
+  offsets and scalar coordinates independently and checks the complete primary
+  label through the [JSON diagnostic protocol](../../docs/diagnostics.md).
+  Optional `stderr` declares the inspection report before the diagnostic; its
+  exact reconstructed JSON output and text-mode prefix are checked, and the
+  fatal JSON diagnostic must be the last event.
 
 `python3 tools/run_conformance.py` builds the CLI and executes every active case
 through both `check` and `run`. It checks exit codes, exact stdout/declared inspection output, primary error
-codes, and presence of source locations. `--all` includes pending cases when
+codes, and presence of text source locations. JSON runs additionally check exact
+runtime ranges, unchanged stdout/status, and reconstruct inspection output.
+`--all` includes pending cases when
 any exist; currently it selects the same 85 active cases and passes. An optional
 `--bin PATH` selects an existing binary. `--gc-stress` requests collection at
 every object, array, closure, and lazy-cell allocation safepoint; CI executes the
@@ -33,7 +41,8 @@ with direct source execution. Invalid source must fail to build without creating
 a file. `--formatted` additionally formats temporary copies, checks idempotence,
 and compiles/executes the same expectations. It composes with `--artifacts` and
 `--gc-stress`; CI exercises the combined path. Error locations must remain valid,
-while line numbers may change after formatting. Checked-in files are not modified.
+while line numbers may change after formatting; expected JSON ranges are derived
+from the actual formatted source. Checked-in files are not modified.
 
 The harness must fail if an unsupported case is silently skipped within a release's
 declared subset. Report fixtures pin the current deterministic renderer; its

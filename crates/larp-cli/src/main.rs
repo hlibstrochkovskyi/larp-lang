@@ -6,6 +6,7 @@ use std::process::ExitCode;
 const HELP: &str = "LARP — Fake it till you compile.
 
 Usage:
+  larp [--diagnostic-format=json|text] COMMAND ...
   larp --help
   larp --version
   larp explain CODE
@@ -25,14 +26,79 @@ Artifacts embed source maps and are verified again when loaded. --ir requires so
 fmt preserves tokens and comments; its default mode updates the source file.
 --gc-stress collects at every object/array/closure/lazy allocation safepoint.";
 
+#[derive(Clone, Copy)]
+enum DiagnosticFormat {
+    Text,
+    Json,
+}
+
+impl DiagnosticFormat {
+    fn event(self, kind: &str, code: Option<&str>, message: &str) {
+        match self {
+            Self::Text => eprintln!("{message}"),
+            Self::Json => eprint!("{}", larp_diagnostics::json::event(kind, code, message)),
+        }
+    }
+
+    fn error(self, message: impl std::fmt::Display) {
+        self.event("cli_error", None, &format!("error: {message}"));
+    }
+
+    fn diagnostic(self, diagnostic: &larp_diagnostics::Diagnostic, sources: &[SourceFile]) {
+        match self {
+            Self::Json => eprint!("{}", larp_diagnostics::json::render(diagnostic, sources)),
+            Self::Text => {
+                if let Some(source) = sources
+                    .iter()
+                    .find(|source| source.slice(diagnostic.primary.span).is_some())
+                {
+                    eprint!("{}", larp_diagnostics::render(diagnostic, source));
+                } else {
+                    eprintln!("error[{}]: {}", diagnostic.code.id, diagnostic.message);
+                }
+            }
+        }
+    }
+}
+
+struct Inspection<'a> {
+    output: &'a mut dyn Write,
+    format: DiagnosticFormat,
+}
+
+impl Write for Inspection<'_> {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        match self.format {
+            DiagnosticFormat::Text => self.output.write(bytes),
+            DiagnosticFormat::Json => {
+                let text = std::str::from_utf8(bytes)
+                    .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
+                self.output.write_all(
+                    larp_diagnostics::json::event("inspection", None, text).as_bytes(),
+                )?;
+                Ok(bytes.len())
+            }
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.output.flush()
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
+    let (format, args) = match args.split_first() {
+        Some((flag, rest)) if flag == "--diagnostic-format=json" => (DiagnosticFormat::Json, rest),
+        Some((flag, rest)) if flag == "--diagnostic-format=text" => (DiagnosticFormat::Text, rest),
+        _ => (DiagnosticFormat::Text, args.as_slice()),
+    };
     let Some(args) = args
         .iter()
         .map(|arg| arg.to_str())
         .collect::<Option<Vec<_>>>()
     else {
-        eprintln!("error: CLI arguments must be valid UTF-8");
+        format.error("CLI arguments must be valid UTF-8");
         return ExitCode::from(2);
     };
     match args.as_slice() {
@@ -53,31 +119,37 @@ fn main() -> ExitCode {
                 ExitCode::SUCCESS
             }
             None => {
-                eprintln!("error: unknown diagnostic code {id}");
+                format.error(format_args!("unknown diagnostic code {id}"));
                 ExitCode::from(2)
             }
         },
-        ["check", path] => process(path, Mode::Check),
-        ["build", path] => process(path, Mode::Build(Path::new(path).with_extension("larpbc"))),
-        ["build", path, "-o", output] => process(path, Mode::Build(PathBuf::from(output))),
+        ["check", path] => process(path, Mode::Check, format),
+        ["build", path] => process(
+            path,
+            Mode::Build(Path::new(path).with_extension("larpbc")),
+            format,
+        ),
+        ["build", path, "-o", output] => process(path, Mode::Build(PathBuf::from(output)), format),
         ["run", path, options @ ..] => match run_options(options) {
-            Ok(run) => process(path, Mode::Run(run)),
+            Ok(run) => process(path, Mode::Run(run), format),
             Err(message) => {
-                eprintln!("error: {message}");
+                format.error(message);
                 ExitCode::from(2)
             }
         },
-        ["dump", path] => process(path, Mode::Dump),
-        ["dump", path, "--ir"] => process(path, Mode::Ir),
-        ["fmt", path] if !path.starts_with("--") => process(path, Mode::Format(FormatMode::Write)),
+        ["dump", path] => process(path, Mode::Dump, format),
+        ["dump", path, "--ir"] => process(path, Mode::Ir, format),
+        ["fmt", path] if !path.starts_with("--") => {
+            process(path, Mode::Format(FormatMode::Write), format)
+        }
         ["fmt", path, "--check"] | ["fmt", "--check", path] if !path.starts_with("--") => {
-            process(path, Mode::Format(FormatMode::Check))
+            process(path, Mode::Format(FormatMode::Check), format)
         }
         ["fmt", path, "--stdout"] | ["fmt", "--stdout", path] if !path.starts_with("--") => {
-            process(path, Mode::Format(FormatMode::Stdout))
+            process(path, Mode::Format(FormatMode::Stdout), format)
         }
         _ => {
-            eprintln!("error: invalid arguments\n\n{HELP}");
+            format.error(format_args!("invalid arguments\n\n{HELP}"));
             ExitCode::from(2)
         }
     }
@@ -134,17 +206,17 @@ enum FormatMode {
     Stdout,
 }
 
-fn process(path: &str, mode: Mode) -> ExitCode {
+fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
     let mut file = match std::fs::File::open(path) {
         Ok(file) => file,
-        Err(error) => return input_error(path, &error),
+        Err(error) => return input_error(path, &error, format),
     };
     let mut prefix = Vec::new();
     if let Err(error) = Read::by_ref(&mut file).take(8).read_to_end(&mut prefix) {
-        return input_error(path, &error);
+        return input_error(path, &error, format);
     }
     if let Err(error) = file.rewind() {
-        return input_error(path, &error);
+        return input_error(path, &error, format);
     }
     if prefix == b"LARPBC\r\n"
         || Path::new(path)
@@ -152,7 +224,7 @@ fn process(path: &str, mode: Mode) -> ExitCode {
             .is_some_and(|ext| ext == "larpbc")
     {
         if matches!(mode, Mode::Ir | Mode::Build(_) | Mode::Format(_)) {
-            eprintln!("error: build, fmt, and dump --ir require source input");
+            format.error("build, fmt, and dump --ir require source input");
             return ExitCode::from(2);
         }
         let artifact = match larp_artifact::read(&mut file) {
@@ -163,17 +235,21 @@ fn process(path: &str, mode: Mode) -> ExitCode {
                     larp_artifact::ErrorKind::ResourceLimit => "LARP-B003",
                     _ => "LARP-B002",
                 };
-                eprintln!("error[{code}]: cannot load '{path}': {error}");
+                format.event(
+                    "artifact_error",
+                    Some(code),
+                    &format!("error[{code}]: cannot load '{path}': {error}"),
+                );
                 return ExitCode::from(1);
             }
         };
-        return execute(&artifact.module, &artifact.sources, mode);
+        return execute(&artifact.module, &artifact.sources, mode, format);
     }
     let text = if matches!(mode, Mode::Format(_)) {
         let mut bytes = Vec::new();
         let limit = larp_format::MAX_SOURCE_BYTES;
         if let Err(error) = file.take((limit + 1) as u64).read_to_end(&mut bytes) {
-            return input_error(path, &error);
+            return input_error(path, &error, format);
         }
         if bytes.len() > limit {
             let source = SourceFile::new(SourceId(0), path, "");
@@ -182,7 +258,7 @@ fn process(path: &str, mode: Mode) -> ExitCode {
                 source.span(0..0).unwrap(),
                 "Formatter source size limit exceeded",
             );
-            eprint!("{}", larp_diagnostics::render(&diagnostic, &source));
+            format.diagnostic(&diagnostic, &[source]);
             return ExitCode::from(1);
         }
         match String::from_utf8(bytes) {
@@ -191,25 +267,26 @@ fn process(path: &str, mode: Mode) -> ExitCode {
                 return input_error(
                     path,
                     &std::io::Error::new(std::io::ErrorKind::InvalidData, error),
+                    format,
                 );
             }
         }
     } else {
         let mut text = String::new();
         if let Err(error) = file.read_to_string(&mut text) {
-            return input_error(path, &error);
+            return input_error(path, &error, format);
         }
         text
     };
     let source = SourceFile::new(SourceId(0), path, text);
     if let Mode::Format(mode) = mode {
-        return format_source(path, &source, mode);
+        return format_source(path, &source, mode, format);
     }
     let compilation = match larp_compiler::compile(&source) {
         Ok(compilation) => compilation,
         Err(diagnostics) => {
             for diagnostic in diagnostics {
-                eprint!("{}", larp_diagnostics::render(&diagnostic, &source));
+                format.diagnostic(&diagnostic, std::slice::from_ref(&source));
             }
             return ExitCode::from(1);
         }
@@ -225,53 +302,60 @@ fn process(path: &str, mode: Mode) -> ExitCode {
                     std::fs::canonicalize(path).is_ok_and(|input| input == output)
                 })
             {
-                eprintln!("error: artifact output must differ from the source file");
+                format.error("artifact output must differ from the source file");
                 return ExitCode::from(2);
             }
             let bytes = match larp_artifact::encode(&compilation.bytecode, &[source]) {
                 Ok(bytes) => bytes,
                 Err(error) => {
-                    eprintln!("error[LARP-B003]: cannot encode artifact: {error}");
+                    format.event(
+                        "artifact_error",
+                        Some("LARP-B003"),
+                        &format!("error[LARP-B003]: cannot encode artifact: {error}"),
+                    );
                     return ExitCode::from(1);
                 }
             };
             if let Err(error) = write_file(&output, &bytes, None, None) {
-                eprintln!("error: cannot write '{}': {error}", output.display());
+                format.error(format_args!("cannot write '{}': {error}", output.display()));
                 return ExitCode::from(1);
             }
             ExitCode::SUCCESS
         }
-        mode => execute(&compilation.bytecode, &[source], mode),
+        mode => execute(&compilation.bytecode, &[source], mode, format),
     }
 }
 
-fn input_error(path: &str, error: &std::io::Error) -> ExitCode {
-    eprintln!("error: cannot read '{path}': {error}");
+fn input_error(path: &str, error: &std::io::Error, format: DiagnosticFormat) -> ExitCode {
+    format.error(format_args!("cannot read '{path}': {error}"));
     ExitCode::from(1)
 }
 
-fn execute(module: &larp_bytecode::VerifiedModule, sources: &[SourceFile], mode: Mode) -> ExitCode {
+fn execute(
+    module: &larp_bytecode::VerifiedModule,
+    sources: &[SourceFile],
+    mode: Mode,
+    format: DiagnosticFormat,
+) -> ExitCode {
     match mode {
         Mode::Check => {}
         Mode::Dump => print!("{}", module.disassemble()),
         Mode::Run(run) => {
             let mut input = std::io::stdin().lock();
             let mut host = larp_vm::Host::new(Some(&run.arguments), Some(&mut input));
+            let mut stderr = std::io::stderr().lock();
+            let mut inspection = Inspection {
+                output: &mut stderr,
+                format,
+            };
             if let Err(diagnostic) = larp_vm::execute_with_host(
                 module,
                 &mut std::io::stdout().lock(),
-                &mut std::io::stderr().lock(),
+                &mut inspection,
                 &mut host,
                 run.limits,
             ) {
-                if let Some(source) = sources
-                    .iter()
-                    .find(|source| source.slice(diagnostic.primary.span).is_some())
-                {
-                    eprint!("{}", larp_diagnostics::render(&diagnostic, source));
-                } else {
-                    eprintln!("error[{}]: {}", diagnostic.code.id, diagnostic.message);
-                }
+                format.diagnostic(&diagnostic, sources);
                 return ExitCode::from(1);
             }
         }
@@ -282,12 +366,17 @@ fn execute(module: &larp_bytecode::VerifiedModule, sources: &[SourceFile], mode:
     ExitCode::SUCCESS
 }
 
-fn format_source(path: &str, source: &SourceFile, mode: FormatMode) -> ExitCode {
+fn format_source(
+    path: &str,
+    source: &SourceFile,
+    mode: FormatMode,
+    format: DiagnosticFormat,
+) -> ExitCode {
     let formatted = match larp_format::format(source) {
         Ok(formatted) => formatted,
         Err(diagnostics) => {
             for diagnostic in diagnostics {
-                eprint!("{}", larp_diagnostics::render(&diagnostic, source));
+                format.diagnostic(&diagnostic, std::slice::from_ref(source));
             }
             return ExitCode::from(1);
         }
@@ -295,12 +384,16 @@ fn format_source(path: &str, source: &SourceFile, mode: FormatMode) -> ExitCode 
     match mode {
         FormatMode::Stdout => {
             if let Err(error) = std::io::stdout().lock().write_all(formatted.as_bytes()) {
-                eprintln!("error: cannot write formatted source: {error}");
+                format.error(format_args!("cannot write formatted source: {error}"));
                 return ExitCode::from(1);
             }
         }
         FormatMode::Check if formatted != source.text() => {
-            eprintln!("{path}: source needs formatting");
+            format.event(
+                "format_needed",
+                None,
+                &format!("{path}: source needs formatting"),
+            );
             return ExitCode::from(1);
         }
         FormatMode::Write if formatted != source.text() => {
@@ -316,7 +409,7 @@ fn format_source(path: &str, source: &SourceFile, mode: FormatMode) -> ExitCode 
                 )
             })();
             if let Err(error) = result {
-                eprintln!("error: cannot format '{path}': {error}");
+                format.error(format_args!("cannot format '{path}': {error}"));
                 return ExitCode::from(1);
             }
         }

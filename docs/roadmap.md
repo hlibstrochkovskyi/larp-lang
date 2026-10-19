@@ -180,6 +180,9 @@ and supported-platform decisions. The maintainer selected the
 bounded fuzz campaigns passed on `cc1354d`; see
 [the exact-commit evidence](validation-fuzzing.md#hosted-verification). Later
 changes require their own results before being reported as passed.
+The [readiness audit](preview-readiness.md) also records unresolved grouped-place
+grammar and constant-control-flow return checks. JSON CLI diagnostics and exact
+runtime-span contracts are implemented; see the [protocol](diagnostics.md).
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in
 the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource
