@@ -1,0 +1,8 @@
+main_character {
+    let callback = () => {
+        if (cap) {
+            return cap;
+        }
+        return 44;
+    };
+}

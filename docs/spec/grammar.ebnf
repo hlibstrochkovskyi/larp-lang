@@ -36,7 +36,8 @@ binding       = ( type, IDENT | "let", IDENT ), "=", expression, ";" ;
 lazy          = "nonchalant", type, IDENT, "=", expression, ";" ;
 assignment    = place, ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ),
                 expression, ";" ;
-place         = ( IDENT | "self" ), { ".", IDENT | "[", expression, "]" } ;
+place         = ( IDENT | "self" | "(", place, ")" ),
+                { ".", IDENT | "[", expression, "]" } ;
 if_stmt       = "if", "(", expression, ")", block,
                 [ "else", ( block | if_stmt ) ] ;
 while_stmt    = "locked_in", "while", "(", expression, ")", block ;

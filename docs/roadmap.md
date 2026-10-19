@@ -128,7 +128,7 @@ value immediately. `sybau` dynamically suppresses ordinary `yap` across calls
 without removing observation effects or muting inspection/diagnostics. Source
 return/break lowering and verified control-flow joins preserve nesting.
 
-All 85 current corpus cases are active and executable. This closes the current
+All 89 current corpus cases are active and executable. This closes the current
 fixture inventory, not the developer-preview release gate or every normative
 rule. See [lazy and suppression validation](validation-lazy-and-suppression.md).
 
@@ -180,8 +180,8 @@ and supported-platform decisions. The maintainer selected the
 bounded fuzz campaigns passed on `cc1354d`; see
 [the exact-commit evidence](validation-fuzzing.md#hosted-verification). Later
 changes require their own results before being reported as passed.
-The [readiness audit](preview-readiness.md) also records unresolved grouped-place
-grammar and constant-control-flow return checks. JSON CLI diagnostics and exact
+The [readiness audit](preview-readiness.md) records the grouped-place grammar and
+constant-control-flow corrections with their validation. JSON CLI diagnostics and exact
 runtime-span contracts are implemented; see the [protocol](diagnostics.md).
 
 Gate: all v0.1 corpus cases are executed by a real harness; no pending cases in

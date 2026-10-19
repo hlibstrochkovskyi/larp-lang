@@ -1,0 +1,9 @@
+sidequest choose(verdict flag) -> mf uses() {
+    if (flag) {
+        return 42;
+    }
+}
+
+main_character {
+    yap(choose(fr));
+}

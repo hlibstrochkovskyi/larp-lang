@@ -219,7 +219,7 @@ fn types_scopes_signatures_and_dead_code_are_checked_before_execution() {
             "LARP-N002",
         ),
         (
-            "sidequest f() -> mf { if (fr) { return 1; } } main_character {}",
+            "sidequest f(verdict flag) -> mf { if (flag) { return 1; } } main_character {}",
             "LARP-T007",
         ),
         (

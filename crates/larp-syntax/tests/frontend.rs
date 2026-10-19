@@ -194,6 +194,48 @@ fn assignment_places_allow_named_index_and_member_paths_but_reject_temporary_roo
 }
 
 #[test]
+fn grouped_assignment_places_preserve_paths_operators_and_source_ranges() {
+    use larp_syntax::{ExprKind, StatementKind};
+    use larp_types::Binary;
+
+    for (place, expected_operator, operator) in [
+        ("((value))", None, "="),
+        ("((self).field)", Some(Binary::Add), "+="),
+        ("((values)[next()])", Some(Binary::Subtract), "-="),
+        (
+            "(((objects)[first()]).field)[second()]",
+            Some(Binary::Multiply),
+            "*=",
+        ),
+    ] {
+        let text = format!("main_character {{ {place} {operator} rhs(); }}");
+        let source = SourceFile::new(SourceId(0), "grouped-places.larp", text);
+        let program = larp_syntax::parse(&source).unwrap();
+        let StatementKind::Assignment { target, op, value } = &program.main.statements[0].kind
+        else {
+            panic!("Expected a grouped-place assignment");
+        };
+        assert_eq!(*op, expected_operator);
+        assert_eq!(source.slice(target.span), Some(place));
+        assert!(matches!(value.kind, ExprKind::Call { .. }));
+    }
+    for place in [
+        "((1))",
+        "([1])[0]",
+        "((make()))[0]",
+        "((values).make())[0]",
+        "((left + right))[0]",
+        "((new Cell()).value)",
+    ] {
+        let errors = parse(&format!("main_character {{ {place} += 1; }}")).unwrap_err();
+        assert!(
+            errors.iter().any(|error| error.code.id == "LARP-P001"),
+            "{place}"
+        );
+    }
+}
+
+#[test]
 fn hostile_array_and_index_nesting_and_long_lists_are_bounded() {
     let nested_arrays = format!(
         "main_character {{ let x = {}0{}; }}",

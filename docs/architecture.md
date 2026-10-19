@@ -45,6 +45,9 @@ flowchart LR
    conversion, and exact extension resolution are checked before lowering.
    Scenario outlining and transitive call-graph specialization enforce region
    restrictions before lowering.
+   Known scalar conditions become single CFG successors, so return checks and
+   definite field initialization do not include impossible paths. Both source
+   branches are still checked, and regional specialization scans all typed blocks.
 5. **Typed IR:** explicit basic blocks, typed local slots, temporaries, calls,
    branch targets, and terminators. Initially use mutable slots rather than SSA.
    Preserve source locations, effect signatures, and lexical region metadata.

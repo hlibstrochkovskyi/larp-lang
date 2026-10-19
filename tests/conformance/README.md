@@ -7,7 +7,7 @@ arguments is an empty list. Compile-error cases do not consume host input.
 
 Cases in `manifest.json` are either **active** or **pending**. Active cases run
 through the real compiler and VM. Pending cases specify future milestones and
-must not be reported as passing tests. The current inventory contains 85 cases,
+must not be reported as passing tests. The current inventory contains 89 cases,
 all active, with no pending fixtures. This finite corpus is not a proof that
 every normative rule or developer-preview release gate is complete.
 
@@ -32,7 +32,7 @@ through both `check` and `run`. It checks exit codes, exact stdout/declared insp
 codes, and presence of text source locations. JSON runs additionally check exact
 runtime ranges, unchanged stdout/status, and reconstruct inspection output.
 `--all` includes pending cases when
-any exist; currently it selects the same 85 active cases and passes. An optional
+any exist; currently it selects the same 89 active cases and passes. An optional
 `--bin PATH` selects an existing binary. `--gc-stress` requests collection at
 every object, array, closure, and lazy-cell allocation safepoint; CI executes the
 corpus with both normal collection and this stress mode. `--artifacts` adds

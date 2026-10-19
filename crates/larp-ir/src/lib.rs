@@ -180,8 +180,13 @@ pub enum Terminator {
 
 impl Function {
     pub fn reachable(&self) -> Vec<bool> {
+        self.reachable_from(0)
+    }
+
+    /// Structural reachability from an existing block, including expression-local flow.
+    pub fn reachable_from(&self, entry: BlockId) -> Vec<bool> {
         let mut visited = vec![false; self.blocks.len()];
-        let mut pending = vec![0];
+        let mut pending = vec![entry];
         while let Some(id) = pending.pop() {
             if visited[id] {
                 continue;

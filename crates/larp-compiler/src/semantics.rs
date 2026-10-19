@@ -187,6 +187,7 @@ struct Builder<'a> {
     generated_base: usize,
     required: Effects,
     inferred_result: Option<Option<Type>>,
+    inferred_returns: Vec<(Type, Span)>,
     scenario_boundary: bool,
     scenario_outer: std::collections::HashSet<Local>,
     scenario_forbidden: std::collections::HashSet<String>,
@@ -226,6 +227,7 @@ impl<'a> Builder<'a> {
             generated_base,
             required: Effects::NONE,
             inferred_result: None,
+            inferred_returns: Vec::new(),
             scenario_boundary: false,
             scenario_outer: Default::default(),
             scenario_forbidden: Default::default(),
@@ -237,6 +239,18 @@ impl<'a> Builder<'a> {
     fn finish(&mut self) {
         if !self.errors.is_empty() {
             return;
+        }
+        if let Some(Some(expected)) = &self.inferred_result {
+            // Earlier unreachable returns did not constrain result inference,
+            // but must agree once a reachable return establishes the result.
+            for (found, span) in &self.inferred_returns {
+                if let Err(error) = self.matches(expected.clone(), found.clone(), *span) {
+                    self.errors.push(*error);
+                }
+            }
+            if !self.errors.is_empty() {
+                return;
+            }
         }
         let reachable = self.function.reachable();
         for (block, live) in self.function.blocks.iter_mut().zip(reachable) {
@@ -401,6 +415,20 @@ impl<'a> Builder<'a> {
         }
         Ok(value)
     }
+    // Preserve constant control flow for return and initialization analysis.
+    // Statement lowering still checks both source branches before bytecode emission.
+    fn branch(&mut self, condition: &Value, when_true: BlockId, when_false: BlockId, span: Span) {
+        let terminator = match &condition.constant {
+            Some(Scalar::Verdict(true)) => Terminator::Goto(when_true),
+            Some(Scalar::Verdict(false)) => Terminator::Goto(when_false),
+            _ => Terminator::Branch {
+                condition: condition.slot,
+                when_true,
+                when_false,
+            },
+        };
+        self.terminate(terminator, span);
+    }
     fn statement(&mut self, statement: &ast::Statement) -> Result<()> {
         let span = statement.span;
         match &statement.kind {
@@ -477,14 +505,7 @@ impl<'a> Builder<'a> {
                 let when_true = self.new_block(then_block.span);
                 let when_false = self.new_block(span);
                 let merge = self.new_block(span);
-                self.terminate(
-                    Terminator::Branch {
-                        condition: condition.slot,
-                        when_true,
-                        when_false,
-                    },
-                    span,
-                );
+                self.branch(&condition, when_true, when_false, span);
                 self.current = when_true;
                 self.block(then_block, true);
                 self.terminate(Terminator::Goto(merge), span);
@@ -502,14 +523,7 @@ impl<'a> Builder<'a> {
                 self.terminate(Terminator::Goto(test), span);
                 self.current = test;
                 let condition = self.condition(condition)?;
-                self.terminate(
-                    Terminator::Branch {
-                        condition: condition.slot,
-                        when_true: run,
-                        when_false: done,
-                    },
-                    span,
-                );
+                self.branch(&condition, run, done, span);
                 self.current = run;
                 self.breaks.push((done, self.silence_depth));
                 self.block(body, true);
@@ -555,18 +569,14 @@ impl<'a> Builder<'a> {
                 let run = self.new_block(body.span);
                 let step = self.new_block(span);
                 let done = self.new_block(span);
-                self.terminate(Terminator::Goto(test), span);
+                // Keep the initial bound comparison separate from the backedge:
+                // known bounds prove zero or at least one iteration, never all iterations.
+                let first = self.binary(Binary::Less, start, end.clone(), span, true)?;
+                self.branch(&first, run, done, span);
                 self.current = test;
                 let current = self.read(&binding, span)?;
                 let condition = self.binary(Binary::Less, current, end, span, true)?;
-                self.terminate(
-                    Terminator::Branch {
-                        condition: condition.slot,
-                        when_true: run,
-                        when_false: done,
-                    },
-                    span,
-                );
+                self.branch(&condition, run, done, span);
                 self.current = run;
                 self.breaks.push((done, self.silence_depth));
                 self.block(body, true);
@@ -640,6 +650,7 @@ impl<'a> Builder<'a> {
                     None => Some(self.function.result.clone()),
                     Some(inferred) => inferred.clone(),
                 };
+                let expression_entry = self.current;
                 let (slot, result_type) = if let Some(expression) = expression {
                     let value = self.expression(expression, expected.clone(), true)?;
                     (Some(value.slot), value.ty)
@@ -648,6 +659,11 @@ impl<'a> Builder<'a> {
                 };
                 if let Some(expected) = expected {
                     self.matches(expected, result_type.clone(), span)?;
+                }
+                if self.inferred_result.is_some()
+                    && self.function.reachable_from(expression_entry)[self.current]
+                {
+                    self.inferred_returns.push((result_type.clone(), span));
                 }
                 if matches!(self.inferred_result, Some(None))
                     && self.function.reachable()[self.current]
@@ -1232,14 +1248,7 @@ impl<'a> Builder<'a> {
         } else {
             (done, run)
         };
-        self.terminate(
-            Terminator::Branch {
-                condition: left.slot,
-                when_true,
-                when_false,
-            },
-            span,
-        );
+        self.branch(&left, when_true, when_false, span);
         self.current = run;
         let right = self.expression(right, Some(Type::Verdict), evaluate && !skip)?;
         self.emit(

@@ -1,0 +1,47 @@
+sidequest answer() -> mf uses() {
+    if (fr) {
+        return 42;
+    }
+}
+
+sidequest once() -> mf uses() {
+    locked_in while (!cap) {
+        return 7;
+    }
+}
+
+sidequest singleRange() -> mf {
+    npc loop (mf i in 0..1) {
+        return 44;
+    }
+}
+
+archetype Counter {
+    highkey mf value;
+
+    init() {
+        if (40 < 42) {
+            self.value = 40;
+        }
+    }
+}
+
+main_character {
+    let callback = () => {
+        if (1 + 1 == 2) {
+            return 43;
+        }
+    };
+    yap(answer());
+    yap(once());
+    yap(singleRange());
+    yap(callback());
+    nonchalant mf saved = answer();
+    yap(saved);
+    let current = new Counter();
+    larp (current) as Trial {
+        current.value += answer() - 40;
+        canon current.value;
+    }
+    yap(current.value);
+}

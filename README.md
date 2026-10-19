@@ -95,7 +95,7 @@ by default; `--stdout` previews and `--check` verifies formatting without change
 
 The compiler implementation direction is Rust → typed IR → bytecode → LARP VM.
 The language semantics do not depend on Rust, LLVM, or any particular collector.
-All 85 current conformance fixtures are active; the corpus is a finite acceptance
+All 89 current conformance fixtures are active; the corpus is a finite acceptance
 suite, not a proof that every language rule is implemented. Specification v0.1
 defines the broader target, and M6 developer-preview gates remain open.
 

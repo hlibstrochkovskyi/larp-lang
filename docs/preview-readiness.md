@@ -3,8 +3,8 @@
 Date: 2026-10-19. **The preview gate remains open.** The project has an
 executable compiler/VM and candidate archives; neither a green finite corpus nor
 this audit approves the whole language specification. This document connects
-requirements to inspectable evidence and records counterexamples that still need
-resolution. It does not replace the [specification](spec/v0.1.md),
+requirements to inspectable evidence and records identified counterexamples and
+their resolution. It does not replace the [specification](spec/v0.1.md),
 [implementation status](implementation-status.md), or [roadmap](roadmap.md).
 
 "Exercised" below means working implementation and relevant executed tests exist.
@@ -19,11 +19,11 @@ still prevents closing that requirement.
 | §1: independent compilation and sequential execution | [Compiler entry](../crates/larp-compiler/src/lib.rs), [typed IR](../crates/larp-ir/src/lib.rs), [VM](../crates/larp-vm/src/lib.rs), CLI disassembly tests | Exercised; source compiles to verified bytecode, without host eval or translation |
 | §1: left-to-right evaluation and checked assignment places | [Core tests](../crates/larp-compiler/tests/core.rs), [collection tests](../crates/larp-compiler/tests/collections.rs) | Exercised, including bounds-before-RHS and nested fixed-array sibling writes |
 | §2: lexical forms, comments, escapes, UTF-8 locations | [Frontend tests](../crates/larp-syntax/tests/frontend.rs), [source tests](../crates/larp-source/src/lib.rs) | Exercised; Unicode strings and byte/scalar distinctions are explicit |
-| §2: exact grammar acceptance | [Grammar](spec/grammar.ebnf), parser `is_place`/grouping | **Open G1:** grouped assignment places are accepted beyond the published production |
+| §2: exact grammar acceptance | [Grammar](spec/grammar.ebnf), [grouped-place tests](../crates/larp-compiler/tests/grouped_places.rs) | G1 resolved: the production explicitly permits grouping; temporary roots and immutable targets remain rejected |
 | §3: exact numeric types, contextual literals, conversions, IEEE behavior | Core/function tests; [context regressions](validation-contextual-equality.md) | Exercised; recent operand-order defects show why passing earlier fixtures was insufficient |
 | §3: equality and invariant payloads | Function, collection, object, and role tests | Exercised for supported payloads/identities; dynamic-array/function equality is rejected |
 | §4: scopes, parameters, captures, forward calls and recursion | [Function tests](../crates/larp-compiler/tests/functions_and_results.rs), core tests | Exercised; captures are snapshots and ordinary prelude names can be shadowed |
-| §4: return paths and constant control flow | Compiler `finish` and IR `reachable` | **Open G2:** impossible constant-condition successors still count as reachable |
+| §4: return paths and constant control flow | Compiler `branch`/`finish`, IR reachability, [constant-flow tests](../crates/larp-compiler/tests/constant_flow.rs) | G2 resolved for established scalar conditions and range entry; dead code still receives semantic checks and settled inferred returns are validated |
 | §4: loop bounds, read-only indices, breaks and short circuit | Core tests and conformance loop/short-circuit cases | Exercised, including end-exclusive integer ranges and skipped constant evaluation |
 | §4: local lazy cells, captures, forcing and abort effects | [Lazy tests](../crates/larp-compiler/tests/lazy_and_suppression.rs), [lazy VM tests](../crates/larp-vm/src/lazy_tests.rs) | Exercised; SnapshotValue captures/results and memoized forcing are checked |
 | §5: nominal classes, visibility and constructor publication | [Object tests](../crates/larp-compiler/tests/objects.rs), [object validation](validation-objects.md) | Exercised; no partially initialized identity is published |
@@ -40,9 +40,9 @@ still prevents closing that requirement.
 | §10: stable diagnostic data and exact runtime spans | [Protocol](diagnostics.md), renderer/CLI tests, all ten runtime contracts | Exercised in text/JSON, formatted source and loaded artifacts; this closes a previously weaker location-presence check |
 | §11: baseline design review | Numeric conversion, finite effects, conservative regions, selective-commit limitation | **Open:** implementation does not constitute maintainer acceptance of these policies |
 
-## Confirmed reconciliation work
+## Resolved reconciliation work
 
-### G1: grouped assignment places
+### G1: grouped assignment places — resolved
 
 The following source currently executes and prints `2\n`:
 
@@ -50,15 +50,15 @@ The following source currently executes and prints `2\n`:
 main_character { mf x = 1; (x) = 2; yap(x); }
 ```
 
-The grammar's `place` production starts with IDENT or `self`, without grouped
-roots. The parser discards grouping before checking `is_place`, so its accepted
-syntax is wider. Reconcile the production with an explicit grouped-place policy,
-or preserve enough grouping information to reject it. Do not describe the
-current grammar as exact until that decision is reflected in grammar and tests.
+The earlier production started with IDENT or `self`, while the parser already
+accepted grouping. The production now recursively permits parenthesized places.
+Syntax and compiler tests exercise grouped local/self/member/index paths,
+read-only targets, temporary rejection, once-only index evaluation,
+bounds-before-RHS behavior and sibling-preserving fixed-array writes.
 
-### G2: constant-condition return reachability
+### G2: constant-condition return reachability — resolved
 
-This source currently fails with `LARP-T007`:
+This source previously failed with `LARP-T007`; it now executes with stdout `42\n`:
 
 ```larp
 sidequest answer() -> mf uses() {
@@ -67,20 +67,25 @@ sidequest answer() -> mf uses() {
 main_character { yap(answer()); }
 ```
 
-Section 4 requires a return on every reachable non-aborting path. The compiler
-emits both successors for a constant condition, and structural IR reachability
-visits both. Its return check consequently treats the impossible fallthrough as
-live. Reconcile constant `if`/`while` control flow and constructor initialization
-without skipping type/effect checks in dead branches. Add positive and negative
-execution tests before claiming this rule is satisfied.
-Under the current normative wording, the example should compile and print
-`42\n`; conservatively rejecting it is not a completed implementation of that rule.
+Known scalar conditions now choose a single CFG successor. This applies to
+`if`, `while` and short-circuit evaluation. Range lowering separately checks the
+saved initial bounds, preserving proof of zero/at least one iteration without
+treating later index tests as constant. Return checks and constructor
+initialization use these feasible paths. Unknown conditions remain conservative.
+
+Both source branches are still checked, including effects and private/region
+access. Regional specialization scans all typed blocks before bytecode lowering.
+Inferred lambda results receive a final compatibility check for earlier ordinary
+dead returns, while nonreturning expressions do not supply false `unit` results.
+No nested-body replay or whole-body type unification is introduced.
+See [control-flow validation](validation-control-flow.md) for positive/negative
+evidence and the explicit limits of sequential literal context.
 
 ## Toolchain and distribution gates
 
 | Gate | Evidence and remaining work |
 | --- | --- |
-| Real conformance execution | 85 active cases, no pending entries; normal/stress, loaded artifacts, and formatted loaded artifacts execute in CI. The inventory is finite, not complete semantic coverage. |
+| Real conformance execution | 89 active cases, no pending entries; normal/stress, loaded artifacts, and formatted loaded artifacts execute through the harness. The inventory is finite, not complete semantic coverage; current-commit CI must be checked separately. |
 | Artifact loading and source maps | [Wire format](bytecode-format-v1.md), [v2 input additions](bytecode-format-v2.md), loader/verifier/CLI tests; VM execution accepts verified modules only. |
 | Source formatter | [Formatter contract](formatter.md), lossless syntax tests, and formatted conformance execution; no token/spelling/order rewrite. |
 | Robustness and resource evidence | [Bounded campaigns](validation-fuzzing.md) and fresh-process measurements exist. No sustained coverage, hostile-code sandbox, heap-byte limit, or universal resource-bound proof is claimed. |

@@ -4,8 +4,9 @@ The compiler currently implements algorithmic programs, nominal objects, and iso
 Specification v0.1. Programs are lexed, parsed, name/type/effect checked, lowered
 into typed control-flow IR, compiled to stack bytecode, verified, and executed by LARP's VM.
 No host `eval`, source-to-Python/JavaScript translation, or AST execution is used.
-The [preview audit](preview-readiness.md) records remaining grammar and
-constant-control-flow mismatches; the finite passing corpus does not close them.
+The [preview audit](preview-readiness.md) records resolved semantic regressions
+and remaining design/platform/release gates; a finite passing corpus does not
+approve the whole proposed specification.
 
 ## Working features
 
@@ -15,6 +16,9 @@ constant-control-flow mismatches; the finite passing corpus does not close them.
   IEEE floating-point operations, text concatenation, comparisons, and `mogg`.
 - Real short-circuit `&&`/`||`; constant folding preserves skipped computation.
 - Functions with explicit signatures, forward calls, mutual recursion, return checks.
+  Established constant conditions and initial range bounds select feasible
+  return/initialization paths while dead branches still receive semantic checks.
+  See [control-flow validation](validation-control-flow.md).
 - First-class named functions and prelude functions; explicit `fn(...) -> T` types,
   contextual or annotated lambdas, nested closures, and returned closures.
 - Immutable captures copied at closure creation; later outer reassignment does
@@ -322,7 +326,7 @@ allocation failure; fuel and traced-object counters are not a memory sandbox.
 `python3 tools/run_conformance.py` executes every active fixture through `check`
 and `run`, comparing stdout, explicitly declared inspection output, or primary diagnostic codes and source locations.
 `--gc-stress` repeats execution with collection at every object, array, closure,
-and lazy-cell allocation safepoint. All 85 current fixtures are active; `--all`
+and lazy-cell allocation safepoint. All 89 current fixtures are active; `--all`
 selects the same complete inventory and passes. `--artifacts` also builds valid
 programs, loads/verifies them, and compares execution with source; invalid source
 must fail build without producing output. `--formatted` formats temporary copies,

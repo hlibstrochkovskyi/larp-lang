@@ -1,0 +1,29 @@
+archetype Cell {
+    highkey hediJeans<mf, 2> values;
+
+    init() {
+        ((self).values) = [10, 20];
+    }
+}
+
+sidequest index(mf marker) -> mf uses(observe) {
+    yap(marker);
+    return 0;
+}
+
+sidequest rhs(mfs<Cell> cells) -> mf uses(read, write, observe, abort) {
+    yap(3);
+    ((cells[0]).values)[1] = 99;
+    return 5;
+}
+
+main_character {
+    mf local = 1;
+    ((local)) += 1;
+    no_cap(local == 2);
+
+    mfs<Cell> cells = [new Cell()];
+    (((cells)[index(1)]).values)[index(2)] += rhs(cells);
+    yap(cells[0].values[0]);
+    yap(cells[0].values[1]);
+}
