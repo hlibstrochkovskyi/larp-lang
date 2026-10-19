@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="docs/LARP%20Programming%20Language%20Logo.png" alt="LARP programming language logo" width="720">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/LARP%20Programming%20Language%20Doodle%20Logo.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/LARP%20Programming%20Language%20Logo.png">
+    <img src="docs/LARP%20Programming%20Language%20Logo.png" alt="LARP programming language logo" width="720">
+  </picture>
 </p>
 
 # LARP
