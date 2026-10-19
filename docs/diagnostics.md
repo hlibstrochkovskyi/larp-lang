@@ -15,6 +15,11 @@ or file/tooling failure, 2 for invalid CLI usage. Successful commands emit no
 completion record. Stdout keeps its usual contents, including program output,
 formatted source, dumps, explanations, help, and version text. A value after
 `run ... --` is a program argument, even if it spells this global option.
+The separate `larp --version --json` command reports toolchain and format
+capabilities on stdout; its `schema_version` belongs to the
+[version-info protocol](versioning.md#machine-readable-identity), independently
+of this stderr diagnostic schema. The diagnostic option does not select the
+version command's stdout format.
 
 In JSON mode, stderr contains UTF-8 JSON objects separated by physical LF.
 Newlines, tabs, quotes, backslashes, and all U+0000–U+001F controls inside strings

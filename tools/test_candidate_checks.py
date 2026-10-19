@@ -8,6 +8,7 @@ import unittest
 
 from check_candidate import checked_contents
 from check_candidate_matrix import MODES, validate
+from version_contract import validate_identity, version_channel
 
 REVISION = "a" * 40
 
@@ -23,6 +24,10 @@ def synthetic_reports() -> dict:
             "version": "0.1.0-dev", "target": "x86_64-unknown-linux-gnu",
             "rustc": "synthetic compiler metadata", "cargo": "synthetic Cargo metadata",
             "checksummed_files": 10, "conformance_cases": 2, "payload_unchanged": True,
+            "identity": {"schema_version": 1, "name": "larp", "version": "0.1.0-dev",
+                         "channel": "development", "language_spec": "0.1", "language_status": "experimental",
+                         "diagnostics_schema": 1, "artifact": {"write": 2, "read": [1, 2]}},
+            "historical_versions": [1, 2],
             "conformance_modes": [{"flags": copy.copy(mode), "passed": 2, "pending": 0} for mode in MODES],
             "environment": {"system": "Linux", "machine": "x86_64", "glibc": "synthetic libc",
                             "os_release": {"ID": "ubuntu", "VERSION_ID": release},
@@ -49,6 +54,37 @@ class MatrixEvidenceTests(unittest.TestCase):
         del reports["ubuntu-26.04"]
         with self.assertRaises(ValueError):
             validate(reports, REVISION)
+
+    def test_different_protocol_or_unexecuted_read_version_is_rejected(self):
+        for field, value in (("identity", {"artifact": {"read": [1, 2]}, "diagnostics_schema": 2}),
+                             ("historical_versions", [2])):
+            with self.subTest(field=field):
+                reports = synthetic_reports()
+                reports["ubuntu-26.04"][field] = value
+                with self.assertRaises(ValueError):
+                    validate(reports, REVISION)
+
+
+class VersionIdentityTests(unittest.TestCase):
+    def test_semver_prerelease_and_build_metadata_are_distinct(self):
+        for version, channel in (("0.1.0-dev", "development"), ("0.1.0-dev.7+local", "development"),
+                                 ("0.1.0-preview.1", "preview"), ("0.1.0-rc.1", "prerelease"),
+                                 ("0.1.0+preview.1", "release")):
+            self.assertEqual(version_channel(version), channel)
+        for version in ("01.1.0", "0.1.0-01", "0.1.0-preview..1", "0.1.0-", "0.1.0+", "0.1.0-🦀"):
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                version_channel(version)
+
+    def test_protocol_types_and_inconsistent_artifact_capabilities_are_rejected(self):
+        original = synthetic_reports()["ubuntu-24.04"]["identity"]
+        validate_identity(original, "0.1.0-dev", "0.1")
+        for field, value in (("schema_version", 2), ("schema_version", True), ("diagnostics_schema", "1"),
+                             ("channel", "release"), ("artifact", {"write": 2, "read": [1]}),
+                             ("artifact", {"write": True, "read": [1, 2]})):
+            with self.subTest(field=field, value=value), self.assertRaises(ValueError):
+                changed = copy.deepcopy(original)
+                changed[field] = value
+                validate_identity(changed, "0.1.0-dev", "0.1")
 
     def test_two_reports_from_the_same_os_are_rejected(self):
         reports = synthetic_reports()

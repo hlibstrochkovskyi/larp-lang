@@ -1,0 +1,4 @@
+main_character {
+    mfs<text> cli = args();
+    yap(cli.size());
+}

@@ -15,6 +15,8 @@ import subprocess
 import tarfile
 import tomllib
 
+from version_contract import specification_version, validate_identity, version_channel
+
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE = {"Ideas-not-for push!", ".git", ".git-foundation", ".agents", ".codex", ".aws", "artifacts", "target"}
 RESERVED = {"bin/larp", "PACKAGE.md", "BUILD.json", "SHA256SUMS", "THIRD_PARTY.md"}
@@ -73,8 +75,10 @@ def main() -> None:
             files[str(path)] = (stream.read(), 0o755 if member.mode & 0o111 else 0o644)
     package = tomllib.loads(files["Cargo.toml"][0].decode("utf-8"))["workspace"]["package"]
     version = package["version"]
-    if not re.fullmatch(r"\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", version):
-        parser.error("Unsupported package version")
+    try:
+        version_channel(version)
+    except ValueError as error:
+        parser.error(str(error))
     if package.get("license") != "MIT" or not files.get("LICENSE", (b"", 0))[0].startswith(b"MIT License\n"):
         parser.error("The archived source must contain the selected MIT license and Cargo metadata")
     epoch = int(report["controlled_environment"]["SOURCE_DATE_EPOCH"])
@@ -87,6 +91,12 @@ def main() -> None:
         (output / "package-report.json").write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
 
     try:
+        version_output = subprocess.run([report["builds"][0]["binary"], "--version", "--json"],
+                                        input=b"", capture_output=True, timeout=15)
+        if version_output.returncode or version_output.stderr:
+            raise RuntimeError("Candidate CLI must support --version --json without errors")
+        identity = json.loads(version_output.stdout)
+        validate_identity(identity, version, specification_version(files["docs/spec/v0.1.md"][0].decode("utf-8")))
         compiler = report["rustc_executable"]
         current_compiler = subprocess.check_output([compiler, "-Vv"], text=True, timeout=15).strip()
         if current_compiler != report["rustc"]:
@@ -126,6 +136,7 @@ def main() -> None:
                       "revision": revision, "target": report["target"], "license": "MIT",
                       "status": "experimental candidate", "source_archive_sha256": report["archive_sha256"],
                       "binary_sha256": digest(binaries[0]), "rustc": report["rustc"], "cargo": report["cargo"],
+                      "toolchain_identity": identity,
                       "source_date_epoch": epoch, "abi": abi,
                       "rust_runtime_notices": notice_manifest,
                       "reproducibility": "Both clean build binaries and both candidate archives matched within this run"}

@@ -14,6 +14,8 @@ import sys
 import tarfile
 import tomllib
 
+from version_contract import specification_version, validate_identity
+
 ROOT = Path(__file__).resolve().parents[1]
 MAX_BYTES = 128 * 1024 * 1024
 PRIVATE = {"Ideas-not-for push!", ".git", ".git-foundation", ".agents", ".codex", ".aws", "artifacts", "target"}
@@ -178,6 +180,20 @@ def main() -> None:
         version = invoke([str(executable), "--version"], root)
         if not version.startswith(f"larp {package['version']} "):
             raise RuntimeError("Candidate CLI reports an unexpected version")
+        identity = json.loads(invoke([str(executable), "--version", "--json"], root))
+        validate_identity(identity, package["version"],
+                          specification_version(root.joinpath("docs/spec/v0.1.md").read_text(encoding="utf-8")))
+        if identity != metadata.get("toolchain_identity"):
+            raise RuntimeError("Actual CLI protocol capabilities differ from the package provenance")
+        report["identity"] = identity
+        version_output = output / "version-contract"
+        invoke([sys.executable, "-B", str(root / "tools/check_version.py"), "--bin", str(executable),
+                "--output", str(version_output)], root, timeout=90)
+        version_report = json.loads(version_output.joinpath("version-report.json").read_text(encoding="utf-8"))
+        if (version_report.get("status") != "passed" or version_report.get("identity") != identity
+                or version_report.get("binary_sha256") != contents["bin/larp"]):
+            raise RuntimeError("Packaged version/historical artifact contract did not pass")
+        report["historical_versions"] = version_report["historical_versions"]
         manifest = json.loads(root.joinpath("tests/conformance/manifest.json").read_text(encoding="utf-8"))
         if (not isinstance(manifest, dict) or manifest.get("schema_version") != 3
                 or not isinstance(manifest.get("cases"), list)

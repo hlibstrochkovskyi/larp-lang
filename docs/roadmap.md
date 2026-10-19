@@ -179,7 +179,12 @@ same-archive execution](platforms.md), with complete packaged conformance and
 cross-job digest comparison. The matrix [passed for `c6083b0`](validation-platforms.md#hosted-exact-commit-matrix).
 Each later candidate still requires successful exact-commit hosted evidence.
 
-Remaining: versioned release/distribution policy and additional host APIs.
+Implemented versioning baseline: [independent version identities and preview
+compatibility rules](versioning.md), `--version --json`, real diagnostic/encoder
+checks, and frozen historical artifacts executed by the current VM. Package
+provenance and both compatibility hosts check the same advertised contracts.
+
+Remaining: versioned preview publication, release notes and additional host APIs.
 The maintainer selected the
 [MIT License](../LICENSE). Hosted compiler CI and
 bounded fuzz campaigns passed on `cc1354d`; see

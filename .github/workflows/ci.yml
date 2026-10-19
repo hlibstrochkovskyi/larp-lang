@@ -21,6 +21,7 @@ jobs:
       - run: cargo test --workspace --locked --offline
       - run: cargo test -p larp-compiler --release --locked --offline
       - run: python3 tools/check_corpus.py
+      - run: python3 tools/check_version.py --bin target/debug/larp --output artifacts/version-contract
       - run: python3 -m unittest discover -s tools -p 'test_candidate_checks.py'
       - run: python3 tools/run_conformance.py
       - run: python3 tools/run_conformance.py --gc-stress
@@ -33,6 +34,12 @@ jobs:
         with:
           name: resource-evidence
           path: artifacts/ci-resources/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: version-contract
+          path: artifacts/version-contract/version-report.json
           retention-days: 14
 
   reproducible-build:
@@ -89,7 +96,9 @@ jobs:
         if: always()
         with:
           name: candidate-compatibility-${{ matrix.os }}
-          path: artifacts/candidate-compatibility/compatibility-report.json
+          path: |
+            artifacts/candidate-compatibility/compatibility-report.json
+            artifacts/candidate-compatibility/version-contract/version-report.json
           retention-days: 14
 
   candidate-matrix:

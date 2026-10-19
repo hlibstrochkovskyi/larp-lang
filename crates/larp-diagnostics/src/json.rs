@@ -4,6 +4,9 @@ use crate::{Diagnostic, Label, Severity};
 use larp_source::SourceFile;
 use std::fmt::Write;
 
+/// Schema used by every JSON Lines diagnostic and event record.
+pub const SCHEMA_VERSION: u32 = 1;
+
 fn quoted(text: &str) -> String {
     let mut output = String::from("\"");
     for character in text.chars() {
@@ -64,7 +67,7 @@ pub fn render(diagnostic: &Diagnostic, sources: &[SourceFile]) -> String {
         .collect::<Vec<_>>()
         .join(",");
     format!(
-        "{{\"schema_version\":1,\"kind\":\"diagnostic\",\"severity\":{},\"code\":{},\"title\":{},\"message\":{},\"primary\":{},\"related\":[{}],\"expected_type\":{},\"found_type\":{},\"help\":{}}}\n",
+        "{{\"schema_version\":{SCHEMA_VERSION},\"kind\":\"diagnostic\",\"severity\":{},\"code\":{},\"title\":{},\"message\":{},\"primary\":{},\"related\":[{}],\"expected_type\":{},\"found_type\":{},\"help\":{}}}\n",
         quoted(match diagnostic.severity {
             Severity::Error => "error",
             Severity::Warning => "warning",
@@ -83,7 +86,7 @@ pub fn render(diagnostic: &Diagnostic, sources: &[SourceFile]) -> String {
 /// Render an event without a source span, such as inspection or CLI failure.
 pub fn event(kind: &str, code: Option<&str>, message: &str) -> String {
     format!(
-        "{{\"schema_version\":1,\"kind\":{},\"code\":{},\"message\":{}}}\n",
+        "{{\"schema_version\":{SCHEMA_VERSION},\"kind\":{},\"code\":{},\"message\":{}}}\n",
         quoted(kind),
         optional(code),
         quoted(message),

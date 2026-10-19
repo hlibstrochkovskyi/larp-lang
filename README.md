@@ -55,6 +55,7 @@ provide explicitly effect-checked CLI input through host capabilities.
 - [Reproducible builds](docs/reproducible-builds.md): two clean release builds and explicit limits.
 - [Candidate archives](docs/distribution.md): prebuilt CLI, complete source, and extraction checks.
 - [Preview platforms](docs/platforms.md): pinned build host and same-archive execution gates.
+- [Versioning](docs/versioning.md): toolchain versions, machine-readable identity, and independent format contracts.
 - [Bytecode artifacts](docs/bytecode-format-v1.md): baseline wire format and limits; [version 2](docs/bytecode-format-v2.md) adds host input.
 - [Development](CONTRIBUTING.md): local setup and checks.
 - [Git setup](docs/git-setup.md): saved history in this managed workspace.

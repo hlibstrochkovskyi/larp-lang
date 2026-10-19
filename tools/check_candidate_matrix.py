@@ -20,7 +20,7 @@ def validate(reports: dict, revision: str) -> dict:
     common = None
     hosts = {}
     fields = ("revision", "archive", "archive_sha256", "binary_sha256", "version", "target",
-              "rustc", "cargo", "checker_sha256", "checksummed_files", "conformance_cases")
+              "rustc", "cargo", "checker_sha256", "checksummed_files", "conformance_cases", "identity", "historical_versions")
     for label, release in HOSTS.items():
         report = reports[label]
         if (report.get("schema_version") != 1 or report.get("status") != "passed"
@@ -31,6 +31,8 @@ def validate(reports: dict, revision: str) -> dict:
             if not re.fullmatch(r"[0-9a-f]{64}", report.get(key, "")):
                 raise ValueError(f"Missing or invalid {key}: {label}")
         cases = report.get("conformance_cases")
+        if report.get("historical_versions") != report.get("identity", {}).get("artifact", {}).get("read"):
+            raise ValueError(f"Historical artifact execution does not cover declared read versions: {label}")
         if type(cases) is not int or cases < 1 or report.get("conformance_modes") != [
                 {"flags": mode, "passed": cases, "pending": 0} for mode in MODES]:
             raise ValueError(f"Incomplete packaged conformance execution: {label}")

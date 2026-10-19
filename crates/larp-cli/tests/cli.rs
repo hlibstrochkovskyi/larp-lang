@@ -20,6 +20,46 @@ fn help_reports_actual_implementation_status() {
 }
 
 #[test]
+fn structured_version_is_explicit_and_independent_of_diagnostic_rendering() {
+    let ordinary = larp(&["--version"]);
+    assert!(ordinary.status.success());
+    assert!(ordinary.stderr.is_empty());
+    assert!(
+        String::from_utf8_lossy(&ordinary.stdout)
+            .starts_with(&format!("larp {} ", env!("CARGO_PKG_VERSION")))
+    );
+    let structured = larp(&["--version", "--json"]);
+    assert!(structured.status.success());
+    assert!(structured.stderr.is_empty());
+    assert_eq!(
+        structured
+            .stdout
+            .iter()
+            .filter(|&&byte| byte == b'\n')
+            .count(),
+        1
+    );
+    for arguments in [
+        vec!["-V", "--json"],
+        vec!["--diagnostic-format=json", "--version", "--json"],
+        vec!["--diagnostic-format=text", "--version", "--json"],
+    ] {
+        let output = larp(&arguments);
+        assert!(output.status.success());
+        assert!(output.stderr.is_empty());
+        assert_eq!(output.stdout, structured.stdout);
+    }
+    assert_eq!(
+        larp(&["--diagnostic-format=json", "--version"]).stdout,
+        ordinary.stdout
+    );
+    let invalid = larp(&["--diagnostic-format=json", "--version", "--json", "extra"]);
+    assert_eq!(invalid.status.code(), Some(2));
+    assert!(invalid.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&invalid.stderr).contains("\"kind\":\"cli_error\""));
+}
+
+#[test]
 fn explanation_has_code_and_actionable_conversion_help() {
     let output = larp(&["explain", "LARP-T041"]);
     assert!(output.status.success());

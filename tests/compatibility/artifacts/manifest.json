@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "collections-v1",
+      "wire_version": 1,
+      "producer_revision": "044b02dbbeca710ccd28f2f65745361e7b40447f",
+      "source": "collections-v1.larp",
+      "source_sha256": "7498b08fd632410899af560bba78ea04783f611f62af95c7d22080f0a56abfa8",
+      "artifact": "collections-v1.larpbc.hex",
+      "artifact_sha256": "80d197bc193b7a84907faa7b4cdd909a5879b382fb66ba40e4ea36fc3a48d909",
+      "stdout": "5\n50\n",
+      "args": [],
+      "stdin": "",
+      "producer_cli_sha256": "c34545f93ad2a77d001abd5ed51dd46cfab416072e9383cef1f4f1aaef003583",
+      "producer_cli_version": "larp 0.1.0-dev (objects, scenarios, and memoized lazy values)",
+      "producer_build": {
+        "profile": "dev",
+        "locked": true,
+        "offline": true,
+        "incremental": false,
+        "rustc": "rustc 1.99.0 (b940084d7 2026-09-28) (Arch Linux rust 1:1.99.0-1)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
+        "cargo": "cargo 1.99.0 (5f94df478 2026-08-27) (Arch Linux rust 1:1.99.0-1)"
+      },
+      "producer_source_archive_sha256": "56ce3dcecb39fa1d6d204588f944de486c3b724ad775fbc19e0df08f03a5eb34"
+    },
+    {
+      "id": "host-arguments-v2",
+      "wire_version": 2,
+      "producer_revision": "b381fd3178ab78115317a4e37796e72b5401ed1e",
+      "source": "host-arguments-v2.larp",
+      "source_sha256": "5be6f0deaf142d705765d9920d319b99ecf65f5e29f817ca75b2a4595ca35208",
+      "artifact": "host-arguments-v2.larpbc.hex",
+      "artifact_sha256": "62801ba95c1f0f7bb05a5ae5fe9b3a0130e2ab4a468c828393131ff686fd2b52",
+      "stdout": "2\n",
+      "args": [
+        "unc",
+        "bro"
+      ],
+      "stdin": "",
+      "producer_cli_sha256": "2a5fc188e2f5d8bc96f308902752d7c51bbefddcbe685bb9bce5006fe5b7eed5",
+      "producer_cli_version": "larp 0.1.0-dev (objects, scenarios, and memoized lazy values)",
+      "producer_build": {
+        "profile": "dev",
+        "locked": true,
+        "offline": true,
+        "incremental": false,
+        "rustc": "rustc 1.99.0 (b940084d7 2026-09-28) (Arch Linux rust 1:1.99.0-1)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
+        "cargo": "cargo 1.99.0 (5f94df478 2026-08-27) (Arch Linux rust 1:1.99.0-1)"
+      },
+      "producer_source_archive_sha256": "24b96ca02db24957f1cf89ae33539a7d00f7d7e66fb9c04825f529d652181ee8"
+    }
+  ]
+}

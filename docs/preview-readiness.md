@@ -94,7 +94,7 @@ evidence and the explicit limits of sequential literal context.
 | Reproducibility and extraction | Two independent native builds and archives are compared byte-for-byte; extracted binaries run real programs. See [build](reproducible-builds.md) and [packaging](distribution.md) contracts. |
 | Hosted exact-commit checks | Compiler/conformance/packaging and bounded fuzz jobs passed for [`a84f033`](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39178705380) and [its campaign](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39178705339). Later commits need their own outcomes. |
 | Platform policy | [Explicit policy](platforms.md): Ubuntu 24.04 build and identical-archive execution on Ubuntu 24.04/26.04, x86-64 GNU/Linux. Both exact-commit host jobs and their digest/conformance aggregate [passed for `c6083b0`](validation-platforms.md#hosted-exact-commit-matrix); later candidates require their own evidence. |
-| Versioned distribution | **Open:** the candidate workflow uploads reviewable archives; it creates neither a version tag nor a GitHub Release. Define preview version/compatibility/update policy before publication. |
+| Versioned distribution | [Versioning policy](versioning.md) and executable CLI identity/format checks are implemented. **Publication open:** candidate workflows create neither a version tag nor a GitHub Release; a named preview still needs its declared subset, change notes and exact-commit release evidence. |
 
 Additional host APIs, modules/packages, user generics, nested/object-graph
 scenarios, async, native optimization and editor services remain later RFC work.

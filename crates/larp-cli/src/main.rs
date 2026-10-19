@@ -3,12 +3,14 @@ use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod version;
+
 const HELP: &str = "LARP — Fake it till you compile.
 
 Usage:
   larp [--diagnostic-format=json|text] COMMAND ...
   larp --help
-  larp --version
+  larp --version [--json]
   larp explain CODE
   larp build FILE.larp [-o FILE.larpbc]
   larp check FILE.larp|FILE.larpbc
@@ -111,6 +113,10 @@ fn main() -> ExitCode {
                 "larp {} (objects, scenarios, and memoized lazy values)",
                 env!("CARGO_PKG_VERSION")
             );
+            ExitCode::SUCCESS
+        }
+        ["--version", "--json"] | ["-V", "--json"] => {
+            println!("{}", version::json());
             ExitCode::SUCCESS
         }
         ["explain", id] => match larp_diagnostics::lookup(id) {

@@ -20,6 +20,8 @@ mod codec;
 
 pub const MAGIC: &[u8; 8] = b"LARPBC\r\n";
 pub const VERSION: u16 = 2;
+/// Wire versions accepted by the decoder, independently of the toolchain version.
+pub const SUPPORTED_VERSIONS: &[u16] = &[1, VERSION];
 pub const MAX_FILE_BYTES: usize = 16 * 1024 * 1024;
 const MAX_ALLOCATED: usize = 64 * 1024 * 1024;
 const MAX_STRING_BYTES: usize = 1024 * 1024;
@@ -814,7 +816,7 @@ pub fn decode(bytes: &[u8]) -> Result<Artifact> {
         return Err(r.invalid("Invalid artifact magic"));
     }
     let version = r.u16()?;
-    if version != 1 && version != VERSION {
+    if !SUPPORTED_VERSIONS.contains(&version) {
         return Err(r.invalid("Unsupported artifact version"));
     }
     r.version = version;

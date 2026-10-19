@@ -55,6 +55,8 @@ Its single root directory contains:
 - `PACKAGE.md`, with commands for using this extracted candidate.
 - `BUILD.json`, with full source commit, target/version, toolchain information,
   source/binary digests, and observed GLIBC version references when available.
+  New candidates also retain the actual CLI's `toolchain_identity` JSON object,
+  including its language baseline, artifact versions, and diagnostic schema.
 - `SHA256SUMS`, covering every other regular file, including the provenance and
   executable. The checksum file excludes itself to avoid a circular digest.
 - `THIRD_PARTY.md` and `THIRD_PARTY/rust/`, preserving upstream runtime attribution
@@ -157,6 +159,12 @@ checker bounds the archive/extracted payload to 128 MiB and 8192 entries, requir
 one normalized package root and regular files/directories, and verifies complete
 payload checksums before execution. It checks exact revision, version, MIT,
 target, recorded Rust 1.99.0, ELF architecture/mode, and runtime notice inventory.
+The actual `--version --json` response must match `BUILD.json.toolchain_identity`.
+The archived version-contract driver checks the reported encoder against real
+emitted bytes and executes frozen historical v1/v2 artifacts on that host. Its
+outputs stay outside the checksummed payload; Python bytecode caching is disabled
+for the archived driver so imports do not modify package contents. See
+[versioning](versioning.md) and the [fixture provenance](../tests/compatibility/artifacts/README.md).
 These checks apply to our own CI-produced executable; they are not an execution
 sandbox or publisher authentication for arbitrary downloaded programs.
 
@@ -174,3 +182,5 @@ identical archive/binary/toolchain/corpus identities. A failure in either host
 job prevents that aggregate gate from passing. `matrix-report.json` retains input
 report hashes and both recorded environments. Each artifact expires after 14 days;
 successful exact-commit evidence must be recorded before making a platform claim.
+Compatibility artifacts also retain each archived driver's `version-report.json`;
+the ordinary check job saves its own report as `version-contract`.
