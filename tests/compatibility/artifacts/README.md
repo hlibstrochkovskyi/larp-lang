@@ -1,9 +1,27 @@
 # Historical bytecode compatibility fixtures
 
+[Project overview](../../../README.md) · [Version policy](../../../docs/versioning.md) · [Artifact format](../../../docs/bytecode-format-v2.md)
+
 These are frozen artifacts emitted by genuine earlier LARP compilers. They test
 whether the current loader, verifier, and VM still accept the advertised wire
 versions. They are independent of the current encoder: a current encode/decode
 round trip cannot establish historical compatibility.
+
+## Run the compatibility checks
+
+From the repository root:
+
+```sh
+cargo build -p larp-cli --locked --offline
+python3 tools/check_version.py --bin target/debug/larp --output artifacts/version-check
+```
+
+Use a new or empty `--output` directory for each run. If `CARGO_TARGET_DIR` is set,
+adjust `--bin` to the actual binary location. The checker validates CLI identity,
+current encoding, and the hashes and normal/stress-GC execution of both frozen
+fixtures. It never recompiles the historical source to obtain fixture bytes.
+
+## Inventory and manifest
 
 The `.larpbc.hex` files contain lowercase hexadecimal text, with 32 decoded bytes
 per complete line. Decode the complete file with `bytes.fromhex` before loading

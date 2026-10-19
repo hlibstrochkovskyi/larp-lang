@@ -1,9 +1,12 @@
 # Preview platform policy
 
-Status: **baseline validated for commit `c6083b05f329b910da302cfb77eaf3d1c5fd0c98`**.
-The [hosted evidence](validation-platforms.md#hosted-exact-commit-matrix) records
-both successful compatibility jobs and their aggregate for that candidate.
-This policy defines the first preview's platform gate. Local builds and candidate
+Status: **the published `v0.1.0-preview.1` passed this matrix at commit
+`61cc9314916c510673112dc799e247c0f59cc3b9`**. Its
+[publication record](releases/0.1.0-preview.1-publication.md) identifies the exact
+archive, executable digests, and hosted checks. The earlier
+[`c6083b0` baseline](validation-platforms.md#hosted-exact-commit-matrix) is retained
+as historical evidence.
+This policy defines the experimental preview's platform gate. Local builds and candidate
 smoke tests alone do not establish the matrix below. Later commits require their
 own successful workflow runs, full source revisions, archive digests, and runner
 image versions before their candidates can be described as validated here.
@@ -101,5 +104,5 @@ execution evidence before making an additional platform claim.
 
 Later candidate commits require their own matrix results. Changing an OS label,
 target, Rust version, runtime dependency, or packaging method requires reviewing
-this policy and rerunning the affected gates. No minimum support lifetime or
-versioned Release is established by this draft.
+this policy and rerunning the affected gates. Publication of the first preview
+does not establish a minimum support lifetime or extend the measured matrix.

@@ -1,8 +1,15 @@
-# Experimental source and binary candidate
+# Distribution and candidate packaging
 
-Status: local Linux x86-64 candidate packaging is implemented. It creates a
-reviewable archive and exercises its extracted CLI; it does not create a tag or
-GitHub Release. The source remains a developer preview under the [MIT License](../LICENSE).
+The first public prerelease is
+[`v0.1.0-preview.1`](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1).
+It includes a Linux x86-64 GNU archive, its SHA-256 sidecar, and release evidence.
+See the [publication record](releases/0.1.0-preview.1-publication.md) for exact
+filenames, digests, source revision, and compatibility results. LARP remains an
+experimental developer preview under the [MIT License](../LICENSE).
+
+The candidate packager described below produces reviewable archives and
+exercises their extracted CLI. Running it does not publish a tag or GitHub
+Release; publication is a separate maintainer-authorized action.
 
 ## Build a candidate
 
@@ -139,8 +146,10 @@ and both archives remain in ignored `artifacts/package-with-runtime-notices/`.
 CI builds its own exact-commit candidate after the independent-build check.
 Reports/logs are saved as `reproducibility-evidence`; a successful candidate and
 its archive checksum are saved as `larp-candidate-linux-x86_64`. This artifact is
-for review and testing. Publishing a versioned Release and establishing
-longer-term compatibility remain separate work.
+for review and testing; it is distinct from the
+[published first preview](releases/0.1.0-preview.1-publication.md). Each future
+Release needs its own publication decision and retained evidence. No long-term
+compatibility promise follows from candidate packaging.
 
 ## Execute the same candidate on the preview hosts
 

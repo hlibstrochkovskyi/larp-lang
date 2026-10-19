@@ -10,106 +10,171 @@
 
 *Fake it till you compile.*
 
-LARP is a language project: familiar C-style syntax, strict static types,
-nominal objects, and controlled what-if execution. The jokes belong in the
-vocabulary; correctness belongs in the compiler.
+[![CI](https://github.com/hlibstrochkovskyi/larp-lang/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hlibstrochkovskyi/larp-lang/actions/workflows/ci.yml)
+[![Preview](https://img.shields.io/badge/preview-0.1.0--preview.1-8b5cf6)](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1)
+[![MIT](https://img.shields.io/badge/license-MIT-8b5cf6)](LICENSE)
+
+[Download](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1) · [Learn](docs/reference.md) · [Documentation](docs/README.md) · [Contribute](CONTRIBUTING.md)
+
+LARP is an experimental, statically typed programming language with C-style
+syntax, objects, first-class functions, and controlled what-if execution.
+Written in Rust, it compiles to its own verified bytecode and runs on the LARP VM.
+
+## Pitch the unicorn. Keep the aura.
+
+No funding? `.copium()` has you covered. Farm some aura, rehearse the billion-dollar
+valuation, and decide which changes become real.
 
 ```larp
-main_character {
-    unc money = fortnine;
-    locked_in while (money < 1000) {
-        money += 10;
+archetype Founder {
+    highkey unc valuation;
+    highkey mf aura;
+
+    init(unc seed) {
+        self.valuation = seed;
+        self.aura = 0;
     }
-    yap(money);
+
+    highkey sidequest isMogging(mf rival) -> verdict uses(read) {
+        return self.aura mogg rival;
+    }
+}
+
+main_character {
+    baddie<unc> funding = no_bitches;
+    Founder bro = new Founder(funding.copium(fortnine));
+
+    mfs<mf> clips = [2, 4, 49];
+    mf qualified = clips.map(x => x + 1).filter(x => x mogg 4).size();
+
+    larp (bro) as UnicornPitch {
+        nonchalant mf pitchDeckAura = qualified * 10;
+        flex bro.valuation = 1_000_000_000;
+        bro.aura += pitchDeckAura;
+        canon bro.aura;
+        palantir(bro);
+    }
+
+    yap(bro.valuation);
+    yap(bro.aura);
+    yap(bro.isMogging(10));
 }
 ```
 
-**Status: executable core with objects, roles, collections, and isolated scenarios.**
-The example above compiles to verified bytecode and runs on the LARP VM, printing
-`1009`. Functions, recursion, loops, checked arithmetic, effect bounds, first-class
-functions, snapshot captures, options/results, checked conversions, dynamic/fixed
-arrays, and eager collection pipelines work today. Nominal classes support
-constructors, public/private fields and methods, and bound methods. Objects,
-closures, and dynamic arrays use a tracing collector. Nominal role dispatch,
-concrete receiver extensions, and built-in method extraction preserve identity
-and checked effect bounds. Language-level `larp` blocks now compile to isolated
-scenario frames with checked call graphs, selective final-field commit, and
-`palantir` reports. Read-only `nonchalant` bindings memoize snapshot computations;
-`sybau` suppresses ordinary `yap` output across calls. The separate state model
-remains an independent experiment. Versioned `.larpbc` artifacts embed source maps
-and pass verification again on loading. The syntax-aware formatter preserves
-comments, original token spellings, and program order. `args()` and `readLine()`
-provide explicitly effect-checked CLI input through host capabilities.
+The console prints `49`, `20`, and `fr` on separate lines. `palantir` separately
+reports the trial on stderr:
 
-## Start here
-
-- [Design review](docs/design-review.md): strengths, contradictions, and proposed decisions.
-- [Language Specification v0.1](docs/spec/v0.1.md): proposed normative semantics.
-- [Grammar](docs/spec/grammar.ebnf): syntax for the proposed subset.
-- [Compiler architecture](docs/architecture.md): pipeline, memory, and runtime boundaries.
-- [Roadmap](docs/roadmap.md): milestones with acceptance gates.
-- [Implementation status](docs/implementation-status.md): supported features and limits.
-- [Preview readiness](docs/preview-readiness.md): requirement evidence and open semantic/release gates.
-- [First preview candidate](docs/releases/0.1.0-preview.1.md): declared subset, commands, formats, and known limits.
-- [Diagnostic protocol](docs/diagnostics.md): JSON Lines, exact source spans, and inspection events.
-- [Practical reference](docs/reference.md): implemented syntax and executable examples.
-- [Research](docs/research.md): primary sources and their limits.
-- [Scenario evaluation](docs/scenario-evaluation.md): executed comparisons and a counterexample.
-- [Scenario validation](docs/validation-scenarios.md): compiled scenario acceptance evidence.
-- [Lazy and suppression validation](docs/validation-lazy-and-suppression.md): current implementation checks.
-- [Host input](docs/host-input.md): arguments, stdin, EOF/errors, and embedding.
-- [Source formatter](docs/formatter.md): layout, preservation, and CLI modes.
-- [Fuzzing](fuzz/README.md): coverage-guided targets and stable regression replay.
-- [Resource measurements](docs/validation-resources.md): VM counters, process memory, and limit witnesses.
-- [Reproducible builds](docs/reproducible-builds.md): two clean release builds and explicit limits.
-- [Candidate archives](docs/distribution.md): prebuilt CLI, complete source, and extraction checks.
-- [Preview platforms](docs/platforms.md): pinned build host and same-archive execution gates.
-- [Versioning](docs/versioning.md): toolchain versions, machine-readable identity, and independent format contracts.
-- [Bytecode artifacts](docs/bytecode-format-v1.md): baseline wire format and limits; [version 2](docs/bytecode-format-v2.md) adds host input.
-- [Development](CONTRIBUTING.md): local setup and checks.
-- [Git setup](docs/git-setup.md): saved history in this managed workspace.
-- [Conformance corpus](tests/conformance/README.md): required programs and failures.
-
-## Local development
-
-Use Rust 1.99.0 or later, Cargo, rustfmt, Clippy, and Python 3.11 or later.
-The workspace currently has no third-party Rust dependencies and builds offline.
-
-```sh
-cargo run -p larp-cli -- --help
-cargo run -p larp-cli -- explain LARP-T041
-cargo run -p larp-cli -- run examples/primes.larp
-cargo run -p larp-cli -- run examples/callbacks.larp --gc-stress
-cargo run -p larp-cli -- run examples/collections.larp --gc-stress
-cargo run -p larp-cli -- run examples/objects.larp --gc-stress
-cargo run -p larp-cli -- run examples/roles.larp --gc-stress
-cargo run -p larp-cli -- run examples/lazy.larp --gc-stress
-cargo run -p larp-cli -- run tests/conformance/pass/scenario.larp --gc-stress
-cargo run -p larp-cli -- dump examples/primes.larp
-cargo run -p larp-cli -- build examples/objects.larp -o /tmp/objects.larpbc
-cargo run -p larp-cli -- run /tmp/objects.larpbc --gc-stress
-cargo run -p larp-cli -- fmt examples/objects.larp --stdout
-cargo run -p larp-cli -- run examples/input-sum.larp -- total < scores.txt
-cargo test --workspace --locked --offline
-python3 tools/run_conformance.py
-python3 tools/run_conformance.py --gc-stress
-python3 tools/run_conformance.py --artifacts --gc-stress
-python3 tools/run_conformance.py --formatted --artifacts --gc-stress
+```text
+PALANTIR [UnicornPitch]
+PROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED
+valuation | 49 | 1000000000 | 1000000000 | false
+aura | 0 | 20 | - | true
 ```
 
-The implemented CLI commands are `--help`, `--version`, `explain CODE`,
-`build SOURCE [-o OUTPUT]`, `check FILE`, `run FILE [--fuel N] [--gc-stress] [-- ARG...]`,
-`dump FILE [--ir]`, and `fmt SOURCE [--check|--stdout]`. Source and artifact input
-are supported by `check`, `run`, and bytecode `dump`; `--ir` requires source. Artifacts contain full source text
-for diagnostics and run without the original source file. `fmt` updates source
-by default; `--stdout` previews and `--check` verifies formatting without changes.
+The valuation was a performance. The aura is canon.
 
-The compiler implementation direction is Rust → typed IR → bytecode → LARP VM.
-The language semantics do not depend on Rust, LLVM, or any particular collector.
-All 89 current conformance fixtures are active; the corpus is a finite acceptance
-suite, not a proof that every language rule is implemented. Specification v0.1
-defines the broader target, and M6 developer-preview gates remain open.
+This is a [complete runnable example](examples/pitch-deck.larp), checked against
+the released compiler and in CI. It combines objects, explicit method effects,
+optional values, collection callbacks, memoized computation, and selective commit.
+Scenario roots currently need value-only fields; selected fields keep their final
+trial values on normal block completion. This preserves field types, not
+relationships between fields. See [scenario semantics and limits](docs/scenario-evaluation.md).
 
-The project repository is [hlibstrochkovskyi/larp-lang](https://github.com/hlibstrochkovskyi/larp-lang).
-LARP is licensed under the [MIT License](LICENSE). Private design material is
-excluded from version control.
+## Try the first preview
+
+**[v0.1.0-preview.1](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1)**
+is available for Linux x86-64 GNU, tested on Ubuntu 24.04 and 26.04.
+The archive includes the CLI, source, documentation, examples, and license notices.
+Running the prebuilt CLI requires no Rust installation.
+
+Download the `.tar.gz` and its matching `.sha256` from the release, or use:
+
+```sh
+larp_release=https://github.com/hlibstrochkovskyi/larp-lang/releases/download/v0.1.0-preview.1
+larp_archive=larp-0.1.0-preview.1-x86_64-unknown-linux-gnu-61cc9314916c.tar.gz
+curl -fLO "$larp_release/$larp_archive"
+curl -fLO "$larp_release/$larp_archive.sha256"
+sha256sum -c "$larp_archive.sha256"
+tar -xzf "$larp_archive"
+cd "${larp_archive%.tar.gz}"
+./bin/larp run examples/hello.larp
+```
+
+To try the pitch above with that binary, save the snippet as `pitch-deck.larp`
+and run `./bin/larp run pitch-deck.larp`. The example was added to the repository
+after publication, so its file is not in the frozen preview archive.
+See the [publication record](docs/releases/0.1.0-preview.1-publication.md)
+for the exact commit, checksums, and compatibility evidence.
+
+### Build from source
+
+Use Rust **1.99.0+**, Cargo, and a native linker. The main workspace has no
+third-party Rust dependencies and builds offline after installing the toolchain.
+Python **3.11+**, rustfmt, and Clippy are needed for development checks.
+
+```sh
+git clone https://github.com/hlibstrochkovskyi/larp-lang.git
+cd larp-lang
+cargo build -p larp-cli --release --locked --offline
+./target/release/larp run examples/pitch-deck.larp
+```
+
+Source builds use the checked-out commit; they do not reproduce the published
+archive merely by sharing its version string. Other platforms are not yet part
+of the release compatibility policy.
+
+## Cursed vocabulary. Concrete semantics.
+
+| LARP | What it does |
+| --- | --- |
+| `mf`, `unc`, `geeked`, `verdict` | Exact i32, i64, f64, and Boolean types; no implicit truthiness or numeric conversions |
+| `archetype`, `role`, `sidequest` | Nominal objects, interfaces, and functions with checked signatures and effect bounds |
+| `mfs<T>`, `hediJeans<T,N>` | Shared dynamic arrays and fixed-size value arrays, with checked indexing |
+| `baddie<T>`, `result<T,E>` | Explicit absence and expected errors, with `.copium()` and `.cope()` recovery |
+| `larp`, `flex`, `canon`, `palantir` | Isolated value-state trials, explicit claims, selective commit, and inspection |
+| `nonchalant`, `sybau` | Pure memoized computation and scoped suppression of ordinary `yap` output |
+
+Closures capture bindings as snapshots. A tracing collector manages objects,
+arrays, closures, and lazy cells. Source checks and an independent bytecode
+verifier preserve types, visibility, effects, and scenario restrictions.
+
+The first preview is experimental: programs occupy one source file; modules,
+user-defined generics, inheritance, async, FFI, and a native backend remain future
+work. There is no stable source/API compatibility promise or hostile-code sandbox.
+The [implementation status](docs/implementation-status.md) lists working features
+and precise limits; the [specification](docs/spec/v0.1.md) remains a design baseline.
+
+## Explore the toolchain
+
+After a source build:
+
+```sh
+./target/release/larp --version --json
+./target/release/larp check examples/pitch-deck.larp
+./target/release/larp fmt examples/pitch-deck.larp --stdout
+trial_dir=$(mktemp -d)
+./target/release/larp build examples/pitch-deck.larp -o "$trial_dir/pitch.larpbc"
+./target/release/larp run "$trial_dir/pitch.larpbc" --gc-stress
+./target/release/larp explain LARP-T041
+```
+
+`fmt --stdout` previews formatting; `fmt --check` checks it; `fmt FILE` writes it.
+Artifacts embed source maps and pass verification when loaded. JSON diagnostics
+keep program output on stdout and report structured events on stderr.
+
+## Learn, build, contribute
+
+- **Write LARP:** [practical reference](docs/reference.md), [examples](examples/),
+  [CLI and diagnostics](docs/diagnostics.md).
+- **Understand the implementation:** [architecture](docs/architecture.md),
+  [development guide](docs/development.md), [roadmap](docs/roadmap.md).
+- **Help the project:** [contribution guide](CONTRIBUTING.md),
+  [report a bug](https://github.com/hlibstrochkovskyi/larp-lang/issues),
+  [review an open pull request](https://github.com/hlibstrochkovskyi/larp-lang/pulls).
+- **Go deeper:** [documentation index](docs/README.md), including language design,
+  execution contracts, validation reports, and distribution policy.
+
+## License
+
+[MIT](LICENSE) · Copyright (c) 2026 **Hlib Strochkovskyi**.
+Packaged Rust runtime components retain their own license notices.

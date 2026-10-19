@@ -4,9 +4,11 @@ The compiler currently implements algorithmic programs, nominal objects, and iso
 Specification v0.1. Programs are lexed, parsed, name/type/effect checked, lowered
 into typed control-flow IR, compiled to stack bytecode, verified, and executed by LARP's VM.
 No host `eval`, source-to-Python/JavaScript translation, or AST execution is used.
-The [preview audit](preview-readiness.md) records resolved semantic regressions
-and remaining design/platform/release gates; a finite passing corpus does not
-approve the whole proposed specification.
+The first public prerelease is [`v0.1.0-preview.1`](releases/0.1.0-preview.1-publication.md).
+The [preview audit](preview-readiness.md) records resolved semantic regressions,
+release evidence, and remaining design questions; a finite passing corpus and a
+published preview do not approve the whole proposed specification. File modules
+and package management are not implemented in this released subset.
 
 ## Working features
 
@@ -158,7 +160,10 @@ restores its inherited depth. Suppressed calls still require `observe`, still
 evaluate their arguments, and still execute their computation. `palantir`,
 diagnostics, fatal errors, and external effects are not muted.
 
-These features are part of M6; additional host APIs and release gates remain pending. See [lazy and suppression validation](validation-lazy-and-suppression.md).
+These features shipped in the first M6 preview; additional host APIs remain
+future work. See [lazy and suppression validation](validation-lazy-and-suppression.md)
+for the original measured feature checks and the
+[publication record](releases/0.1.0-preview.1-publication.md) for release evidence.
 
 ## Host input
 
@@ -333,4 +338,5 @@ programs, loads/verifies them, and compares execution with source; invalid sourc
 must fail build without producing output. `--formatted` formats temporary copies,
 checks idempotence, and compiles/executes the same contracts; it composes with
 artifact loading and GC stress. A finite corpus with no pending
-cases does not establish full language conformance or complete the M6 release.
+cases does not establish full language conformance. The published first preview
+has separate [release evidence](releases/0.1.0-preview.1-publication.md).

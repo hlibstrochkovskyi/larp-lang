@@ -1,8 +1,9 @@
 # Implementation roadmap
 
-Status: M1 through the M5 feature set are implemented. M6 is in progress; lazy
-bindings, output suppression, persisted bytecode, and source formatting are
-implemented, while preview gates remain open.
+Status: M1 through M5 and the bounded M6 first-preview scope are implemented.
+[`v0.1.0-preview.1`](releases/0.1.0-preview.1-publication.md) is published as an
+experimental prerelease. Broader specification review and later language/tooling
+work remain open; file modules are not part of the released compiler.
 This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -119,7 +120,7 @@ statistics. Record code size, explanation burden, and failure modes. Decide
 whether the feature earns its complexity before expanding it. Do not claim
 financial safety or invariant preservation from field-level type safety.
 
-## M6 — Developer preview (in progress)
+## M6 — First developer preview (published)
 
 Implemented: read-only snapshot-capturing `nonchalant` bindings, memoized forcing
 with preserved abort bounds, local-only lazy cells, checked regional thunks, and
@@ -129,8 +130,8 @@ without removing observation effects or muting inspection/diagnostics. Source
 return/break lowering and verified control-flow joins preserve nesting.
 
 All 89 current corpus cases are active and executable. This closes the current
-fixture inventory, not the developer-preview release gate or every normative
-rule. See [lazy and suppression validation](validation-lazy-and-suppression.md).
+fixture inventory; it does not prove every normative rule. The first-preview
+publication has separate [exact-commit evidence](releases/0.1.0-preview.1-publication.md). See [lazy and suppression validation](validation-lazy-and-suppression.md).
 
 Implemented artifact slice: deterministic versioned `.larpbc`, embedded source
 maps, bounded decoding and mandatory verification, `build` and source/artifact
@@ -171,26 +172,31 @@ CI job; its local evidence does not establish cross-machine reproducibility.
 Implemented candidate packaging: complete tracked source plus the prebuilt CLI,
 MIT, deterministic tar/gzip metadata, provenance/checksums, and real execution
 after extraction. CI attaches a reviewable Linux x86-64 candidate; see
-[distribution](distribution.md). This is not a versioned Release or a broad
-platform compatibility claim.
+[distribution](distribution.md). CI review artifacts remain distinct from a
+published Release and do not establish broad platform compatibility.
 
 Implemented platform gate: [explicit Ubuntu 24.04 build and Ubuntu 24.04/26.04
 same-archive execution](platforms.md), with complete packaged conformance and
-cross-job digest comparison. The matrix [passed for `c6083b0`](validation-platforms.md#hosted-exact-commit-matrix).
-Each later candidate still requires successful exact-commit hosted evidence.
+cross-job digest comparison. The published preview's matrix passed for
+`61cc9314916c510673112dc799e247c0f59cc3b9`; see its
+[publication record](releases/0.1.0-preview.1-publication.md). The earlier
+[`c6083b0` baseline](validation-platforms.md#hosted-exact-commit-matrix) remains
+historical evidence. Each later candidate requires its own successful hosted checks.
 
 Implemented versioning baseline: [independent version identities and preview
 compatibility rules](versioning.md), `--version --json`, real diagnostic/encoder
 checks, and frozen historical artifacts executed by the current VM. Package
 provenance and both compatibility hosts check the same advertised contracts.
 
-Prepared first named candidate: `0.1.0-preview.1`, with
-[release notes](releases/0.1.0-preview.1.md) and a machine-checked descriptor.
-Packaging and both compatibility hosts bind those documents to the real CLI's
-version and protocol capabilities. This prepares review material; it does not
-publish a tag/Release or claim maintainer acceptance of the design.
+Published first named preview: `v0.1.0-preview.1`, from
+`61cc9314916c510673112dc799e247c0f59cc3b9`, after explicit maintainer approval.
+The [publication record](releases/0.1.0-preview.1-publication.md) links the Release
+and exact-commit evidence. Frozen [release notes](releases/0.1.0-preview.1.md) and
+the machine-checked descriptor remain bound to the archived CLI's version and
+protocol capabilities.
 
-Remaining: preview design acceptance/publication and additional host APIs.
+Remaining: broader design/specification review, additional host APIs, and the
+later RFCs below. Publication approval does not approve every proposed design rule.
 The maintainer selected the
 [MIT License](../LICENSE). Hosted compiler CI and
 bounded fuzz campaigns passed on `cc1354d`; see

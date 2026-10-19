@@ -1,0 +1,33 @@
+archetype Founder {
+    highkey unc valuation;
+    highkey mf aura;
+
+    init(unc seed) {
+        self.valuation = seed;
+        self.aura = 0;
+    }
+
+    highkey sidequest isMogging(mf rival) -> verdict uses(read) {
+        return self.aura mogg rival;
+    }
+}
+
+main_character {
+    baddie<unc> funding = no_bitches;
+    Founder bro = new Founder(funding.copium(fortnine));
+
+    mfs<mf> clips = [2, 4, 49];
+    mf qualified = clips.map(x => x + 1).filter(x => x mogg 4).size();
+
+    larp (bro) as UnicornPitch {
+        nonchalant mf pitchDeckAura = qualified * 10;
+        flex bro.valuation = 1_000_000_000;
+        bro.aura += pitchDeckAura;
+        canon bro.aura;
+        palantir(bro);
+    }
+
+    yap(bro.valuation);
+    yap(bro.aura);
+    yap(bro.isMogging(10));
+}

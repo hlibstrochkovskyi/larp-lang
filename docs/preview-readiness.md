@@ -1,16 +1,18 @@
 # v0.1 developer-preview readiness audit
 
-Date: 2026-10-19. **The preview gate remains open.** The project has an
-executable compiler/VM and candidate archives; neither a green finite corpus nor
-this audit approves the whole language specification. This document connects
-requirements to inspectable evidence and records identified counterexamples and
-their resolution. It does not replace the [specification](spec/v0.1.md),
+Audit baseline: 2026-10-19. **The bounded first preview is now published as
+[`v0.1.0-preview.1`](releases/0.1.0-preview.1-publication.md).** Its publication
+record identifies the approved source commit, archived binary, and passing
+release checks. Neither publication nor a green finite corpus approves the
+whole proposed specification. This document connects requirements to inspectable
+evidence and records identified counterexamples and their resolution. It does
+not replace the [specification](spec/v0.1.md),
 [implementation status](implementation-status.md), or [roadmap](roadmap.md).
 
 "Exercised" below means working implementation and relevant executed tests exist.
 It does not mean every possible program or every normative sentence is proved.
-"Open" means a counterexample, missing decision, or insufficient release evidence
-still prevents closing that requirement.
+"Open" identifies a remaining design decision or an unsupported broader claim;
+it does not imply that the explicitly bounded published preview is unreleased.
 
 ## Language and execution evidence
 
@@ -38,7 +40,7 @@ still prevents closing that requirement.
 | §8.5: required program and practical alternatives | Active scenario/configuration/game cases; [evaluation](scenario-evaluation.md) | Executed; selective commit can break cross-field invariants and stays experimental |
 | §9: traced lifetime, cycles and temporary roots | Heap/VM/compiler stress tests; [resource measurements](validation-resources.md) | Exercised; logical arena counters are not byte budgets or whole-process memory guarantees |
 | §10: stable diagnostic data and exact runtime spans | [Protocol](diagnostics.md), renderer/CLI tests, all ten runtime contracts | Exercised in text/JSON, formatted source and loaded artifacts; this closes a previously weaker location-presence check |
-| §11: baseline design review | [Technical review](preview-design-review.md) of numeric conversion, finite effects, conservative regions and selective-commit limitations | Technical review completed with executable cases. **Maintainer acceptance open:** implementation/review evidence does not constitute the maintainer's design decision. |
+| §11: baseline design review | [Technical review](preview-design-review.md) of numeric conversion, finite effects, conservative regions and selective-commit limitations | Technical review completed with executable cases. The maintainer approved publication of the bounded preview; broader specification/design acceptance remains open and is not implied by that decision. |
 
 ## Resolved reconciliation work
 
@@ -92,9 +94,9 @@ evidence and the explicit limits of sequential literal context.
 | Reference programs | [Reference contracts](reference-cases.json) execute all eight complete reference examples through real source/artifact/GC paths. |
 | License and attribution | Maintainer-selected [MIT](../LICENSE); candidate packages retain notices from their actual Rust distribution. |
 | Reproducibility and extraction | Two independent native builds and archives are compared byte-for-byte; extracted binaries run real programs. See [build](reproducible-builds.md) and [packaging](distribution.md) contracts. |
-| Hosted exact-commit checks | Compiler/conformance/packaging and bounded fuzz jobs passed for [`a84f033`](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39178705380) and [its campaign](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39178705339). Later commits need their own outcomes. |
-| Platform policy | [Explicit policy](platforms.md): Ubuntu 24.04 build and identical-archive execution on Ubuntu 24.04/26.04, x86-64 GNU/Linux. Both exact-commit host jobs and their digest/conformance aggregate [passed for `c6083b0`](validation-platforms.md#hosted-exact-commit-matrix); later candidates require their own evidence. |
-| Versioned distribution | [Versioning policy](versioning.md), identity checks and [prepared preview notes](releases/0.1.0-preview.1.md) exist. A machine-checked descriptor binds the proposed tag/notes/formats to the actual CLI and archive. **Publication open:** no version tag or GitHub Release is created; the prepared preview needs its own exact-commit release evidence and publication decision. |
+| Hosted exact-commit checks | The published source commit `61cc9314916c510673112dc799e247c0f59cc3b9` passed all five [candidate CI jobs](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39248451254). Earlier [compiler](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39178705380) and [bounded-fuzz](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39178705339) outcomes remain historical evidence, not proof for arbitrary later commits. See the [publication record](releases/0.1.0-preview.1-publication.md) for the release checks. |
+| Platform policy | [Explicit policy](platforms.md): Ubuntu 24.04 build and identical-archive execution on Ubuntu 24.04/26.04, x86-64 GNU/Linux. Both host jobs and their digest/conformance aggregate passed for the published `61cc931` archive; see the [publication record](releases/0.1.0-preview.1-publication.md). Later candidates require their own evidence. |
+| Versioned distribution | [`v0.1.0-preview.1`](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1) is published after explicit maintainer approval. A machine-checked descriptor binds the frozen [release notes](releases/0.1.0-preview.1.md) and formats to the actual CLI/archive. The separate [publication record](releases/0.1.0-preview.1-publication.md) retains the exact commit, tag, artifacts, and post-upload checks. |
 
 Additional host APIs, modules/packages, user generics, nested/object-graph
 scenarios, async, native optimization and editor services remain later RFC work.

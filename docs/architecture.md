@@ -8,7 +8,10 @@ function instances and VM frames. Lazy bindings use checked memoization cells;
 output suppression has explicit dynamic scope. Versioned artifacts embed source
 maps and pass a bounded loader and mandatory verification before execution.
 The pipeline below includes both current contracts and their intended extensions;
-see [implementation status](implementation-status.md) for the supported subset.
+see [implementation status](implementation-status.md) for the supported subset
+and the [first-preview publication record](releases/0.1.0-preview.1-publication.md)
+for the exact shipped revision. The released source frontend accepts one file;
+bytecode module metadata is not a source-file import system.
 
 ## Pipeline and contracts
 
@@ -34,8 +37,10 @@ flowchart LR
    validated half-open spans. Diagnostics refer to file IDs, not copied lines.
 2. **Lexer/parser:** handwritten scanner and recursive-descent declarations with
    a Pratt expression parser. This makes unusual token pairs and expression
-   precedence explicit. Recover at `;` and balanced braces; preserve error nodes
-   so one typo does not produce dozens of false errors. AST nodes retain spans.
+   precedence explicit. Synchronize failed statements at `;` or balanced braces
+   and failed top-level declarations at declaration keywords. Accumulate
+   structured syntax diagnostics; parsing returns either a complete AST or those
+   diagnostics. AST nodes retain spans.
 3. **Resolution:** collect declaration headers first, then bind bodies to stable
    symbol IDs and lexical scopes. Separate namespaces for types and values.
 4. **Semantic analysis:** bidirectional local inference, lexical capture analysis,
@@ -79,9 +84,9 @@ flowchart LR
    trap is structured data, not a Rust panic. Active scenario frames are discarded
    when a trap propagates through the VM loop.
 
-The parser may be temporarily exercised without a backend, but the first
-executable language slice must go all the way through typed IR and bytecode.
-An AST walker may be a test oracle later; it is not the production execution path.
+The executable language path passes through typed IR, bytecode, and mandatory
+verification. Parser-only tests exercise syntax independently; they do not count
+as executing LARP programs. An AST walker is not the production execution path.
 
 ## Workspace boundaries
 
@@ -108,8 +113,9 @@ CLI to compiler/runtime, never from semantic libraries to CLI. The VM and
 bytecode format must not depend on AST types. Share only deliberately stable
 artifact types between the emitter and loader.
 
-Keep the initial workspace dependency-free. Evaluate libraries for CLI parsing,
-diagnostic rendering, serialization, property tests, and fuzzing when needed.
+The main workspace currently has no third-party Rust dependencies; the isolated
+fuzz workspace uses external instrumentation tooling. Evaluate libraries for CLI
+parsing, diagnostic rendering, serialization, and property testing when needed.
 A custom source location abstraction is small; a custom terminal layout engine
 or cryptographic artifact format is not a good use of engineering time.
 
@@ -436,7 +442,8 @@ UTF-8 is decoded only after a complete record. See [host input](host-input.md).
 ## Diagnostics and tools
 
 Semantic phases emit structured English diagnostics with stable codes. Rendering
-into terminal text or future JSON happens at the boundary. Keep expected/found
+into terminal text or schema-versioned JSON happens at the CLI boundary; see
+[the diagnostic protocol](diagnostics.md). Keep expected/found
 types and related spans in data, not embedded in ANSI strings. Memes never replace
 an actionable explanation. The formatter parses source and annotates token spans for generic delimiters
 and unary operators. A concrete delimiter tree retains original tokens and
@@ -449,6 +456,7 @@ lexical API. See [formatter policy](formatter.md).
 Commands already available: `explain`, artifact `build`, source/artifact `check`
 and `run`, IR/bytecode `dump` (`--ir` requires source), and source `fmt` in
 write/check/stdout modes. Disassembly includes role method signatures, class implementation tables,
-concrete extension metadata, lazy construction/forcing, and silence operations. Next: additional host APIs and tooling integrations. No language
-server, incremental query engine, package manager, or optimizer is needed before
-basic programs pass conformance.
+concrete extension metadata, lazy construction/forcing, and silence operations.
+File modules, additional host APIs, and tooling integrations remain later work;
+there is no language server, incremental query engine, package manager, or
+optimizer in this preview.

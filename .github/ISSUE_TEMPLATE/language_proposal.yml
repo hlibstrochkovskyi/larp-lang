@@ -1,0 +1,23 @@
+name: Language or tooling proposal
+description: Explain a use case and propose a concrete language or toolchain change.
+title: "Proposal: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What program or workflow needs this?
+      description: Show the problem with the current implementation or an example you cannot express yet.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include sample syntax or a CLI interaction with expected results. Check the roadmap and implementation status first.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and tradeoffs
+      description: What can users do today? Consider typing, effects, diagnostics, runtime behavior, and compatibility where relevant.

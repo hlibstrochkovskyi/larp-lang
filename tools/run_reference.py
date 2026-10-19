@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute every complete LARP fence in the practical reference through the CLI."""
+"""Execute complete LARP documentation fences through the real compiler and VM."""
 
 import argparse
 import hashlib
@@ -14,12 +14,16 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "artifacts/reference-validation")
+    parser.add_argument("--document", type=Path, default=ROOT / "docs/reference.md")
+    parser.add_argument("--contracts", type=Path, default=ROOT / "docs/reference-cases.json")
+    parser.add_argument("--bin", type=Path, help="Use an existing CLI without rebuilding it")
     options = parser.parse_args()
     output = options.output.resolve()
     if output.exists() and any(output.iterdir()):
         parser.error("Output must be empty; choose a fresh --output to retain previous evidence")
-    document = ROOT / "docs/reference.md"
-    contracts = json.loads(ROOT.joinpath("docs/reference-cases.json").read_text(encoding="utf-8"))
+    document = options.document.resolve()
+    contract_path = options.contracts.resolve()
+    contracts = json.loads(contract_path.read_text(encoding="utf-8"))
     if contracts.get("schema_version") != 1:
         parser.error("Unsupported reference contract schema")
     cases = contracts["cases"]
@@ -29,12 +33,19 @@ def main() -> None:
     identifiers = [case["id"] for case in cases]
     if len(set(identifiers)) != len(cases) or any(not re.fullmatch(r"[a-z][a-z0-9-]*", name) for name in identifiers):
         parser.error("Reference case IDs must be unique lowercase filename-safe names")
-    subprocess.run(["cargo", "build", "-p", "larp-cli", "--locked", "--offline"], cwd=ROOT, check=True)
-    binary = ROOT / "target/debug/larp"
+    for code, case in zip(blocks, cases, strict=True):
+        if "source" in case:
+            source = ROOT.joinpath(case["source"]).resolve()
+            if not source.is_relative_to(ROOT) or not source.is_file() or source.read_text(encoding="utf-8") != code:
+                parser.error(f"Documentation example differs from its checked-in source: {case['id']}")
+    if options.bin is None:
+        subprocess.run(["cargo", "build", "-p", "larp-cli", "--locked", "--offline"], cwd=ROOT, check=True)
+    binary = options.bin.resolve() if options.bin else ROOT / "target/debug/larp"
     output.mkdir(parents=True, exist_ok=True)
     report = {"schema_version": 1, "samples": len(blocks),
+              "document": str(document), "contracts": str(contract_path),
               "reference_sha256": hashlib.sha256(document.read_bytes()).hexdigest(),
-              "contracts_sha256": hashlib.sha256(ROOT.joinpath("docs/reference-cases.json").read_bytes()).hexdigest(),
+              "contracts_sha256": hashlib.sha256(contract_path.read_bytes()).hexdigest(),
               "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(), "commands": []}
 
     def invoke(arguments: list[str], stdin: str = "", stdout: str | None = "", stderr: str = "") -> str:

@@ -1,4 +1,32 @@
-# Practical reference validation
+# Documentation example validation
+
+The practical reference and main README now have separate executable contracts.
+The historical reference run below retains its original scope and counts.
+
+## README pitch example
+
+The main [README](../README.md) contains one complete LARP program, also stored
+as [examples/pitch-deck.larp](../examples/pitch-deck.larp). The harness checks that
+they are identical before executing [readme-cases.json](readme-cases.json).
+
+```sh
+python3 tools/run_reference.py --document README.md --contracts docs/readme-cases.json --output artifacts/readme-validation
+```
+
+This runs the same source/check/format/artifact contracts as the reference suite:
+15 CLI commands, including five VM executions, exact stdout `49\n20\nfr\n`, and
+the declared `PALANTIR [UnicornPitch]` stderr report. CI includes this command.
+The example was also executed through the unchanged published `0.1.0-preview.1`
+binary with `--bin`, including normal/stress source and loaded artifacts and
+formatted source. This proves the snippet works on that executable even though
+the example file was added after the release archive was frozen.
+
+Use `--document` and `--contracts` together to select another document and its
+ordered contracts; `--bin` avoids rebuilding an existing CLI. Output directories
+must be new or empty. Document, contract, and binary hashes are retained with
+actual command results.
+
+## Historical practical reference run
 
 Date: 2026-10-19. Scope: the eight complete LARP code blocks in
 [the practical reference](reference.md), not every possible program described by

@@ -1,10 +1,11 @@
 # Versioning and compatibility
 
-Status: the workspace prepares `0.1.0-preview.1` as a review candidate. The
-language remains experimental, and no named preview tag or GitHub Release has
-been published. See the [candidate notes](releases/0.1.0-preview.1.md). This policy
-defines version identities and publication criteria; it does not declare the
-[preview readiness gate](preview-readiness.md) closed or implement publication.
+Status: [`v0.1.0-preview.1`](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1)
+is the first public prerelease. The language remains experimental. The
+[publication record](releases/0.1.0-preview.1-publication.md) identifies its exact
+commit, artifacts, and executed checks; the immutable [release notes](releases/0.1.0-preview.1.md)
+describe the shipped subset. This policy defines version identities and the
+evidence required for subsequent releases.
 
 ## Independent version identities
 
@@ -35,8 +36,7 @@ There is no stable language or public Rust library API promise yet.
   commits can share that version; retain the full commit and archive digest.
 - The first named preview series uses `0.y.z-preview.N`, beginning with a
   positive decimal `N` without leading zeroes. For example,
-  `0.1.0-preview.1` identifies the current prepared candidate; it is not a
-  published release.
+  `0.1.0-preview.1` identifies the first published experimental prerelease.
 - Numbered previews in a series may change the experimental design. Every
   intentional source, behavior, CLI, or library incompatibility must be explicit
   in its release notes, with the affected construct and migration or rebuild
@@ -158,14 +158,16 @@ python3 tools/check_version.py --bin target/debug/larp --output artifacts/versio
 
 Use a new or empty output directory and the intended executable. The driver
 checks the current implementation; it does not create a release or tag. The
-candidate workflow continues to upload review archives. A publication command,
-tag-triggered release workflow, signatures/attestations, and a support lifetime
-remain outside the current implementation. No preview publication or maintainer
-design acceptance is implied by this policy.
+candidate workflow continues to upload review archives; those CI artifacts are
+not automatically public releases. The first preview was published after an
+explicit maintainer decision, as recorded in its
+[publication record](releases/0.1.0-preview.1-publication.md). This policy does not
+authorize subsequent publication, establish signatures/attestations or a support
+lifetime, or approve the whole proposed language design.
 
-## Executed local validation
+## Historical local validation — 2026-10-19
 
-On 2026-10-19, the current CLI passed 13 version-contract commands, including
+On 2026-10-19, the development CLI passed 13 version-contract commands, including
 five real VM executions: one newly emitted artifact and both frozen historical
 artifacts with ordinary/stress GC. Identity reported toolchain `0.1.0-dev`,
 experimental specification `0.1`, writer 2, readers 1/2, and diagnostic schema 1.
@@ -185,7 +187,7 @@ ordinary conformance, and formatted/artifact/GC-stress conformance. These local
 results test the implementation; exact-commit hosted packaging and platform
 results must still be inspected independently for each candidate.
 
-## Prepared preview metadata
+## Release metadata
 
 For a named preview, the version-contract driver also reads
 `docs/releases/VERSION.json` and `docs/releases/VERSION.md`. The descriptor binds

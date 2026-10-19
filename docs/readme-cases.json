@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "pitch-deck",
+      "source": "examples/pitch-deck.larp",
+      "stdout": "49\n20\nfr\n",
+      "stderr": "PALANTIR [UnicornPitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+    }
+  ]
+}

@@ -1,17 +1,34 @@
 # Coverage-guided robustness checks
 
+[Project overview](../README.md) · [Contributing](../CONTRIBUTING.md) · [Saved regressions](regressions/README.md)
+
 This standalone Cargo workspace keeps libFuzzer's third-party tooling out of
 the dependency-free compiler workspace. The shared oracles live in
 `crates/larp-fuzz-support`; ordinary stable workspace tests replay deterministic
 mutations and checked-in regressions without downloading fuzz dependencies.
 
-Install a C++ compiler, Rust `nightly-2026-10-17`, and `cargo-fuzz` 0.13.2:
+## Stable regression checks
+
+From the repository root, run the shared oracles and saved regression replay:
+
+```sh
+cargo test -p larp-fuzz-support --locked --offline
+```
+
+This is a deterministic test suite, not a coverage-guided campaign. Ordinary
+contributors do not need nightly Rust or `cargo-fuzz` for it.
+
+## Instrumented campaigns
+
+Install a C++ compiler, Rust `nightly-2026-10-17`, and `cargo-fuzz` 0.13.2.
+Run these commands from the repository root, using a fresh corpus directory:
 
 ```sh
 rustup toolchain install nightly-2026-10-17 --profile minimal
 cargo install cargo-fuzz --version 0.13.2 --locked
 cargo build --locked --offline
 python3 tools/seed_fuzz.py
+cargo +nightly-2026-10-17 fetch --manifest-path fuzz/Cargo.toml --locked
 cargo +nightly-2026-10-17 fuzz build --codegen-units 16
 cargo +nightly-2026-10-17 fuzz run frontend --codegen-units 16 -- \
     -seed=49 -max_len=65536 -max_total_time=60 -timeout=5 \
@@ -37,12 +54,18 @@ To continue a search, pass the old corpus to the runner explicitly and retain it
 recorded initial fingerprint. Such a run starts from a warmed corpus rather than
 the original public seed inventory.
 
+The [bounded fuzz workflow](../.github/workflows/fuzz.yml) pins the CI toolchain,
+target list, and campaign settings. A successful run is evidence for that
+particular build and input stream, rather than a permanent project-wide result.
+
 On hosts that prohibit LeakSanitizer's required ptrace support, explicitly use
 `--disable-leak-check` (or `ASAN_OPTIONS=detect_leaks=0` for `cargo fuzz run`). This
 leaves AddressSanitizer's memory-access checks enabled but supplies no leak-check
 evidence; the runner records the effective sanitizer environment. Do not count a
 fatal LeakSanitizer startup/shutdown error as a successful campaign or a language
 defect. The default leaves leak checking enabled.
+
+## Oracles and input scope
 
 | Target | Oracle |
 | --- | --- |
@@ -65,11 +88,15 @@ public examples must compile. Directory markers are not regression inputs.
 Mutable corpus, crashes, build products, and coverage outputs are ignored.
 Do not publish an automatically generated crash before checking its contents.
 
+## Recording findings
+
 For a finding, first replay the exact input with `cargo fuzz run TARGET FILE`,
 then minimize it with `cargo fuzz tmin TARGET FILE`. Fix the production defect
 and add a small input under `fuzz/regressions/TARGET/`, with the cause and expected
 behavior recorded in `regressions/README.md`. Workspace tests replay every file
 in those four directories, so a discovered defect remains covered on stable CI.
+
+## Limits and tooling licenses
 
 These are bounded bug searches, not proof of language conformance, memory safety,
 or sandboxing. Fuel does not bound allocation, so the targets do not execute

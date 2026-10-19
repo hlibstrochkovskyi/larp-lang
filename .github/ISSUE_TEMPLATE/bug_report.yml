@@ -1,0 +1,33 @@
+name: Bug report
+description: A program, command, diagnostic, or build behaves incorrectly.
+title: "Bug: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the expected behavior and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: How can we reproduce it?
+      description: Include the smallest complete program and the exact command, arguments, and stdin.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output and diagnostics
+      description: Paste stdout, stderr, diagnostic codes, and exit status as text.
+      render: text
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and environment
+      description: Include larp --version --json, your OS/architecture, and the commit if building from source. For build failures, include rustc -Vv.
+      render: text
+    validations:
+      required: true

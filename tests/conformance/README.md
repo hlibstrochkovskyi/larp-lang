@@ -1,50 +1,80 @@
-# Proposed language conformance corpus
+# Language conformance corpus
 
-Schema version 3 permits an optional `input` object containing UTF-8 `stdin`
-text and/or an `args` array of UTF-8 strings. NUL is forbidden in OS arguments.
-Run/runtime-error cases can declare input; absent stdin is explicit EOF, absent
-arguments is an empty list. Compile-error cases do not consume host input.
+[Project overview](../../README.md) · [Specification](../../docs/spec/v0.1.md) · [Contributing](../../CONTRIBUTING.md)
 
-Cases in `manifest.json` are either **active** or **pending**. Active cases run
-through the real compiler and VM. Pending cases specify future milestones and
-must not be reported as passing tests. The current inventory contains 89 cases,
-all active, with no pending fixtures. This finite corpus is not a proof that
-every normative rule or developer-preview release gate is complete.
+The [manifest](manifest.json) defines executable acceptance cases for the real
+LARP toolchain. It currently contains **89 active cases and no pending cases**.
+A passing finite corpus provides evidence for these programs; it does not prove
+all specification rules or replace the other release checks.
 
-`python3 tools/check_corpus.py` validates metadata, paths, diagnostic IDs, and
-inventory completeness. It does not parse, type-check, compile, or run LARP.
+## Run the corpus
 
-- `run`: compilation must succeed and stdout must match exactly. Optional
-  `stderr` declares exact inspection output; otherwise stderr must be empty.
-- `compile_error`: compilation must fail with the specified primary code.
-- `runtime_error`: compilation must succeed, then execution must fail with the
-  specified runtime code. Optional `stdout` declares observations emitted before
-  failure; otherwise stdout must be empty. Required `span` identifies a nonempty
-  source slice appearing exactly once. The harness calculates its UTF-8 byte
-  offsets and scalar coordinates independently and checks the complete primary
-  label through the [JSON diagnostic protocol](../../docs/diagnostics.md).
-  Optional `stderr` declares the inspection report before the diagnostic; its
-  exact reconstructed JSON output and text-mode prefix are checked, and the
-  fatal JSON diagnostic must be the last event.
+Run from the repository root:
 
-`python3 tools/run_conformance.py` builds the CLI and executes every active case
-through both `check` and `run`. It checks exit codes, exact stdout/declared inspection output, primary error
-codes, and presence of text source locations. JSON runs additionally check exact
-runtime ranges, unchanged stdout/status, and reconstruct inspection output.
-`--all` includes pending cases when
-any exist; currently it selects the same 89 active cases and passes. An optional
-`--bin PATH` selects an existing binary. `--gc-stress` requests collection at
-every object, array, closure, and lazy-cell allocation safepoint; CI executes the
-corpus with both normal collection and this stress mode. `--artifacts` adds
-`build`/loaded `check`/loaded `run`, comparing exit status, stdout, and stderr
-with direct source execution. Invalid source must fail to build without creating
-a file. `--formatted` additionally formats temporary copies, checks idempotence,
-and compiles/executes the same expectations. It composes with `--artifacts` and
-`--gc-stress`; CI exercises the combined path. Error locations must remain valid,
-while line numbers may change after formatting; expected JSON ranges are derived
-from the actual formatted source. Checked-in files are not modified.
+```sh
+python3 tools/check_corpus.py
+python3 tools/run_conformance.py
+```
 
-The harness must fail if an unsupported case is silently skipped within a release's
-declared subset. Report fixtures pin the current deterministic renderer; its
-layout remains an implementation format rather than a frozen language contract.
-Incremental milestone suites can stay smaller than the full target corpus.
+The first command checks metadata, paths, diagnostic IDs, and inventory
+completeness. It does not parse, compile, or execute LARP. The second builds the
+CLI and checks every active case through `check` and `run`, in text and JSON
+diagnostic modes. Programs that compile execute in the VM; compile-error cases
+must fail before execution.
+
+Additional execution paths use the same expectations:
+
+```sh
+python3 tools/run_conformance.py --gc-stress
+python3 tools/run_conformance.py --artifacts
+python3 tools/run_conformance.py --artifacts --gc-stress --formatted
+```
+
+| Option | What it checks |
+| --- | --- |
+| `--bin PATH` | Use an existing CLI without rebuilding it |
+| `--gc-stress` | Collect at every object, array, closure, and lazy-cell allocation safepoint |
+| `--artifacts` | Build bytecode, load/verify it, and compare execution with direct source execution |
+| `--formatted` | Format temporary copies, check idempotence, and compile/execute the same contracts |
+| `--all` | Include pending cases as well as active ones; pending failures are expected |
+
+CI exercises normal, stress-GC, artifact, and combined formatted/artifact/stress
+paths. Checked-in source files are never reformatted by this harness. Formatted
+copies may have different line numbers; JSON ranges are derived independently
+from their actual source bytes. Invalid source must fail to build without
+creating an artifact.
+
+## Case contracts
+
+Cases have an ID, source path, milestone, status, and expectation. Every `.larp`
+file in this directory must appear exactly once in the manifest. **Active**
+cases are required to pass; **pending** cases describe future milestones and
+must not be reported as passing tests or silently skipped within a release's
+declared subset. With the present inventory, `--all` selects the same 89 cases.
+
+| Expectation | Required behavior |
+| --- | --- |
+| `run` | Compilation succeeds; exit status is 0 and stdout matches exactly |
+| `compile_error` | Compilation fails with the declared primary diagnostic code |
+| `runtime_error` | Compilation succeeds; VM execution fails with the declared runtime code and source span |
+
+For `run`, optional `stderr` is exact inspection output; otherwise stderr must
+be empty. Runtime-error cases can declare `stdout` and `stderr` emitted before
+failure; omitted values mean empty output. Their required `span` identifies a
+nonempty source slice appearing exactly once. The harness independently computes
+its UTF-8 byte offsets and scalar coordinates and checks the full primary label
+through the [JSON diagnostic protocol](../../docs/diagnostics.md).
+
+JSON execution must preserve stdout and exit status. Inspection events must
+reconstruct the exact declared report; a fatal diagnostic must be the last
+stderr event. Text-mode errors must include source locations. Report fixtures
+pin the current deterministic inspection renderer, whose layout is an
+implementation format rather than a frozen language contract.
+
+## Host input
+
+Manifest schema version 3 permits an optional `input` object containing UTF-8
+`stdin` text and/or an `args` array of UTF-8 strings. NUL is forbidden in OS
+arguments. Run/runtime-error cases may declare input; absent stdin is explicit
+EOF and absent arguments is an empty list. Compile-error cases cannot consume
+host input.
