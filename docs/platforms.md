@@ -1,14 +1,16 @@
 # Preview platform policy
 
-Status: **intended baseline; exact-commit compatibility CI has not yet run**.
-This policy defines the first preview's platform gate. Existing local builds,
-earlier hosted checks, and candidate smoke tests do not establish the matrix
-below. Record successful workflow runs, full source revisions, archive digests,
-and runner image versions before describing a candidate as validated here.
+Status: **baseline validated for commit `c6083b05f329b910da302cfb77eaf3d1c5fd0c98`**.
+The [hosted evidence](validation-platforms.md#hosted-exact-commit-matrix) records
+both successful compatibility jobs and their aggregate for that candidate.
+This policy defines the first preview's platform gate. Local builds and candidate
+smoke tests alone do not establish the matrix below. Later commits require their
+own successful workflow runs, full source revisions, archive digests, and runner
+image versions before their candidates can be described as validated here.
 The [local gate validation](validation-platforms.md) records executed checks and
 their limits separately from hosted compatibility evidence.
 
-## Intended build and execution matrix
+## Build and execution matrix
 
 | Work | Runner label | Toolchain or executable |
 | --- | --- | --- |

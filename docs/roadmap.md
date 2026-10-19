@@ -176,11 +176,11 @@ platform compatibility claim.
 
 Implemented platform gate: [explicit Ubuntu 24.04 build and Ubuntu 24.04/26.04
 same-archive execution](platforms.md), with complete packaged conformance and
-cross-job digest comparison. Each candidate still requires successful exact-commit
-hosted evidence before the matrix is considered validated.
+cross-job digest comparison. The matrix [passed for `c6083b0`](validation-platforms.md#hosted-exact-commit-matrix).
+Each later candidate still requires successful exact-commit hosted evidence.
 
-Remaining: versioned release/distribution policy, additional host APIs,
-and platform validation evidence. The maintainer selected the
+Remaining: versioned release/distribution policy and additional host APIs.
+The maintainer selected the
 [MIT License](../LICENSE). Hosted compiler CI and
 bounded fuzz campaigns passed on `cc1354d`; see
 [the exact-commit evidence](validation-fuzzing.md#hosted-verification). Later
