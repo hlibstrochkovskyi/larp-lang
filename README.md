@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/LARP%20Programming%20Language%20Logo.png" alt="LARP programming language logo" width="720">
+</p>
+
 # LARP
 
 *Fake it till you compile.*
