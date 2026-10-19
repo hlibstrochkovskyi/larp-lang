@@ -126,7 +126,7 @@ dependencies = [
 
 [[package]]
 name = "larp-artifact"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 dependencies = [
  "larp-bytecode",
  "larp-source",
@@ -135,7 +135,7 @@ dependencies = [
 
 [[package]]
 name = "larp-bytecode"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 dependencies = [
  "larp-source",
  "larp-types",
@@ -143,7 +143,7 @@ dependencies = [
 
 [[package]]
 name = "larp-compiler"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 dependencies = [
  "larp-bytecode",
  "larp-diagnostics",
@@ -155,14 +155,14 @@ dependencies = [
 
 [[package]]
 name = "larp-diagnostics"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 dependencies = [
  "larp-source",
 ]
 
 [[package]]
 name = "larp-format"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 dependencies = [
  "larp-diagnostics",
  "larp-source",
@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "larp-fuzz-support"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 dependencies = [
  "larp-artifact",
  "larp-bytecode",
@@ -193,7 +193,7 @@ dependencies = [
 
 [[package]]
 name = "larp-ir"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 dependencies = [
  "larp-bytecode",
  "larp-source",
@@ -202,11 +202,11 @@ dependencies = [
 
 [[package]]
 name = "larp-source"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 
 [[package]]
 name = "larp-syntax"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 dependencies = [
  "larp-diagnostics",
  "larp-source",
@@ -215,7 +215,7 @@ dependencies = [
 
 [[package]]
 name = "larp-types"
-version = "0.1.0-dev"
+version = "0.1.0-preview.1"
 
 [[package]]
 name = "leb128fmt"

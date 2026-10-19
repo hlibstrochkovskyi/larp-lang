@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0-preview.1",
+  "proposed_tag": "v0.1.0-preview.1",
+  "notes": "docs/releases/0.1.0-preview.1.md",
+  "language_spec": "0.1",
+  "target": "x86_64-unknown-linux-gnu",
+  "execution_hosts": ["ubuntu-24.04", "ubuntu-26.04"],
+  "artifact": {"write": 2, "read": [1, 2]},
+  "diagnostics_schema": 1,
+  "identity_schema": 1
+}

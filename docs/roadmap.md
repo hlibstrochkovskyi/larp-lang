@@ -184,7 +184,13 @@ compatibility rules](versioning.md), `--version --json`, real diagnostic/encoder
 checks, and frozen historical artifacts executed by the current VM. Package
 provenance and both compatibility hosts check the same advertised contracts.
 
-Remaining: versioned preview publication, release notes and additional host APIs.
+Prepared first named candidate: `0.1.0-preview.1`, with
+[release notes](releases/0.1.0-preview.1.md) and a machine-checked descriptor.
+Packaging and both compatibility hosts bind those documents to the real CLI's
+version and protocol capabilities. This prepares review material; it does not
+publish a tag/Release or claim maintainer acceptance of the design.
+
+Remaining: preview design acceptance/publication and additional host APIs.
 The maintainer selected the
 [MIT License](../LICENSE). Hosted compiler CI and
 bounded fuzz campaigns passed on `cc1354d`; see

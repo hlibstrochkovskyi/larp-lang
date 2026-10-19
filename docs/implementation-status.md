@@ -245,9 +245,10 @@ allocations, and memoized cells release captured initializer inputs.
   VM call frames: at most 1024 by default; the Rust API accepts explicit limits.
 - Integer operations on variables conservatively require `abort`, even if a more
   advanced range analysis could prove safety. Literal-only safe operations fold.
-- Return-path checks do not prove constant conditions or loop invariants. A
-  non-unit function needs syntactically complete reachable return paths or an
-  unconditional non-returning loop/abort.
+- Return-path checks use established scalar conditions and initial range bounds.
+  They do not prove general loop invariants or arbitrary algebraic identities.
+  A non-unit function needs complete feasible return paths or a proven
+  non-returning loop/abort; unknown conditions remain conservative.
 - Function parameter and return types are invariant; only the top-level function
   effect bound may widen. Option/result payloads are invariant, including any
   nested function bounds.

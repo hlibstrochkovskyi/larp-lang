@@ -191,9 +191,11 @@ def main() -> None:
                 "--output", str(version_output)], root, timeout=90)
         version_report = json.loads(version_output.joinpath("version-report.json").read_text(encoding="utf-8"))
         if (version_report.get("status") != "passed" or version_report.get("identity") != identity
-                or version_report.get("binary_sha256") != contents["bin/larp"]):
+                or version_report.get("binary_sha256") != contents["bin/larp"]
+                or version_report.get("preview") != metadata.get("preview")):
             raise RuntimeError("Packaged version/historical artifact contract did not pass")
         report["historical_versions"] = version_report["historical_versions"]
+        report["preview"] = version_report.get("preview")
         manifest = json.loads(root.joinpath("tests/conformance/manifest.json").read_text(encoding="utf-8"))
         if (not isinstance(manifest, dict) or manifest.get("schema_version") != 3
                 or not isinstance(manifest.get("cases"), list)

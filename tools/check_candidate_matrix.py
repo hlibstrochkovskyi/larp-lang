@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 import re
 
+from version_contract import validate_identity, validate_preview_evidence
+
 ROOT = Path(__file__).resolve().parents[1]
 HOSTS = {"ubuntu-24.04": "24.04", "ubuntu-26.04": "26.04"}
 MODES = [[], ["--gc-stress"], ["--artifacts", "--gc-stress"],
@@ -20,7 +22,7 @@ def validate(reports: dict, revision: str) -> dict:
     common = None
     hosts = {}
     fields = ("revision", "archive", "archive_sha256", "binary_sha256", "version", "target",
-              "rustc", "cargo", "checker_sha256", "checksummed_files", "conformance_cases", "identity", "historical_versions")
+              "rustc", "cargo", "checker_sha256", "checksummed_files", "conformance_cases", "identity", "historical_versions", "preview")
     for label, release in HOSTS.items():
         report = reports[label]
         if (report.get("schema_version") != 1 or report.get("status") != "passed"
@@ -30,6 +32,11 @@ def validate(reports: dict, revision: str) -> dict:
         for key in ("archive_sha256", "binary_sha256", "checker_sha256"):
             if not re.fullmatch(r"[0-9a-f]{64}", report.get(key, "")):
                 raise ValueError(f"Missing or invalid {key}: {label}")
+        identity = report.get("identity")
+        if not isinstance(identity, dict) or not isinstance(identity.get("language_spec"), str):
+            raise ValueError(f"Compatibility report is missing its version identity: {label}")
+        validate_identity(identity, report["version"], identity["language_spec"])
+        validate_preview_evidence(identity, report.get("preview"))
         cases = report.get("conformance_cases")
         if report.get("historical_versions") != report.get("identity", {}).get("artifact", {}).get("read"):
             raise ValueError(f"Historical artifact execution does not cover declared read versions: {label}")

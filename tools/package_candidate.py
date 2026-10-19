@@ -15,7 +15,7 @@ import subprocess
 import tarfile
 import tomllib
 
-from version_contract import specification_version, validate_identity, version_channel
+from version_contract import preview_metadata, specification_version, validate_identity, version_channel
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE = {"Ideas-not-for push!", ".git", ".git-foundation", ".agents", ".codex", ".aws", "artifacts", "target"}
@@ -97,6 +97,7 @@ def main() -> None:
             raise RuntimeError("Candidate CLI must support --version --json without errors")
         identity = json.loads(version_output.stdout)
         validate_identity(identity, version, specification_version(files["docs/spec/v0.1.md"][0].decode("utf-8")))
+        preview = preview_metadata(identity, lambda name: files[name][0])
         compiler = report["rustc_executable"]
         current_compiler = subprocess.check_output([compiler, "-Vv"], text=True, timeout=15).strip()
         if current_compiler != report["rustc"]:
@@ -137,6 +138,7 @@ def main() -> None:
                       "status": "experimental candidate", "source_archive_sha256": report["archive_sha256"],
                       "binary_sha256": digest(binaries[0]), "rustc": report["rustc"], "cargo": report["cargo"],
                       "toolchain_identity": identity,
+                      "preview": preview,
                       "source_date_epoch": epoch, "abi": abi,
                       "rust_runtime_notices": notice_manifest,
                       "reproducibility": "Both clean build binaries and both candidate archives matched within this run"}
@@ -248,7 +250,7 @@ No installer modifies system directories or shell settings.
                          "extracted_hashes_verified": True, "executable_mode": "0755"})
         save()
         print(f"Verified candidate: {first}\nSHA-256: {evidence['archive_sha256']}")
-    except (OSError, ValueError, RuntimeError, tarfile.TarError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, KeyError, RuntimeError, tarfile.TarError, subprocess.SubprocessError) as error:
         evidence.update({"status": "failed", "error": str(error)})
         save()
         raise

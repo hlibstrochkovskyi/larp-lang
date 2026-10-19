@@ -2,13 +2,14 @@
 
 import copy
 import hashlib
+import json
 from pathlib import Path
 import tempfile
 import unittest
 
 from check_candidate import checked_contents
 from check_candidate_matrix import MODES, validate
-from version_contract import validate_identity, version_channel
+from version_contract import preview_metadata, validate_identity, version_channel
 
 REVISION = "a" * 40
 
@@ -28,6 +29,7 @@ def synthetic_reports() -> dict:
                          "channel": "development", "language_spec": "0.1", "language_status": "experimental",
                          "diagnostics_schema": 1, "artifact": {"write": 2, "read": [1, 2]}},
             "historical_versions": [1, 2],
+            "preview": None,
             "conformance_modes": [{"flags": copy.copy(mode), "passed": 2, "pending": 0} for mode in MODES],
             "environment": {"system": "Linux", "machine": "x86_64", "glibc": "synthetic libc",
                             "os_release": {"ID": "ubuntu", "VERSION_ID": release},
@@ -123,6 +125,78 @@ class PayloadInventoryTests(unittest.TestCase):
             root.joinpath("SHA256SUMS").write_text(f"{'a' * 64}  ../outside.txt\n", encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "checksum path"):
                 checked_contents(root)
+
+
+class PreviewNotesTests(unittest.TestCase):
+    root = Path(__file__).resolve().parents[1]
+
+    def identity(self) -> dict:
+        identity = copy.deepcopy(synthetic_reports()["ubuntu-24.04"]["identity"])
+        identity.update({"version": "0.1.0-preview.1", "channel": "preview"})
+        return identity
+
+    def test_prepared_notes_are_bound_to_the_proposed_tag_and_content(self):
+        metadata = preview_metadata(self.identity(), lambda name: self.root.joinpath(name).read_bytes())
+        self.assertEqual(metadata["proposed_tag"], "v0.1.0-preview.1")
+        self.assertGreater(metadata["relative_file_links_checked"], 0)
+        notes = self.root.joinpath(metadata["notes"]).read_bytes()
+        self.assertEqual(metadata["notes_sha256"], hashlib.sha256(notes).hexdigest())
+
+    def test_wrong_tag_or_boolean_schema_is_rejected(self):
+        for field, value in (("proposed_tag", "v0.1.0-preview.2"), ("schema_version", True)):
+            with self.subTest(field=field):
+                def read_file(name):
+                    contents = self.root.joinpath(name).read_bytes()
+                    if name.endswith(".json"):
+                        descriptor = json.loads(contents)
+                        descriptor[field] = value
+                        return json.dumps(descriptor).encode()
+                    return contents
+                with self.assertRaises(ValueError):
+                    preview_metadata(self.identity(), read_file)
+
+    def test_zero_preview_number_or_build_metadata_is_not_publication_identity(self):
+        for version in ("0.1.0-preview.0", "0.1.0-preview.01", "0.1.0-preview.1+local"):
+            identity = self.identity()
+            identity["version"] = version
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                preview_metadata(identity, lambda name: self.fail("Invalid identity must not read files"))
+
+    def test_wrong_note_version_and_parent_link_are_rejected(self):
+        for replacement in (b"# LARP 0.1.0-preview.2\n", None):
+            def read_file(name):
+                contents = self.root.joinpath(name).read_bytes()
+                if name.endswith(".md") and name.startswith("docs/releases/"):
+                    return replacement if replacement else contents + b"\n[invalid](../../../private.txt)\n"
+                return contents
+            with self.subTest(replacement=replacement), self.assertRaises(ValueError):
+                preview_metadata(self.identity(), read_file)
+
+    def test_development_channel_does_not_claim_named_preview_checks(self):
+        identity = synthetic_reports()["ubuntu-24.04"]["identity"]
+        self.assertIsNone(preview_metadata(identity, lambda name: self.fail("Development has no named-preview notes")))
+
+    def test_matrix_requires_preview_document_hashes_even_when_both_reports_agree(self):
+        for evidence in (None, {"notes_sha256": "incorrect"}):
+            reports = synthetic_reports()
+            for report in reports.values():
+                report["identity"] = self.identity()
+                report["version"] = "0.1.0-preview.1"
+                report["preview"] = copy.deepcopy(evidence)
+            with self.subTest(evidence=evidence), self.assertRaises(ValueError):
+                validate(reports, REVISION)
+
+    def test_matrix_accepts_matching_complete_preview_evidence(self):
+        metadata = preview_metadata(self.identity(), lambda name: self.root.joinpath(name).read_bytes())
+        reports = synthetic_reports()
+        for report in reports.values():
+            report["identity"] = self.identity()
+            report["version"] = "0.1.0-preview.1"
+            report["preview"] = copy.deepcopy(metadata)
+        self.assertEqual(validate(reports, REVISION)["preview"], metadata)
+        reports["ubuntu-26.04"]["preview"]["notes_sha256"] = "e" * 64
+        with self.assertRaises(ValueError):
+            validate(reports, REVISION)
 
 
 if __name__ == "__main__":

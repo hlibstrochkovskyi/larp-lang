@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import tomllib
 
-from version_contract import specification_version, validate_identity
+from version_contract import preview_metadata, specification_version, validate_identity
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -61,6 +61,7 @@ def main() -> None:
         if not rendered.endswith("\n") or rendered.count("\n") != 1:
             raise ValueError("Version JSON must be exactly one LF-terminated record")
         report["identity"] = identity
+        report["preview"] = preview_metadata(identity, lambda name: ROOT.joinpath(name).read_bytes())
         ordinary = invoke(["--version"])
         if not ordinary.startswith(f"larp {version} "):
             raise ValueError("Human and machine version disagree")

@@ -1,7 +1,8 @@
 # Versioning and compatibility
 
-Status: the workspace version is `0.1.0-dev`. The language remains experimental,
-and no named preview tag or GitHub Release has been published. This policy
+Status: the workspace prepares `0.1.0-preview.1` as a review candidate. The
+language remains experimental, and no named preview tag or GitHub Release has
+been published. See the [candidate notes](releases/0.1.0-preview.1.md). This policy
 defines version identities and publication criteria; it does not declare the
 [preview readiness gate](preview-readiness.md) closed or implement publication.
 
@@ -9,7 +10,7 @@ defines version identities and publication criteria; it does not declare the
 
 | Identity | Current value | Meaning |
 | --- | --- | --- |
-| Toolchain version | `0.1.0-dev` | CLI and workspace package version from the root Cargo manifest |
+| Toolchain version | `0.1.0-preview.1` | CLI and workspace package version from the root Cargo manifest |
 | Language specification | `0.1` | The [proposed language specification](spec/v0.1.md), with experimental implementation status |
 | Artifact wire version | Writer `2`; reader `1`, `2` | Explicit encodings accepted by the artifact decoder, subject to verification |
 | Diagnostic JSON schema | `1` | The [structured diagnostic protocol](diagnostics.md) |
@@ -30,11 +31,12 @@ notation. SemVer identifies major-zero development and prereleases as unstable;
 the more specific pre-1.0 rules here define how LARP communicates its changes.
 There is no stable language or public Rust library API promise yet.
 
-- Development builds use `0.y.z-dev`, currently `0.1.0-dev`. Multiple development
+- Development builds use `0.y.z-dev`. Multiple development
   commits can share that version; retain the full commit and archive digest.
 - The first named preview series uses `0.y.z-preview.N`, beginning with a
   positive decimal `N` without leading zeroes. For example,
-  `0.1.0-preview.1` would be a preview identity, not an existing release.
+  `0.1.0-preview.1` identifies the current prepared candidate; it is not a
+  published release.
 - Numbered previews in a series may change the experimental design. Every
   intentional source, behavior, CLI, or library incompatibility must be explicit
   in its release notes, with the affected construct and migration or rebuild
@@ -65,7 +67,7 @@ The command emits one JSON object followed by a newline on stdout, exits
 successfully, and leaves stderr empty. For the current workspace it reports:
 
 ```json
-{"schema_version":1,"name":"larp","version":"0.1.0-dev","channel":"development","language_spec":"0.1","language_status":"experimental","artifact":{"write":2,"read":[1,2]},"diagnostics_schema":1}
+{"schema_version":1,"name":"larp","version":"0.1.0-preview.1","channel":"preview","language_spec":"0.1","language_status":"experimental","artifact":{"write":2,"read":[1,2]},"diagnostics_schema":1}
 ```
 
 `schema_version` versions this version-info object separately from diagnostics.
@@ -182,3 +184,24 @@ Required Rust formatting and Clippy checks passed, along with 390 workspace test
 ordinary conformance, and formatted/artifact/GC-stress conformance. These local
 results test the implementation; exact-commit hosted packaging and platform
 results must still be inspected independently for each candidate.
+
+## Prepared preview metadata
+
+For a named preview, the version-contract driver also reads
+`docs/releases/VERSION.json` and `docs/releases/VERSION.md`. The descriptor binds
+the exact proposed tag, language baseline, target/execution-host policy, artifact
+read/write versions, and both JSON schema identities to the actual CLI response.
+Named identities must use `0.y.z-preview.N` with positive `N`, without leading
+zeroes or build metadata. Other channels do not claim this named-preview check.
+
+The descriptor's `proposed_tag` is a proposed name, not proof that a tag exists.
+The driver checks the note's exact version heading and relative file links, then
+records SHA-256 hashes of both documents. Packaging records the same metadata
+under `BUILD.json.preview`; each compatibility host recomputes it from the
+archived documents and compares it with package provenance. The aggregate gate
+requires both hosts to have checked identical preview metadata.
+
+These checks detect version/tag/document/protocol drift. They do not approve the
+release-note prose, establish platform test outcomes by themselves, or authorize
+publication. The [technical policy review](preview-design-review.md) remains
+distinct from maintainer design acceptance.

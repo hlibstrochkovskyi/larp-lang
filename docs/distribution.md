@@ -57,6 +57,8 @@ Its single root directory contains:
   source/binary digests, and observed GLIBC version references when available.
   New candidates also retain the actual CLI's `toolchain_identity` JSON object,
   including its language baseline, artifact versions, and diagnostic schema.
+  Named previews include `preview`, binding a proposed tag and release-document
+  hashes to that identity; this field does not assert publication or approval.
 - `SHA256SUMS`, covering every other regular file, including the provenance and
   executable. The checksum file excludes itself to avoid a circular digest.
 - `THIRD_PARTY.md` and `THIRD_PARTY/rust/`, preserving upstream runtime attribution

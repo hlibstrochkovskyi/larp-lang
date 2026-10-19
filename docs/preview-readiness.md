@@ -38,7 +38,7 @@ still prevents closing that requirement.
 | §8.5: required program and practical alternatives | Active scenario/configuration/game cases; [evaluation](scenario-evaluation.md) | Executed; selective commit can break cross-field invariants and stays experimental |
 | §9: traced lifetime, cycles and temporary roots | Heap/VM/compiler stress tests; [resource measurements](validation-resources.md) | Exercised; logical arena counters are not byte budgets or whole-process memory guarantees |
 | §10: stable diagnostic data and exact runtime spans | [Protocol](diagnostics.md), renderer/CLI tests, all ten runtime contracts | Exercised in text/JSON, formatted source and loaded artifacts; this closes a previously weaker location-presence check |
-| §11: baseline design review | Numeric conversion, finite effects, conservative regions, selective-commit limitation | **Open:** implementation does not constitute maintainer acceptance of these policies |
+| §11: baseline design review | [Technical review](preview-design-review.md) of numeric conversion, finite effects, conservative regions and selective-commit limitations | Technical review completed with executable cases. **Maintainer acceptance open:** implementation/review evidence does not constitute the maintainer's design decision. |
 
 ## Resolved reconciliation work
 
@@ -94,7 +94,7 @@ evidence and the explicit limits of sequential literal context.
 | Reproducibility and extraction | Two independent native builds and archives are compared byte-for-byte; extracted binaries run real programs. See [build](reproducible-builds.md) and [packaging](distribution.md) contracts. |
 | Hosted exact-commit checks | Compiler/conformance/packaging and bounded fuzz jobs passed for [`a84f033`](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39178705380) and [its campaign](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39178705339). Later commits need their own outcomes. |
 | Platform policy | [Explicit policy](platforms.md): Ubuntu 24.04 build and identical-archive execution on Ubuntu 24.04/26.04, x86-64 GNU/Linux. Both exact-commit host jobs and their digest/conformance aggregate [passed for `c6083b0`](validation-platforms.md#hosted-exact-commit-matrix); later candidates require their own evidence. |
-| Versioned distribution | [Versioning policy](versioning.md) and executable CLI identity/format checks are implemented. **Publication open:** candidate workflows create neither a version tag nor a GitHub Release; a named preview still needs its declared subset, change notes and exact-commit release evidence. |
+| Versioned distribution | [Versioning policy](versioning.md), identity checks and [prepared preview notes](releases/0.1.0-preview.1.md) exist. A machine-checked descriptor binds the proposed tag/notes/formats to the actual CLI and archive. **Publication open:** no version tag or GitHub Release is created; the prepared preview needs its own exact-commit release evidence and publication decision. |
 
 Additional host APIs, modules/packages, user generics, nested/object-graph
 scenarios, async, native optimization and editor services remain later RFC work.
