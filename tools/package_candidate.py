@@ -130,6 +130,9 @@ def main() -> None:
                       "rust_runtime_notices": notice_manifest,
                       "reproducibility": "Both clean build binaries and both candidate archives matched within this run"}
         files["BUILD.json"] = ((json.dumps(provenance, indent=2, sort_keys=True) + "\n").encode(), 0o644)
+        platform_note = ("See [preview platforms](docs/platforms.md) for the hosted same-archive\n"
+                         "execution gate; require that commit's recorded results before describing\n"
+                         "its platform matrix as validated.\n") if "docs/platforms.md" in files else ""
         install = f"""# LARP {version} experimental candidate
 
 Source commit: `{revision}`. Target: `{report['target']}`. License: [MIT](LICENSE).
@@ -157,7 +160,7 @@ This is a dynamically linked GNU/Linux x86-64 binary. `BUILD.json` records its
 toolchain and observed GLIBC symbol-version references when readelf is available;
 those observations do not establish a tested minimum distribution version.
 Other operating systems, CPU architectures, and older runtime libraries are not
-validated by this candidate. Checksums detect changes; they are not signatures.
+validated by this candidate. {platform_note}Checksums detect changes; they are not signatures.
 No installer modifies system directories or shell settings.
 """
         files["PACKAGE.md"] = (install.encode(), 0o644)

@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.99.0
@@ -21,6 +21,7 @@ jobs:
       - run: cargo test --workspace --locked --offline
       - run: cargo test -p larp-compiler --release --locked --offline
       - run: python3 tools/check_corpus.py
+      - run: python3 -m unittest discover -s tools -p 'test_candidate_checks.py'
       - run: python3 tools/run_conformance.py
       - run: python3 tools/run_conformance.py --gc-stress
       - run: python3 tools/run_conformance.py --artifacts --gc-stress
@@ -35,7 +36,7 @@ jobs:
           retention-days: 14
 
   reproducible-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -55,10 +56,60 @@ jobs:
             artifacts/reproducible-builds/*/*/build.stderr.txt
             artifacts/package-ci/package-report.json
           retention-days: 14
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: larp-candidate-linux-x86_64
           path: |
             artifacts/package-ci/larp-*.tar.gz
             artifacts/package-ci/larp-*.tar.gz.sha256
+          retention-days: 14
+          if-no-files-found: error
+
+  candidate-compatibility:
+    needs: reproducible-build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: larp-candidate-linux-x86_64
+          path: artifacts/downloaded-candidate
+      - name: Verify and execute the existing candidate
+        run: python3 tools/check_candidate.py --input artifacts/downloaded-candidate --revision "${{ github.sha }}" --output artifacts/candidate-compatibility
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: candidate-compatibility-${{ matrix.os }}
+          path: artifacts/candidate-compatibility/compatibility-report.json
+          retention-days: 14
+
+  candidate-matrix:
+    needs: candidate-compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: candidate-compatibility-*
+          path: artifacts/candidate-matrix-input
+      - name: Require both platforms to have executed identical candidate bytes
+        run: python3 tools/check_candidate_matrix.py --input artifacts/candidate-matrix-input --revision "${{ github.sha }}" --output artifacts/candidate-matrix
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: candidate-matrix
+          path: artifacts/candidate-matrix/matrix-report.json
           retention-days: 14

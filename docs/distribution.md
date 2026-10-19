@@ -78,9 +78,10 @@ configuration changes.
 This candidate targets dynamically linked GNU/Linux x86-64. Its GLIBC references
 come from [readelf version sections](https://sourceware.org/binutils/docs/binutils/readelf.html),
 which describe binary requirements rather than demonstrating compatibility on an
-older distribution. Tests currently establish behavior on the build host and
-hosted CI runner, not a minimum distribution/kernel version or support for other
-CPU/OS combinations. Checksums detect content changes; no signing or attestation
+older distribution. The [preview platform policy](platforms.md) defines explicit
+build/execution hosts and the evidence required for each candidate. A build-host
+smoke test does not establish that matrix, a minimum distribution/kernel version,
+or support for other CPU/OS combinations. Checksums detect content changes; no signing or attestation
 claim is made.
 
 ## Determinism and execution checks
@@ -134,5 +135,42 @@ and both archives remain in ignored `artifacts/package-with-runtime-notices/`.
 CI builds its own exact-commit candidate after the independent-build check.
 Reports/logs are saved as `reproducibility-evidence`; a successful candidate and
 its archive checksum are saved as `larp-candidate-linux-x86_64`. This artifact is
-for review and testing. Publishing a versioned Release, choosing a supported
-platform matrix, and establishing longer-term compatibility remain separate work.
+for review and testing. Publishing a versioned Release and establishing
+longer-term compatibility remain separate work.
+
+## Execute the same candidate on the preview hosts
+
+CI builds and packages on `ubuntu-24.04`, then downloads the identical candidate
+artifact in separate `ubuntu-24.04` and `ubuntu-26.04` jobs. Neither compatibility
+job installs a Rust toolchain or rebuilds the CLI. Python 3.11+ runs the archived
+harness; GNU `getconf`, `readelf`, and `sha256sum` record/check the host and payload.
+
+```sh
+python3 tools/check_candidate.py \
+    --input artifacts/downloaded-candidate \
+    --revision FULL_SOURCE_COMMIT \
+    --output artifacts/candidate-compatibility
+```
+
+The input contains exactly one `larp-*.tar.gz` and its `.sha256` sidecar. The
+checker bounds the archive/extracted payload to 128 MiB and 8192 entries, requires
+one normalized package root and regular files/directories, and verifies complete
+payload checksums before execution. It checks exact revision, version, MIT,
+target, recorded Rust 1.99.0, ELF architecture/mode, and runtime notice inventory.
+These checks apply to our own CI-produced executable; they are not an execution
+sandbox or publisher authentication for arbitrary downloaded programs.
+
+The packaged corpus inventory and all four conformance modes in the platform
+policy must pass. Commands run with EOF, captured stdout/stderr, and process-group
+timeouts; a timeout, failure, pending case, or unexpected stderr fails the job.
+Payload hashes are checked again after execution. Each new/empty output directory
+retains `compatibility-report.json`, its environment/image and libc/ELF details,
+hashes, command outcomes, and extraction. Existing evidence is never overwritten.
+
+CI retains the two reports as `candidate-compatibility-ubuntu-24.04` and
+`candidate-compatibility-ubuntu-26.04`. The final `candidate-matrix` job checks both
+reported host identities, exact source revision, all four executed modes, and
+identical archive/binary/toolchain/corpus identities. A failure in either host
+job prevents that aggregate gate from passing. `matrix-report.json` retains input
+report hashes and both recorded environments. Each artifact expires after 14 days;
+successful exact-commit evidence must be recorded before making a platform claim.
