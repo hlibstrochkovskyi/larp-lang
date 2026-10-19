@@ -1,0 +1,23 @@
+{
+  "revision": "61cc9314916c510673112dc799e247c0f59cc3b9",
+  "tag": "v0.1.0-preview.1",
+  "release_title": "LARP v0.1.0-preview.1",
+  "prerelease": true,
+  "assets": [
+    {
+      "name": "larp-0.1.0-preview.1-x86_64-unknown-linux-gnu-61cc9314916c.tar.gz",
+      "bytes": 2105366,
+      "sha256": "4ef6570c24dc929b83cbff2b3aabf921f00719c35d736f0d74139bbebb8b163c"
+    },
+    {
+      "name": "larp-0.1.0-preview.1-x86_64-unknown-linux-gnu-61cc9314916c.tar.gz.sha256",
+      "bytes": 132,
+      "sha256": "f8ebc8031142d73cc6a7bd029b6f269f753b373cb41d9fe58e1701817d6232ba"
+    },
+    {
+      "name": "release-evidence.json",
+      "bytes": 177415,
+      "sha256": "55bef3f0ccc165df960c22bbc96772fccc83237f257300edc19d4249444de79e"
+    }
+  ]
+}
