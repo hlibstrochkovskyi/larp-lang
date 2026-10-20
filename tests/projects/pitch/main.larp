@@ -1,0 +1,19 @@
+import "lib/founder.larp" as founders;
+import "lib/training.larp" as training;
+
+main_character {
+    founders::Founder bro = new founders::Founder(fortnine);
+    mfs<mf> clips = [2, 4, 49];
+    mf earned = training::earnedAura(clips);
+
+    larp (bro) as CrossFilePitch {
+        flex bro.valuation = 1_000_000_000;
+        founders::train(bro, earned);
+        canon bro.aura;
+        palantir(bro);
+    }
+
+    yap(bro.valuation);
+    yap(bro.aura);
+    yap(bro.isMogging(10));
+}

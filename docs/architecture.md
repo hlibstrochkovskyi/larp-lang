@@ -11,7 +11,40 @@ The pipeline below includes both current contracts and their intended extensions
 see [implementation status](implementation-status.md) for the supported subset
 and the [first-preview publication record](releases/0.1.0-preview.1-publication.md)
 for the exact shipped revision. The released source frontend accepts one file;
-bytecode module metadata is not a source-file import system.
+bytecode module metadata is distinct from a source-file import system. Current
+`0.2.0-dev` adds the source graph described below.
+
+## Whole-project compilation (`0.2.0-dev`)
+
+`larp-syntax::parse_unit` parses imports, top-level visibility, qualified names,
+and an optional entry block. The legacy `parse` API and valid single-file CLI
+programs retain their original grammar, including an identifier named `import`.
+The CLI chooses the unit frontend when legacy parsing does not accept the source.
+`fmt` follows the same selection but does not load dependencies.
+
+`larp-compiler::project::load` takes immutable source snapshots from an injected
+resolver, performs no filesystem I/O, and assigns deterministic breadth-first
+source identities. It deduplicates provider identities, bounds the graph, rejects
+cycles and invalid entry placement, and retains sources for diagnostics on errors.
+The CLI provider canonicalizes regular `.larp` files within the entry's parent,
+with cached snapshots and bounded reads. Canonical path containment is a path
+policy, not a hostile-filesystem race guarantee.
+
+`compile_project` borrows the original unit ASTs. Symbols are keyed by lexical
+`SourceId` and name, with explicit direct import edges and public-name sets.
+Aliases never generate copies of declaration maps or rewrite source identifiers.
+All nominal identities and function headers are allocated before body checking.
+A separate interface pass rejects private nominal types in public signatures.
+Module-qualified metadata names distinguish equal-spelled classes, roles, and
+extensions in the existing bytecode tables; original source spans remain intact.
+
+Every checked body uses its defining file's symbols and extensions. Direct and
+indirect cross-file calls retain the existing effects, ownership, and regional
+specialization passes. Exported extension calls select exact receiver signatures;
+ordinary members still win dot lookup. The resulting whole-project IR passes
+through the ordinary lowerer and independent verifier. Artifacts use the existing
+multi-source table and wire version 2; the runtime needs no module loader.
+See [RFC 0001](rfcs/0001-file-modules.md) and [module usage](modules.md).
 
 ## Pipeline and contracts
 
@@ -457,6 +490,6 @@ Commands already available: `explain`, artifact `build`, source/artifact `check`
 and `run`, IR/bytecode `dump` (`--ir` requires source), and source `fmt` in
 write/check/stdout modes. Disassembly includes role method signatures, class implementation tables,
 concrete extension metadata, lazy construction/forcing, and silence operations.
-File modules, additional host APIs, and tooling integrations remain later work;
+Packages, additional host APIs, and tooling integrations remain later work;
 there is no language server, incremental query engine, package manager, or
 optimizer in this preview.

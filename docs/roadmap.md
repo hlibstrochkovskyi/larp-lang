@@ -3,7 +3,9 @@
 Status: M1 through M5 and the bounded M6 first-preview scope are implemented.
 [`v0.1.0-preview.1`](releases/0.1.0-preview.1-publication.md) is published as an
 experimental prerelease. Broader specification review and later language/tooling
-work remain open; file modules are not part of the released compiler.
+work remain open. File modules are implemented in the `0.2.0-dev` development
+branch and are not part of the released compiler; the M7 local acceptance gate
+has passed, with hosted checks required for each commit.
 This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -211,9 +213,34 @@ the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource
 limits. Preserve the selected MIT license and choose supported platforms. Run CI on the maintainer-selected
 GitHub remote; local checks do not prove hosted CI passed.
 
+## M7 — File modules and whole-project compilation (implemented; local gate passed)
+
+[The file-module RFC](rfcs/0001-file-modules.md) specifies explicit file imports,
+private-by-default declarations and exports, module-qualified type/value lookup,
+nominal identity, lexical extensions, exported-interface checks, and an injected
+resolver. The CLI supplies bounded canonical filesystem resolution within the
+entry parent. Libraries have no entry block; imports execute no initializers.
+
+Implemented paths now include unit parsing/formatting, graph discovery and
+validation, whole-project type/effect checking, explicit imported extensions,
+scenario specialization, and multi-source artifact encoding/execution. The
+[pitch project](../tests/projects/README.md) is the executable acceptance fixture.
+The [local validation record](validation-file-modules.md) covers focused project
+tests, the unchanged single-file corpus, historical artifact/version contracts,
+and full workspace checks. Hosted CI remains authoritative for each commit.
+
+Gate: execute direct/indirect imported calls, nominal classes/roles, lexical
+captures, extensions, lazy values, and scenarios through source and loaded
+artifacts with GC stress. Reject namespace/private-interface leaks, unsafe effects
+and regions, cycles, entry/alias errors, resolver inconsistency, and resource/path
+violations. Preserve original source spans after deleting source files.
+
+Packages, re-exports, cyclic imports, separate compilation, and dynamic loading
+remain outside this gate.
+
 ## Later RFCs
 
-Modules/packages, user-defined generics, richer pattern matching and result
+Packages and richer module APIs, user-defined generics, richer pattern matching and result
 propagation, scenario validation groups, nested/first-class scenarios, scenario
 object graphs, generalized effects, async, native backend, optimizer, debugger, LSP.
 Keep the typed IR backend-neutral, but do not promise native ABI compatibility.

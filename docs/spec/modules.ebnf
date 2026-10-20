@@ -1,0 +1,27 @@
+(* Experimental 0.2.0-dev source-unit extension to grammar.ebnf.
+   Unlisted productions retain their baseline definition. These productions
+   override program, declaration, type, archetype, and primary for unit mode.
+   Import paths use the ordinary STRING token; resolver policy is separate.
+   The entry unit requires main_character; imported units forbid it.
+   Only one direct alias qualifier resolves; longer paths are not re-exports. *)
+
+program       = { import }, { declaration },
+                [ "main_character", block, { declaration } ] ;
+import        = "import", STRING, "as", IDENT, ";" ;
+declaration   = [ visibility ], ( function | archetype | role ) ;
+qualified     = IDENT, { "::", IDENT } ;
+type          = qualified, [ "<", type_arg, { ",", type_arg }, ">" ]
+              | "fn", "(", [ types ], ")", "->", type, [ effects ] ;
+archetype     = "archetype", IDENT, [ ":", qualified, { ",", qualified } ],
+                "{", { member }, "}" ;
+primary       = INT | FLOAT | STRING | "fr" | "cap" | "no_bitches"
+              | qualified | "self" | "(", expression, ")"
+              | "[", [ arguments ], "]"
+              | "new", qualified, "(", [ arguments ], ")" ;
+
+(* The baseline function production uses type for an extension receiver,
+   so qualified extension receiver types require no separate production.
+   Declaration names, local bindings, member names, aliases, and persona labels
+   remain plain IDENT. import is reserved only in source-unit mode.
+   Public-interface, namespace, type, effect, ownership, and region rules are
+   specified in ../rfcs/0001-file-modules.md and ../modules.md. *)

@@ -1,0 +1,7 @@
+sidequest boost(mf score) -> mf uses(abort) {
+    return score + 1;
+}
+
+highkey sidequest earnedAura(mfs<mf> clips) -> mf uses(read, write, abort) {
+    return clips.map(boost).filter(x => x mogg 4).size() * 10;
+}

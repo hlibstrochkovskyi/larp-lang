@@ -7,11 +7,15 @@ experimental release. The implementation status describes what works; the
 specification describes the design baseline. Neither a proposal nor a passing
 finite test suite establishes complete language correctness.
 
+Current development: **`0.2.0-dev`**, including [file modules](modules.md);
+imports are not available in the published first preview.
+
 ## Learn and run
 
 | Guide | Use it for |
 | --- | --- |
 | [Practical reference](reference.md) | Types, control flow, functions, objects, effects, and complete runnable examples |
+| [File modules](modules.md) | Imports, exports, lexical namespaces, extensions, and whole-project artifacts |
 | [Example programs](../examples/) | Collections, roles, lazy values, input, and scenario comparisons |
 | [Implementation status](implementation-status.md) | Supported syntax, CLI commands, restrictions, and runtime limits |
 | [Diagnostics](diagnostics.md) | Diagnostic codes, source locations, JSON Lines, and inspection output |
@@ -66,6 +70,7 @@ source revisions matter; an old passing result does not validate a newer commit.
 | --- | --- |
 | Foundation and algorithms | [Foundation](validation-foundation.md), [scalars](validation-scalar-core.md), [functions/recovery](validation-functions-and-recovery.md) |
 | Types and control flow | [Contextual equality](validation-contextual-equality.md), [constant control flow](validation-control-flow.md) |
+| File modules | [Whole-project compilation](validation-file-modules.md) |
 | Collections and objects | [Collections](validation-collections.md), [objects](validation-objects.md), [roles/extensions](validation-roles-and-extensions.md) |
 | Alternative state | [Scenarios](validation-scenarios.md), [lazy/suppression](validation-lazy-and-suppression.md) |
 | CLI and persisted programs | [Artifacts](validation-artifacts.md), [formatter](validation-formatter.md), [input](validation-host-input.md), [reference examples](validation-reference.md) |

@@ -16,6 +16,7 @@ larp-bytecode.workspace = true
 
 [dev-dependencies]
 larp-vm.workspace = true
+larp-artifact.workspace = true
 
 [lints]
 workspace = true

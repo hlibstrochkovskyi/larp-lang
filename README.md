@@ -20,6 +20,9 @@ LARP is an experimental, statically typed programming language with C-style
 syntax, objects, first-class functions, and controlled what-if execution.
 Written in Rust, it compiles to its own verified bytecode and runs on the LARP VM.
 
+This branch develops **`0.2.0-dev`**, adding [file modules](docs/modules.md).
+The downloadable first preview below remains `0.1.0-preview.1` and single-file.
+
 ## Pitch the unicorn. Keep the aura.
 
 No funding? `.copium()` has you covered. Farm some aura, rehearse the billion-dollar
@@ -139,8 +142,9 @@ arrays, closures, and lazy cells. Source checks and an independent bytecode
 verifier preserve types, visibility, effects, and scenario restrictions.
 
 The first preview is experimental: programs occupy one source file; modules,
-user-defined generics, inheritance, async, FFI, and a native backend remain future
-work. There is no stable source/API compatibility promise or hostile-code sandbox.
+user-defined generics, inheritance, async, FFI, and a native backend are absent.
+File imports are available in this development branch; packages and re-exports
+remain future work. There is no stable source/API compatibility promise or hostile-code sandbox.
 The [implementation status](docs/implementation-status.md) lists working features
 and precise limits; the [specification](docs/spec/v0.1.md) remains a design baseline.
 
@@ -151,6 +155,7 @@ After a source build:
 ```sh
 ./target/release/larp --version --json
 ./target/release/larp check examples/pitch-deck.larp
+./target/release/larp run tests/projects/pitch/main.larp
 ./target/release/larp fmt examples/pitch-deck.larp --stdout
 trial_dir=$(mktemp -d)
 ./target/release/larp build examples/pitch-deck.larp -o "$trial_dir/pitch.larpbc"

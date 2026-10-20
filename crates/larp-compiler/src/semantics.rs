@@ -11,9 +11,11 @@ mod calls;
 mod closures;
 mod declarations;
 mod lazy;
+mod modules;
 mod objects;
 mod roles;
 mod scenarios;
+use modules::{Declarations, Scope};
 use std::collections::HashMap;
 
 type Result<T> = std::result::Result<T, Box<Diagnostic>>;
@@ -30,12 +32,14 @@ struct Header {
 }
 
 struct Tables {
+    project: bool,
     headers: Vec<Header>,
-    names: HashMap<String, usize>,
-    types: HashMap<String, Type>,
+    names: Scope<usize>,
+    types: Scope<Type>,
     classes: Vec<larp_bytecode::Class>,
     roles: Vec<larp_bytecode::Role>,
     extensions: Vec<larp_bytecode::Extension>,
+    exported_extensions: std::collections::HashSet<usize>,
 }
 
 fn error(code: &str, span: Span, message: impl Into<String>) -> Box<Diagnostic> {
@@ -59,7 +63,7 @@ fn effects(declared: &Option<Vec<Name>>) -> Result<Effects> {
     Ok(effects)
 }
 
-fn ty(expression: &ast::TypeExpr, class_types: &HashMap<String, Type>) -> Result<Type> {
+fn ty(expression: &ast::TypeExpr, class_types: &Scope<Type>) -> Result<Type> {
     let result = match &expression.kind {
         ast::TypeExprKind::Integer(_) => Err(error(
             "LARP-T001",
@@ -106,7 +110,7 @@ fn ty(expression: &ast::TypeExpr, class_types: &HashMap<String, Type>) -> Result
                 "This type does not accept generic arguments",
             )),
             _ => Type::from_name(&name.text)
-                .or_else(|| class_types.get(&name.text).cloned())
+                .or_else(|| class_types.get(name).cloned())
                 .ok_or_else(|| {
                     error(
                         "LARP-T005",
@@ -156,7 +160,13 @@ fn ty(expression: &ast::TypeExpr, class_types: &HashMap<String, Type>) -> Result
 }
 
 pub fn check(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>> {
-    declarations::check_program(ast)
+    declarations::check_program(&Declarations::single(ast), None)
+}
+
+pub fn check_project(
+    project: &crate::project::Project,
+) -> std::result::Result<Program, Vec<Diagnostic>> {
+    modules::check(project)
 }
 
 #[derive(Clone)]
@@ -732,13 +742,13 @@ impl<'a> Builder<'a> {
                     .constructor
                     .map(|class| Type::class(class, self.tables.classes[class].name.as_str()))
             }),
-            ExprKind::New { class, .. } => self.tables.types.get(&class.text).cloned(),
+            ExprKind::New { class, .. } => self.tables.types.get(class).cloned(),
             ExprKind::Name(name) => {
                 self.resolve(&name.text)
                     .map(|binding| binding.ty)
                     .or_else(|| {
-                        if let Some(index) = self.tables.names.get(&name.text) {
-                            let header = &self.tables.headers[*index];
+                        if let Some(index) = self.tables.function_value(name, None).ok().flatten() {
+                            let header = &self.tables.headers[index];
                             Some(Type::function(
                                 header.parameters.clone(),
                                 header.result.clone(),
@@ -799,13 +809,26 @@ impl<'a> Builder<'a> {
             }
             ExprKind::Call {
                 callee,
+                arguments,
                 type_arguments,
                 ..
             } => {
                 if let ExprKind::Name(name) = &callee.kind
+                    && self.resolve(&name.text).is_none()
+                    && self.tables.names.get(name).is_none()
+                    && let Some(receiver) = arguments.first().and_then(|value| self.hint(value))
+                    && let Some(index) = self
+                        .tables
+                        .extension_candidates(name)
+                        .into_iter()
+                        .find(|index| self.tables.headers[*index].parameters[0] == receiver)
+                {
+                    return Some(self.tables.headers[index].result.clone());
+                }
+                if let ExprKind::Name(name) = &callee.kind
                     && matches!(name.text.as_str(), "ascend" | "fraud")
                     && self.resolve(&name.text).is_none()
-                    && !self.tables.names.contains_key(&name.text)
+                    && self.tables.names.get(name).is_none()
                     && !self.scenario_forbidden.contains(&name.text)
                     && type_arguments.len() == 1
                 {
@@ -946,9 +969,9 @@ impl<'a> Builder<'a> {
                         span,
                         "Outer reference and function bindings cannot be read inside a scenario",
                     ));
-                } else if name.text == "fortnine" && !self.tables.names.contains_key(&name.text) {
+                } else if name.text == "fortnine" && self.tables.names.get(name).is_none() {
                     self.literal(Scalar::Unc(49), span)
-                } else if let Some(index) = self.tables.names.get(&name.text).copied() {
+                } else if let Some(index) = self.tables.function_value(name, expected.as_ref())? {
                     let header = &self.tables.headers[index];
                     let function_type = Type::function(
                         header.parameters.clone(),

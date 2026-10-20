@@ -13,6 +13,41 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-M001",
+        title: "Module resolution failed",
+        explanation: "An import could not be resolved, or a resolver returned inconsistent contents for one module identity. Check the import path and resolver configuration. The same identity must retain identical source text and display name throughout a project load.",
+    },
+    DiagnosticCode {
+        id: "LARP-M002",
+        title: "Cyclic module imports",
+        explanation: "Imports must form an acyclic graph. Remove an import edge in the reported cycle or move shared declarations into a separate dependency module.",
+    },
+    DiagnosticCode {
+        id: "LARP-M003",
+        title: "Duplicate module alias",
+        explanation: "Each import alias must be unique within its source file. Choose distinct aliases; aliases in other files do not conflict.",
+    },
+    DiagnosticCode {
+        id: "LARP-M004",
+        title: "Invalid module entry point",
+        explanation: "The entry source requires exactly one main_character block. Imported library sources cannot declare main_character. Move executable entry code into the entry source.",
+    },
+    DiagnosticCode {
+        id: "LARP-M005",
+        title: "Module graph resource limit exceeded",
+        explanation: "The project exceeds its module-count, import-edge, aggregate UTF-8 source-byte, or aggregate source-line budget. Reduce the graph or source inventory. These implementation limits do not grant a host sandbox.",
+    },
+    DiagnosticCode {
+        id: "LARP-M006",
+        title: "Private type in an exported interface",
+        explanation: "An exported function, class constructor/public member, role method, or extension exposes a module-private nominal type. Export that type with highkey or keep the interface private. This rule also applies recursively inside containers and function types; inferred use cannot bypass module privacy.",
+    },
+    DiagnosticCode {
+        id: "LARP-M007",
+        title: "Ambiguous exported name",
+        explanation: "An exported ordinary function and an exported extension cannot share one module-qualified name. Rename one declaration. Multiple extension receivers may share a name; a first-class reference then needs an explicit function type identifying one signature. Direct extension calls select by the exact static type of their first argument, using the same receiver rules as dot calls.",
+    },
+    DiagnosticCode {
         id: "LARP-R010",
         title: "Host input capability denied",
         explanation: "Execution requested argument or standard-input access that the embedder did not grant. Use execute_with_host with the required capability. Host input is never available inside an active scenario. The io effect describes a requirement; it does not grant a capability.",
@@ -283,6 +318,11 @@ impl Diagnostic {
 
 /// Plain text rendering; source columns count scalars and tabs expand to four spaces.
 pub fn render(diagnostic: &Diagnostic, source: &larp_source::SourceFile) -> String {
+    render_sources(diagnostic, std::slice::from_ref(source))
+}
+
+/// Render each primary and related label against its own original source.
+pub fn render_sources(diagnostic: &Diagnostic, sources: &[larp_source::SourceFile]) -> String {
     use std::fmt::Write;
     let mut output = format!("error[{}]: {}\n", diagnostic.code.id, diagnostic.message);
     fn label(output: &mut String, item: &Label, source: &larp_source::SourceFile) {
@@ -330,9 +370,13 @@ pub fn render(diagnostic: &Diagnostic, source: &larp_source::SourceFile) -> Stri
             item.message
         );
     }
-    label(&mut output, &diagnostic.primary, source);
-    for related in &diagnostic.related {
-        label(&mut output, related, source);
+    for item in std::iter::once(&diagnostic.primary).chain(&diagnostic.related) {
+        if let Some(source) = sources
+            .iter()
+            .find(|source| source.slice(item.span).is_some())
+        {
+            label(&mut output, item, source);
+        }
     }
     if let (Some(expected), Some(found)) = (&diagnostic.expected_type, &diagnostic.found_type) {
         let _ = writeln!(output, "expected: {expected}; found: {found}");
@@ -355,7 +399,7 @@ mod tests {
             let bytes = code.id.as_bytes();
             assert_eq!(bytes.len(), 9);
             assert!(code.id.starts_with("LARP-"));
-            assert!(b"LPNTESRCB".contains(&bytes[5]));
+            assert!(b"LPNTESRCBM".contains(&bytes[5]));
             assert!(bytes[6..].iter().all(u8::is_ascii_digit));
             assert!(ids.insert(code.id));
             assert!(!code.title.is_empty());
@@ -363,5 +407,26 @@ mod tests {
             assert_eq!(lookup(code.id), Some(code));
         }
         assert!(lookup("LARP-T999").is_none());
+    }
+
+    #[test]
+    fn text_labels_use_their_own_source_identity() {
+        use larp_source::{SourceFile, SourceId};
+        let sources = [
+            SourceFile::new(SourceId(0), "entry.larp", "first"),
+            SourceFile::new(SourceId(1), "lib.larp", "other"),
+        ];
+        let mut error = Diagnostic::error("LARP-M002", sources[1].span(0..5).unwrap(), "Cycle");
+        error.related.push(Label {
+            span: sources[0].span(0..5).unwrap(),
+            message: "Earlier edge".into(),
+        });
+        let rendered = render_sources(&error, &sources);
+        assert!(rendered.contains(" --> lib.larp:1:1\n   1 | other"));
+        assert!(rendered.contains(" --> entry.larp:1:1\n   1 | first"));
+        assert!(rendered.contains("Earlier edge"));
+        let legacy = render(&error, &sources[1]);
+        assert!(legacy.contains("lib.larp"));
+        assert!(!legacy.contains("entry.larp"));
     }
 }

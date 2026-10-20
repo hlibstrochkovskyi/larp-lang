@@ -137,7 +137,7 @@ impl Builder<'_> {
             }
             if name.text == "palantir"
                 && self.resolve(&name.text).is_none()
-                && !self.tables.names.contains_key(&name.text)
+                && self.tables.names.get(name).is_none()
             {
                 if !type_arguments.is_empty() {
                     return Err(error(
@@ -162,7 +162,7 @@ impl Builder<'_> {
         if let ExprKind::Name(name) = &callee.kind
             && self.resolve(&name.text).is_none()
         {
-            if let Some(index) = self.tables.names.get(&name.text).copied() {
+            if let Some(index) = self.tables.names.get(name).copied() {
                 if !type_arguments.is_empty() {
                     return Err(error(
                         "LARP-P002",
@@ -195,6 +195,40 @@ impl Builder<'_> {
                     ty: header.result,
                     constant: None,
                 });
+            }
+            let candidates = self.tables.extension_candidates(name);
+            if !candidates.is_empty() {
+                if !type_arguments.is_empty() {
+                    return Err(error(
+                        "LARP-P002",
+                        span,
+                        "User-defined generic functions are not implemented",
+                    ));
+                }
+                let Some((receiver, remaining)) = arguments.split_first() else {
+                    return Err(error(
+                        "LARP-T006",
+                        span,
+                        "An explicit extension call requires a receiver argument",
+                    ));
+                };
+                // Resolve the receiver with the same static type rules as a dot call.
+                // Reuse its slot so evaluating it cannot repeat an observable effect.
+                let receiver = self.view_expression(receiver, evaluate)?;
+                let function = candidates
+                    .into_iter()
+                    .find(|index| self.tables.headers[*index].parameters[0] == receiver.ty)
+                    .ok_or_else(|| {
+                        error(
+                            "LARP-T001",
+                            span,
+                            format!(
+                                "No exported extension '{}' has receiver type {}",
+                                name.text, receiver.ty
+                            ),
+                        )
+                    })?;
+                return self.receiver_call(receiver, function, remaining, span, evaluate);
             }
             if is_builtin(&name.text) {
                 return self.builtin(name, arguments, type_arguments, expected, span, evaluate);

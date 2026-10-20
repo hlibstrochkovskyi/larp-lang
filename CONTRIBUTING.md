@@ -7,6 +7,7 @@ make a useful contribution.
 
 The first public prerelease is
 [v0.1.0-preview.1](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1).
+Current development uses `0.2.0-dev` and adds [file modules](docs/modules.md).
 The language and artifact formats remain experimental. Read the
 [implementation status](docs/implementation-status.md) for what works today;
 the [proposed specification](docs/spec/v0.1.md) also describes rules that need

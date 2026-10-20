@@ -89,7 +89,7 @@ impl Builder<'_> {
                 "Reference allocation is forbidden inside a scenario",
             ));
         }
-        let ty = self.tables.types.get(&name.text).cloned().ok_or_else(|| {
+        let ty = self.tables.types.get(name).cloned().ok_or_else(|| {
             error(
                 "LARP-T005",
                 name.span,

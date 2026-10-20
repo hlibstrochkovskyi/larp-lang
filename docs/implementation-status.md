@@ -8,7 +8,8 @@ The first public prerelease is [`v0.1.0-preview.1`](releases/0.1.0-preview.1-pub
 The [preview audit](preview-readiness.md) records resolved semantic regressions,
 release evidence, and remaining design questions; a finite passing corpus and a
 published preview do not approve the whole proposed specification. File modules
-and package management are not implemented in this released subset.
+and package management are not implemented in this released subset. The current
+`0.2.0-dev` branch adds file modules as described below.
 
 ## Working features
 
@@ -73,6 +74,34 @@ and package management are not implemented in this released subset.
 - Non-moving mark/sweep object, array, and closure storage with generation-checked
   handles, explicit roots, stress collection, and execution statistics through
   the Rust VM API. Suspended collection callbacks and partial results remain rooted.
+
+## File modules (`0.2.0-dev`)
+
+[File modules](modules.md) extend the single-file baseline with explicit relative
+imports, private-by-default top-level declarations, `highkey` exports, and
+`alias::name` references in expressions and type annotations. Each reachable
+unit is parsed and checked, including unused declarations. Shared dependencies
+retain one nominal identity; equal spellings from distinct files remain distinct.
+
+A pure injected-resolver graph and the CLI's canonical filesystem provider are
+separate boundaries. The default project root is the canonical entry's parent.
+Imports stay within that root, including after symlink resolution. Graph limits
+are 64 files, 4096 import edges, 4 MiB aggregate source bytes, and 131072 lines.
+Cycles, wrong entry placement, inconsistent resolver identities, and duplicate
+aliases produce structured diagnostics. Public interfaces cannot expose private
+nominal types, even nested in containers or callback types.
+
+Dot extensions remain lexical. Exported extensions can be called explicitly as
+`ext::name(receiver, ...)`, using exact static receiver matching, or saved as
+function values with their receiver parameter and effect bounds intact.
+Whole-project checking preserves ordinary constructor/member privacy, effects,
+closure/lazy bindings, role identity, and scenario restrictions. One verified
+artifact embeds every reachable source map; execution never reopens imports.
+The formatter accepts library units without `main_character` and formats one
+specified file at a time. See [RFC 0001](rfcs/0001-file-modules.md) for the contract
+and [project fixtures](../tests/projects/README.md) for executable acceptance.
+The [local validation record](validation-file-modules.md) documents the passed
+gate and its limits; hosted results remain specific to their commit.
 
 ## Roles, extensions, and bound built-ins
 
@@ -209,7 +238,7 @@ executes it. Original source files are unnecessary when running an artifact.
 execution. `--gc-stress` collects at every object, array, closure, and lazy-cell allocation
 safepoint and may be combined with `--fuel`. `dump` emits disassembly
 or typed IR; `--ir` requires source because artifacts contain bytecode. Input is
-one UTF-8 source or versioned artifact. `fmt SOURCE [--check|--stdout]` formats
+a UTF-8 entry source (with optional file imports in development) or a versioned artifact. `fmt SOURCE [--check|--stdout]` formats
 syntactically valid source without requiring type validity. It preserves raw
 tokens/comments and checks its result before publication. Default mode writes
 atomically; check/preview modes never write. See [formatter policy](formatter.md)
@@ -219,7 +248,8 @@ Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 ## Not implemented yet
 
-Modules and additional host I/O APIs beyond arguments/stdin. These are tracked by the existing roadmap,
+Packages, re-exports, import cycles, separate compilation, and additional host
+I/O APIs beyond arguments/stdin. These are tracked by the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
 
 The scenario model remains independent and is not a substitute for compiling

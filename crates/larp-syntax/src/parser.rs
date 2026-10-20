@@ -7,6 +7,36 @@ type Result<T> = std::result::Result<T, Box<Diagnostic>>;
 const MAX_DEPTH: usize = 128;
 
 pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic>> {
+    let unit = parse_source(source, false)?;
+    Ok(Program {
+        roles: unit
+            .roles
+            .into_iter()
+            .map(|declaration| declaration.item)
+            .collect(),
+        classes: unit
+            .classes
+            .into_iter()
+            .map(|declaration| declaration.item)
+            .collect(),
+        functions: unit
+            .functions
+            .into_iter()
+            .map(|declaration| declaration.item)
+            .collect(),
+        main: unit.main.unwrap(),
+    })
+}
+
+/// Parse a project source unit without resolving imports or exported names.
+pub fn parse_unit(source: &SourceFile) -> std::result::Result<SourceUnit, Vec<Diagnostic>> {
+    parse_source(source, true)
+}
+
+fn parse_source(
+    source: &SourceFile,
+    unit_mode: bool,
+) -> std::result::Result<SourceUnit, Vec<Diagnostic>> {
     let tokens = lexer::lex(source)?;
     let mut parser = Parser {
         source,
@@ -14,62 +44,93 @@ pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic
         pos: 0,
         depth: 0,
         errors: Vec::new(),
+        unit_mode,
     };
+    let mut imports = Vec::new();
     let mut classes = Vec::new();
     let mut roles = Vec::new();
     let mut functions = Vec::new();
     let mut main = None;
+    let mut declarations_started = false;
     while !parser.eof() {
         let start = parser.pos;
-        let result = if parser.word("sidequest") {
-            parser
-                .function(true)
-                .map(|function| functions.push(function))
-        } else if parser.word("role") {
-            parser.role().map(|role| roles.push(role))
-        } else if parser.word("archetype") {
-            parser.class().map(|class| classes.push(class))
-        } else if parser.eat_word("main_character") {
-            if main.is_some() {
-                Err(parser.error(
-                    "LARP-P001",
-                    "A program must contain exactly one main_character block",
-                ))
+        let visibility = if unit_mode && parser.eat_word("highkey") {
+            Some(true)
+        } else if unit_mode && parser.eat_word("lowkey") {
+            Some(false)
+        } else {
+            None
+        };
+        let public = visibility.unwrap_or(false);
+        let result = if unit_mode && parser.word("import") {
+            if visibility.is_some() {
+                Err(parser.error("LARP-P001", "An import cannot have declaration visibility"))
+            } else if declarations_started {
+                Err(parser.error("LARP-P001", "Imports must precede declarations"))
             } else {
-                parser.block().map(|block| main = Some(block))
+                parser.import().map(|import| imports.push(import))
             }
         } else {
-            Err(parser.error(
-                "LARP-P002",
-                "Expected role, archetype, sidequest, or main_character",
-            ))
+            declarations_started = true;
+            if parser.word("sidequest") {
+                parser
+                    .function(true)
+                    .map(|item| functions.push(Declaration { public, item }))
+            } else if parser.word("role") {
+                parser
+                    .role()
+                    .map(|item| roles.push(Declaration { public, item }))
+            } else if parser.word("archetype") {
+                parser
+                    .class()
+                    .map(|item| classes.push(Declaration { public, item }))
+            } else if parser.eat_word("main_character") {
+                if visibility.is_some() {
+                    Err(parser.error(
+                        "LARP-P001",
+                        "main_character cannot have declaration visibility",
+                    ))
+                } else if main.is_some() {
+                    Err(parser.error(
+                        "LARP-P001",
+                        "A program must contain exactly one main_character block",
+                    ))
+                } else {
+                    parser.block().map(|block| main = Some(block))
+                }
+            } else {
+                Err(parser.error(
+                    "LARP-P002",
+                    if unit_mode {
+                        "Expected import, role, archetype, sidequest, or main_character"
+                    } else {
+                        "Expected role, archetype, sidequest, or main_character"
+                    },
+                ))
+            }
         };
         if let Err(error) = result {
             parser.errors.push(*error);
             if parser.pos == start {
                 parser.advance();
             }
-            while !parser.eof()
-                && !parser.word("sidequest")
-                && !parser.word("archetype")
-                && !parser.word("role")
-                && !parser.word("main_character")
-            {
+            while !parser.eof() && !parser.top_level_start() {
                 parser.advance();
             }
         }
     }
-    if main.is_none() {
+    if !unit_mode && main.is_none() {
         parser
             .errors
             .push(*parser.error("LARP-P001", "Missing main_character block"));
     }
     if parser.errors.is_empty() {
-        Ok(Program {
+        Ok(SourceUnit {
+            imports,
             roles,
             classes,
             functions,
-            main: main.unwrap(),
+            main,
         })
     } else {
         Err(parser.errors)
@@ -82,9 +143,64 @@ struct Parser<'a> {
     pos: usize,
     depth: usize,
     errors: Vec<Diagnostic>,
+    unit_mode: bool,
 }
 
 impl Parser<'_> {
+    fn top_level_start(&self) -> bool {
+        self.word("sidequest")
+            || self.word("archetype")
+            || self.word("role")
+            || self.word("main_character")
+            || (self.unit_mode
+                && (self.word("import") || self.word("highkey") || self.word("lowkey")))
+    }
+    fn import(&mut self) -> Result<Import> {
+        let start = self.current().span;
+        self.expect_word("import")?;
+        let Kind::Text(path) = &self.current().kind else {
+            return Err(self.error("LARP-P001", "Expected an import path string"));
+        };
+        let path = path.clone();
+        let path_span = self.current().span;
+        self.advance();
+        self.expect_word("as")?;
+        let alias = self.name()?;
+        self.expect(";")?;
+        Ok(Import {
+            path,
+            path_span,
+            alias,
+            span: self.joined(start),
+        })
+    }
+    fn reference_name(&mut self) -> Result<Name> {
+        let mut name = self.name()?;
+        if self.unit_mode {
+            while self.eat("::") {
+                let segment = self.name()?;
+                name.text.push_str("::");
+                name.text.push_str(&segment.text);
+                name.span = self.joined(name.span);
+            }
+        }
+        Ok(name)
+    }
+    fn looks_like_unit_binding(&mut self) -> bool {
+        if !self.unit_mode {
+            return false;
+        }
+        let saved = self.pos;
+        let binding = self.ty().is_ok()
+            && matches!(self.current().kind, Kind::Word(_))
+            && self
+                .tokens
+                .get(self.pos + 1)
+                .is_some_and(|token| token.kind == Kind::Punctuation("="));
+        self.pos = saved;
+        binding
+    }
+
     fn current(&self) -> &Token {
         &self.tokens[self.pos]
     }
@@ -156,41 +272,43 @@ impl Parser<'_> {
         let Kind::Word(text) = &self.current().kind else {
             return Err(self.error("LARP-P001", "Expected an identifier"));
         };
-        if matches!(
-            text.as_str(),
-            "sidequest"
-                | "main_character"
-                | "let"
-                | "if"
-                | "else"
-                | "return"
-                | "npc"
-                | "loop"
-                | "in"
-                | "locked_in"
-                | "while"
-                | "goon"
-                | "touch_grass"
-                | "archetype"
-                | "role"
-                | "highkey"
-                | "lowkey"
-                | "init"
-                | "self"
-                | "new"
-                | "larp"
-                | "as"
-                | "flex"
-                | "canon"
-                | "nonchalant"
-                | "sybau"
-                | "fn"
-                | "uses"
-                | "fr"
-                | "cap"
-                | "no_bitches"
-                | "mogg"
-        ) {
+        if (self.unit_mode && text == "import")
+            || matches!(
+                text.as_str(),
+                "sidequest"
+                    | "main_character"
+                    | "let"
+                    | "if"
+                    | "else"
+                    | "return"
+                    | "npc"
+                    | "loop"
+                    | "in"
+                    | "locked_in"
+                    | "while"
+                    | "goon"
+                    | "touch_grass"
+                    | "archetype"
+                    | "role"
+                    | "highkey"
+                    | "lowkey"
+                    | "init"
+                    | "self"
+                    | "new"
+                    | "larp"
+                    | "as"
+                    | "flex"
+                    | "canon"
+                    | "nonchalant"
+                    | "sybau"
+                    | "fn"
+                    | "uses"
+                    | "fr"
+                    | "cap"
+                    | "no_bitches"
+                    | "mogg"
+            )
+        {
             return Err(self.error(
                 "LARP-P001",
                 "A reserved syntax word cannot be used as an identifier",
@@ -226,7 +344,7 @@ impl Parser<'_> {
                     effects: parser.effects()?,
                 }
             } else {
-                let name = parser.name()?;
+                let name = parser.reference_name()?;
                 let mut arguments = Vec::new();
                 if parser.eat("<") {
                     loop {
@@ -370,7 +488,7 @@ impl Parser<'_> {
             let mut roles = Vec::new();
             if parser.eat(":") {
                 loop {
-                    roles.push(parser.name()?);
+                    roles.push(parser.reference_name()?);
                     if !parser.eat(",") {
                         break;
                     }
@@ -598,7 +716,8 @@ impl Parser<'_> {
                 "LARP-P002",
                 "This statement is not implemented in the executable core yet",
             ));
-        } else if self.word("fn")
+        } else if self.looks_like_unit_binding()
+            || self.word("fn")
             || (matches!(&self.current().kind, Kind::Word(_))
                 && matches!(
                     self.tokens.get(self.pos + 1).map(|t| &t.kind),
@@ -688,7 +807,7 @@ impl Parser<'_> {
             }
             Kind::Word(ref word) if word == "self" => ExprKind::SelfValue,
             Kind::Word(ref word) if word == "new" => {
-                let class = self.name()?;
+                let class = self.reference_name()?;
                 self.expect("(")?;
                 let mut arguments = Vec::new();
                 if !self.punct(")") {
@@ -711,7 +830,7 @@ impl Parser<'_> {
             Kind::Word(ref word) if word == "no_bitches" => ExprKind::None,
             Kind::Word(_) => {
                 self.pos -= 1;
-                ExprKind::Name(self.name()?)
+                ExprKind::Name(self.reference_name()?)
             }
             Kind::Punctuation("(") => {
                 let expression = self.expr(0)?;

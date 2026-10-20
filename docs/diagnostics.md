@@ -73,6 +73,19 @@ labels, and help can improve without changing the code. Diagnostics loaded from
 an artifact use its embedded original sources, even after the input file moves
 or the source is deleted.
 
+## Module diagnostics (`0.2.0-dev`)
+
+Project diagnostics preserve the defining file's source ID and original UTF-8
+byte offsets. Both text and JSON render each related label against its own source;
+cycle errors can therefore show import sites from several files. Loaded artifacts
+use embedded source snapshots rather than reopening those paths.
+
+`LARP-M001` covers resolution and inconsistent resolver identities, `M002` cycles,
+`M003` duplicate aliases, `M004` entry placement, `M005` graph budgets, `M006`
+private nominal types in public interfaces, and `M007` ambiguous exported names.
+Unavailable private declarations use the ordinary name/type error; class-private
+access retains its existing diagnostics. See [file modules](modules.md).
+
 ## Other stderr events
 
 These events have `schema_version`, `kind`, nullable `code`, and `message`:

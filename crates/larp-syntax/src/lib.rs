@@ -6,11 +6,35 @@ mod parser;
 use larp_source::Span;
 use larp_types::{Binary, Unary};
 pub use lexer::{Comment, CommentKind, Kind as TokenKind, Lexed, Token, lex_with_comments};
-pub use parser::parse;
+pub use parser::{parse, parse_unit};
 
 #[derive(Clone, Debug)]
 pub struct Name {
     pub text: String,
+    pub span: Span,
+}
+
+/// A source file parsed with the opt-in project syntax. Libraries may omit main.
+#[derive(Debug)]
+pub struct SourceUnit {
+    pub imports: Vec<Import>,
+    pub roles: Vec<Declaration<Role>>,
+    pub classes: Vec<Declaration<Class>>,
+    pub functions: Vec<Declaration<Function>>,
+    pub main: Option<Block>,
+}
+
+#[derive(Debug)]
+pub struct Declaration<T> {
+    pub public: bool,
+    pub item: T,
+}
+
+#[derive(Debug)]
+pub struct Import {
+    pub path: String,
+    pub path_span: Span,
+    pub alias: Name,
     pub span: Span,
 }
 

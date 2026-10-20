@@ -50,7 +50,10 @@ impl Builder<'_> {
         self.tables
             .extensions
             .iter()
-            .find(|extension| extension.receiver == *ty && extension.name == name.text)
+            .find(|extension| {
+                extension.receiver == *ty
+                    && extension.name == modules::display_name(name, self.tables.project)
+            })
             .map(|extension| extension.function)
             .ok_or_else(|| {
                 error(

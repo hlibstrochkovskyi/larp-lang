@@ -6,8 +6,9 @@
 use larp_diagnostics::Diagnostic;
 use larp_source::{SourceFile, Span};
 use larp_syntax::{
-    Block, CommentKind, Expr, ExprKind, Function, LambdaBody, Program, Statement, StatementKind,
-    Token, TokenKind, TypeExpr, TypeExprKind, lex_with_comments, parse,
+    Block, Class, CommentKind, Expr, ExprKind, Function, LambdaBody, Program, Role, SourceUnit,
+    Statement, StatementKind, Token, TokenKind, TypeExpr, TypeExprKind, lex_with_comments, parse,
+    parse_unit,
 };
 use larp_types::Unary;
 
@@ -27,6 +28,23 @@ fn diagnostic(source: &SourceFile, id: &str, message: &str) -> Vec<Diagnostic> {
 /// Format parseable LARP source without requiring semantic validity.
 /// No output is returned if parsing, resource limits, or preservation checks fail.
 pub fn format(source: &SourceFile) -> Result<String> {
+    format_source(source, Syntax::Program)
+}
+
+/// Format an opt-in project source unit, including libraries without main.
+/// Imports and exported declarations are preserved without resolving any files.
+/// The legacy [`format`] entry point retains its single-file grammar.
+pub fn format_unit(source: &SourceFile) -> Result<String> {
+    format_source(source, Syntax::Unit)
+}
+
+#[derive(Clone, Copy)]
+enum Syntax {
+    Program,
+    Unit,
+}
+
+fn format_source(source: &SourceFile, syntax: Syntax) -> Result<String> {
     if source.text().len() > MAX_SOURCE_BYTES {
         return Err(diagnostic(
             source,
@@ -42,9 +60,11 @@ pub fn format(source: &SourceFile) -> Result<String> {
             "Formatter token count limit exceeded",
         ));
     }
-    let program = parse(source)?;
     let mut annotations = Annotations::new(source, &lexed.tokens);
-    annotations.program(&program);
+    match syntax {
+        Syntax::Program => annotations.program(&parse(source)?),
+        Syntax::Unit => annotations.unit(&parse_unit(source)?),
+    }
     let mut leaves = Vec::with_capacity(lexed.tokens.len() + lexed.comments.len());
     let (mut token, mut comment) = (0, 0);
     while token < lexed.tokens.len() || comment < lexed.comments.len() {
@@ -120,7 +140,11 @@ pub fn format(source: &SourceFile) -> Result<String> {
         source.name(),
         result.as_str(),
     );
-    if parse(&checked).is_err() || !same_lexemes(source, &checked) {
+    let reparsed = match syntax {
+        Syntax::Program => parse(&checked).is_ok(),
+        Syntax::Unit => parse_unit(&checked).is_ok(),
+    };
+    if !reparsed || !same_lexemes(source, &checked) {
         return Err(diagnostic(
             source,
             "LARP-C001",
@@ -208,31 +232,51 @@ impl<'a> Annotations<'a> {
     }
     fn program(&mut self, program: &Program) {
         for role in &program.roles {
-            for method in &role.methods {
-                for (ty, _) in &method.parameters {
-                    self.ty(ty);
-                }
-                self.ty(&method.result);
-            }
+            self.role(role);
         }
         for class in &program.classes {
-            for field in &class.fields {
-                self.ty(&field.ty);
-            }
-            for method in &class.methods {
-                self.function(&method.function);
-            }
-            for constructor in &class.constructors {
-                for (ty, _) in &constructor.parameters {
-                    self.ty(ty);
-                }
-                self.block(&constructor.body);
-            }
+            self.class(class);
         }
         for function in &program.functions {
             self.function(function);
         }
         self.block(&program.main);
+    }
+    fn unit(&mut self, unit: &SourceUnit) {
+        for role in &unit.roles {
+            self.role(&role.item);
+        }
+        for class in &unit.classes {
+            self.class(&class.item);
+        }
+        for function in &unit.functions {
+            self.function(&function.item);
+        }
+        if let Some(main) = &unit.main {
+            self.block(main);
+        }
+    }
+    fn role(&mut self, role: &Role) {
+        for method in &role.methods {
+            for (ty, _) in &method.parameters {
+                self.ty(ty);
+            }
+            self.ty(&method.result);
+        }
+    }
+    fn class(&mut self, class: &Class) {
+        for field in &class.fields {
+            self.ty(&field.ty);
+        }
+        for method in &class.methods {
+            self.function(&method.function);
+        }
+        for constructor in &class.constructors {
+            for (ty, _) in &constructor.parameters {
+                self.ty(ty);
+            }
+            self.block(&constructor.body);
+        }
     }
     fn block(&mut self, block: &Block) {
         for statement in &block.statements {
@@ -475,10 +519,10 @@ fn space(previous: Leaf<'_>, next: Leaf<'_>) -> bool {
         return true;
     }
     let (left, right) = (previous.raw, next.raw);
-    if next.flags.angle_close || matches!(right, ")" | "]" | "," | ";" | ".") {
+    if next.flags.angle_close || matches!(right, ")" | "]" | "," | ";" | "." | "::") {
         return false;
     }
-    if previous.flags.angle_open || matches!(left, "(" | "[" | ".") {
+    if previous.flags.angle_open || matches!(left, "(" | "[" | "." | "::") {
         return false;
     }
     if left == "," {

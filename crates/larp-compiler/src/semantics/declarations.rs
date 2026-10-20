@@ -7,7 +7,7 @@ fn constructor_effects() -> Effects {
 
 fn parameters(
     parameters: &[(ast::TypeExpr, Name)],
-    class_types: &HashMap<String, Type>,
+    class_types: &Scope<Type>,
 ) -> Result<Vec<Type>> {
     let mut names = HashSet::new();
     parameters
@@ -29,7 +29,10 @@ fn parameters(
         .collect()
 }
 
-pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, Vec<Diagnostic>> {
+pub(super) fn check_program(
+    ast: &Declarations<'_>,
+    project: Option<&crate::project::Project>,
+) -> std::result::Result<Program, Vec<Diagnostic>> {
     let mut body_errors = Vec::new();
     let result = (|| -> Result<Program> {
         if ast.classes.len() > 4096 || ast.roles.len() > 4096 {
@@ -39,7 +42,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 "Class or role count limit exceeded",
             ));
         }
-        let mut class_types = HashMap::new();
+        let mut class_types = Scope::types(project);
         for (index, class) in ast.classes.iter().enumerate() {
             if Type::from_name(&class.name.text).is_some()
                 || matches!(
@@ -48,8 +51,8 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 )
                 || class_types
                     .insert(
-                        class.name.text.clone(),
-                        Type::class(index, class.name.text.as_str()),
+                        &class.name,
+                        Type::class(index, modules::display_name(&class.name, project.is_some())),
                     )
                     .is_some()
             {
@@ -67,7 +70,10 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                     "mfs" | "hediJeans" | "baddie" | "result"
                 )
                 || class_types
-                    .insert(role.name.text.clone(), Type::role(index, &role.name.text))
+                    .insert(
+                        &role.name,
+                        Type::role(index, modules::display_name(&role.name, project.is_some())),
+                    )
                     .is_some()
             {
                 return Err(error(
@@ -97,7 +103,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 });
             }
             roles.push(larp_bytecode::Role {
-                name: role.name.text.clone(),
+                name: modules::display_name(&role.name, project.is_some()),
                 methods,
             });
         }
@@ -161,7 +167,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
             }
             classes.push(larp_bytecode::Class {
                 implementations: Vec::new(),
-                name: class.name.text.clone(),
+                name: modules::display_name(&class.name, project.is_some()),
                 fields,
                 methods: Vec::new(),
                 constructor: usize::MAX,
@@ -170,9 +176,11 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
         let mut headers = Vec::new();
         let mut bodies = Vec::new();
         let mut parameter_names = Vec::new();
-        let mut names = HashMap::new();
+        let mut names = Scope::functions(project);
         let mut extensions = Vec::new();
         let mut extension_names = HashSet::new();
+        let public_extensions = modules::exported_extensions(project)?;
+        let mut exported_extensions = HashSet::new();
         for function in &ast.functions {
             let mut function_parameters = parameters(&function.parameters, &class_types)?;
             let mut function_names = function
@@ -181,6 +189,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 .map(|(_, name)| name.clone())
                 .collect::<Vec<_>>();
             let mut name = function.name.clone();
+            name.text = modules::display_name(&function.name, project.is_some());
             if let Some(receiver) = &function.receiver {
                 let receiver = ty(receiver, &class_types)?;
                 if receiver == Type::Unit {
@@ -190,7 +199,11 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                         "An extension receiver cannot have type unit",
                     ));
                 }
-                if !extension_names.insert((receiver.clone(), function.name.text.clone())) {
+                if !extension_names.insert((
+                    function.name.span.source(),
+                    receiver.clone(),
+                    function.name.text.clone(),
+                )) {
                     return Err(error(
                         "LARP-N002",
                         function.name.span,
@@ -208,11 +221,17 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 );
                 extensions.push(larp_bytecode::Extension {
                     receiver,
-                    name: function.name.text.clone(),
+                    name: modules::display_name(&function.name, project.is_some()),
                     function: headers.len(),
                 });
+                if public_extensions.contains(&(
+                    function.name.span.source(),
+                    function.name.span.range().start,
+                )) {
+                    exported_extensions.insert(headers.len());
+                }
             } else {
-                if let Some(previous) = names.get(&function.name.text).copied() {
+                if let Some(previous) = names.get(&function.name).copied() {
                     let mut diagnostic =
                         error("LARP-N002", function.name.span, "Duplicate function name");
                     let previous: usize = previous;
@@ -222,7 +241,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                     });
                     return Err(diagnostic);
                 }
-                names.insert(function.name.text.clone(), headers.len());
+                names.insert(&function.name, headers.len());
             }
             headers.push(Header {
                 name,
@@ -241,11 +260,17 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
             classes[index].constructor = headers.len();
             headers.push(Header {
                 name: Name {
-                    text: format!("{}::init", class.name.text),
+                    text: format!(
+                        "{}::init",
+                        modules::display_name(&class.name, project.is_some())
+                    ),
                     span: constructor.span,
                 },
                 parameters: parameters(&constructor.parameters, &class_types)?,
-                result: class_types[&class.name.text].clone(),
+                result: class_types
+                    .get(&class.name)
+                    .expect("collected class type")
+                    .clone(),
                 effects: constructor_effects(),
                 owner: Some(index),
                 constructor: Some(index),
@@ -261,7 +286,12 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
             );
             for declaration in &class.methods {
                 let method = &declaration.function;
-                let mut method_parameters = vec![class_types[&class.name.text].clone()];
+                let mut method_parameters = vec![
+                    class_types
+                        .get(&class.name)
+                        .expect("collected class type")
+                        .clone(),
+                ];
                 method_parameters.extend(parameters(&method.parameters, &class_types)?);
                 classes[index].methods.push(larp_bytecode::Method {
                     name: method.name.text.clone(),
@@ -270,7 +300,11 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 });
                 headers.push(Header {
                     name: Name {
-                        text: format!("{}::{}", class.name.text, method.name.text),
+                        text: format!(
+                            "{}::{}",
+                            modules::display_name(&class.name, project.is_some()),
+                            method.name.text
+                        ),
                         span: method.name.span,
                     },
                     parameters: method_parameters,
@@ -293,7 +327,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
             let mut seen = HashSet::new();
             for name in &class.roles {
                 let role = class_types
-                    .get(&name.text)
+                    .get(name)
                     .and_then(Type::role_id)
                     .ok_or_else(|| {
                         error(
@@ -369,7 +403,7 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
             constructor: None,
             scenario: None,
         });
-        bodies.push(&ast.main);
+        bodies.push(ast.main);
         parameter_names.push(Vec::new());
         for header in &headers {
             if !Type::function(
@@ -403,13 +437,18 @@ pub(super) fn check_program(ast: &ast::Program) -> std::result::Result<Program, 
                 }
             }
         }
+        if let Some(project) = project {
+            modules::validate_exports(project, ast, &class_types)?;
+        }
         let tables = Tables {
+            project: project.is_some(),
             headers,
             names,
             types: class_types,
             classes,
             roles,
             extensions,
+            exported_extensions,
         };
         let mut functions = Vec::new();
         let mut generated = Vec::new();

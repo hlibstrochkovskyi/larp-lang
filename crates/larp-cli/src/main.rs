@@ -1,3 +1,5 @@
+mod project;
+
 use larp_source::{SourceFile, SourceId};
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
@@ -49,16 +51,7 @@ impl DiagnosticFormat {
     fn diagnostic(self, diagnostic: &larp_diagnostics::Diagnostic, sources: &[SourceFile]) {
         match self {
             Self::Json => eprint!("{}", larp_diagnostics::json::render(diagnostic, sources)),
-            Self::Text => {
-                if let Some(source) = sources
-                    .iter()
-                    .find(|source| source.slice(diagnostic.primary.span).is_some())
-                {
-                    eprint!("{}", larp_diagnostics::render(diagnostic, source));
-                } else {
-                    eprintln!("error[{}]: {}", diagnostic.code.id, diagnostic.message);
-                }
-            }
+            Self::Text => eprint!("{}", larp_diagnostics::render_sources(diagnostic, sources)),
         }
     }
 }
@@ -288,11 +281,46 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
     if let Mode::Format(mode) = mode {
         return format_source(path, &source, mode, format);
     }
-    let compilation = match larp_compiler::compile(&source) {
+    // Keep the legacy grammar for existing single-file programs, including
+    // identifiers that are reserved only by the opt-in module grammar.
+    let graph = if larp_syntax::parse(&source).is_ok() {
+        None
+    } else {
+        let (entry, mut resolver) = match project::open_entry(Path::new(path)) {
+            Ok(entry) => entry,
+            Err(message) => {
+                let diagnostic = larp_diagnostics::Diagnostic::error(
+                    "LARP-M001",
+                    source.span(0..0).unwrap(),
+                    message,
+                );
+                format.diagnostic(&diagnostic, std::slice::from_ref(&source));
+                return ExitCode::from(1);
+            }
+        };
+        match larp_compiler::project::load(entry, &mut resolver) {
+            Ok(project) => Some(project),
+            Err(failure) => {
+                for diagnostic in failure.diagnostics {
+                    format.diagnostic(&diagnostic, &failure.sources);
+                }
+                return ExitCode::from(1);
+            }
+        }
+    };
+    let sources = graph.as_ref().map_or_else(
+        || std::slice::from_ref(&source),
+        |project| project.sources(),
+    );
+    let result = match &graph {
+        Some(project) => larp_compiler::compile_project(project),
+        None => larp_compiler::compile(&source),
+    };
+    let compilation = match result {
         Ok(compilation) => compilation,
         Err(diagnostics) => {
             for diagnostic in diagnostics {
-                format.diagnostic(&diagnostic, std::slice::from_ref(&source));
+                format.diagnostic(&diagnostic, sources);
             }
             return ExitCode::from(1);
         }
@@ -305,13 +333,15 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
         Mode::Build(output) => {
             if output == Path::new(path)
                 || std::fs::canonicalize(&output).ok().is_some_and(|output| {
-                    std::fs::canonicalize(path).is_ok_and(|input| input == output)
+                    sources.iter().any(|source| {
+                        std::fs::canonicalize(source.name()).is_ok_and(|input| input == output)
+                    })
                 })
             {
                 format.error("artifact output must differ from the source file");
                 return ExitCode::from(2);
             }
-            let bytes = match larp_artifact::encode(&compilation.bytecode, &[source]) {
+            let bytes = match larp_artifact::encode(&compilation.bytecode, sources) {
                 Ok(bytes) => bytes,
                 Err(error) => {
                     format.event(
@@ -328,7 +358,7 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
             }
             ExitCode::SUCCESS
         }
-        mode => execute(&compilation.bytecode, &[source], mode, format),
+        mode => execute(&compilation.bytecode, sources, mode, format),
     }
 }
 
@@ -378,7 +408,12 @@ fn format_source(
     mode: FormatMode,
     format: DiagnosticFormat,
 ) -> ExitCode {
-    let formatted = match larp_format::format(source) {
+    let result = if larp_syntax::parse(source).is_ok() {
+        larp_format::format(source)
+    } else {
+        larp_format::format_unit(source)
+    };
+    let formatted = match result {
         Ok(formatted) => formatted,
         Err(diagnostics) => {
             for diagnostic in diagnostics {

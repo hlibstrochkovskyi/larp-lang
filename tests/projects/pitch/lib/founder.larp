@@ -1,0 +1,17 @@
+highkey archetype Founder {
+    highkey unc valuation;
+    highkey mf aura;
+
+    init(unc seed) {
+        self.valuation = seed;
+        self.aura = 0;
+    }
+
+    highkey sidequest isMogging(mf rival) -> verdict uses(read) {
+        return self.aura mogg rival;
+    }
+}
+
+highkey sidequest Founder.train(mf earned) -> unit uses(read, write, abort) {
+    self.aura += earned;
+}

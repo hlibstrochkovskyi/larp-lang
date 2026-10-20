@@ -25,6 +25,10 @@ implementation does not translate programs into another language or use host
 `eval`. Add crates when a boundary has working code, rather than creating empty
 subsystems in anticipation of future work.
 
+The multifile compiler and CLI acceptance tests run with the workspace suite.
+The [project fixture guide](../tests/projects/README.md) also provides commands
+for source, artifact, formatting, and GC-stress execution.
+
 ## Additional checks
 
 The required local baseline is in [Contributing](../CONTRIBUTING.md#check-your-change).

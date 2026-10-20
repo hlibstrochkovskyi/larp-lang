@@ -1,8 +1,20 @@
 # Source formatter
 
-Status: implemented M6 tool. Its public API is
-`larp_format::format(&SourceFile) -> Result<String, Vec<Diagnostic>>`. This document
-records the current contract; see [executed validation](validation-formatter.md).
+Status: implemented M6 tool, extended with experimental file-module syntax in
+the development compiler. Final module acceptance validation is pending.
+The [M6 validation record](validation-formatter.md) describes the original
+single-file tool; [RFC 0001](rfcs/0001-file-modules.md) records the module contract.
+
+The library exposes two entry points with the same result type:
+
+| API | Accepted syntax |
+| --- | --- |
+| `larp_format::format(&SourceFile)` | Legacy single-file program with exactly one `main_character` |
+| `larp_format::format_unit(&SourceFile)` | Project source unit with imports, top-level visibility, `::` references, and optional `main_character` |
+
+Both return `Result<String, Vec<Diagnostic>>`. The legacy API retains its grammar,
+including existing identifiers named `import`; the source-unit grammar reserves
+`import`. Neither API loads dependencies or resolves import paths.
 
 ## Commands and failure
 
@@ -19,9 +31,16 @@ The default mode replaces the source with its formatted text. Options are
 mutually exclusive. Artifact input is rejected; there is no source rewriting
 inside `.larpbc` files.
 
-Formatting requires a syntactically valid complete program, including
-`main_character`. It does not resolve names or check types/effects. Programs
-with a wrong type or an unfinished role implementation may still be formatted;
+The development CLI accepts both entry programs and library source units without
+`main_character`. It chooses the legacy API when the complete source parses under
+the legacy grammar, and otherwise uses the source-unit API. This preserves old
+programs that use an identifier named `import`. Formatting a library does not
+require its imported files to exist; the import-order and declaration grammar
+must still be valid. The published `0.1.0-preview.1` formatter accepts only
+complete single-file programs.
+
+Formatting does not resolve names or check types/effects. Programs with a wrong
+type or an unfinished role implementation may still be formatted;
 lexical errors, missing punctuation, and parser resource failures are reported
 with the existing structured diagnostics and do not modify files. No compiler,
 VM, or user code executes during formatting.
@@ -53,8 +72,9 @@ printing the AST's grouped declaration vectors. It does not insert/remove
 parentheses, canonicalize literals or escapes, reorder effects, change visibility,
 replace `mogg`, or rewrite executable expressions.
 
-Every successful result is parsed again. The original and formatted raw token
-and comment sequences must agree before the result can reach the writer.
+Every successful result is parsed again under its selected grammar. The original
+and formatted raw token and comment sequences must agree before the result can
+reach the writer.
 Comments remain opaque text in their original order, including Unicode and
 embedded whitespace. String spellings, numeric separators, and explicit
 parentheses are preserved. Formatting twice must yield the same bytes.
@@ -64,8 +84,14 @@ parentheses are preserved. Formatting twice must yield the same bytes.
 The initial policy uses four-space indentation, blocks with line breaks, and a
 100-Unicode-scalar soft target for delimiter lists. Commas and operators receive syntax
 appropriate spacing; generic brackets differ from comparisons, and prefix signs
-differ from binary arithmetic. Multiline list layout and comments can introduce
-breaks without adding trailing commas (the grammar does not accept them).
+differ from binary arithmetic. Module qualification has no surrounding spaces
+(`math::Founder`, `math::answer()`), except where comments must remain separated
+from adjacent tokens. Import strings retain their original escape spelling;
+imports and top-level `highkey`/`lowkey` declarations remain in source order.
+Nested qualified types, constructors, typed lambdas, and extension receiver
+types use the same AST annotations as their single-file counterparts.
+Multiline list layout and comments can introduce breaks without adding trailing
+commas (the grammar does not accept them).
 Long opaque tokens and comments may exceed the soft target. There is no alignment
 matrix, import sorting, configurable style, or formatter-disable pragma in this
 slice. The tool policy can evolve separately from language semantics.
@@ -113,5 +139,14 @@ errors use `LARP-P003`; preservation failures use `LARP-C001`.
 These are logical size/work limits, not bounds on process RSS or wall-clock time.
 Lexing must allocate its token records before the token count can be checked;
 parser/tree/rendering and preservation checks have additional temporary storage.
+The source-unit extension has focused checks in
+[`units.rs`](../crates/larp-format/tests/units.rs), including library-only files,
+raw import spellings, qualified types/calls/extensions, visibility, comments,
+original diagnostic spans, reparse, and idempotence. CLI coverage in
+[`projects.rs`](../crates/larp-cli/tests/projects.rs) formats entry and library
+files, checks unchanged formatting, and executes the resulting project through
+the real compiler and VM. See the [module validation record](validation-file-modules.md) for executed
+local acceptance results and their limits.
+
 Coverage-guided fuzzing and whole-process resource measurements remain preview
 work. See [validation](validation-formatter.md) for the checks already executed.

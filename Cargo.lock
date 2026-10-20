@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "larp-artifact"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-bytecode",
  "larp-source",
@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "larp-bytecode"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-source",
  "larp-types",
@@ -21,7 +21,7 @@ dependencies = [
 
 [[package]]
 name = "larp-cli"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-artifact",
  "larp-bytecode",
@@ -29,13 +29,15 @@ dependencies = [
  "larp-diagnostics",
  "larp-format",
  "larp-source",
+ "larp-syntax",
  "larp-vm",
 ]
 
 [[package]]
 name = "larp-compiler"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
+ "larp-artifact",
  "larp-bytecode",
  "larp-diagnostics",
  "larp-ir",
@@ -47,14 +49,14 @@ dependencies = [
 
 [[package]]
 name = "larp-diagnostics"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-source",
 ]
 
 [[package]]
 name = "larp-format"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-diagnostics",
  "larp-source",
@@ -64,7 +66,7 @@ dependencies = [
 
 [[package]]
 name = "larp-fuzz-support"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-artifact",
  "larp-bytecode",
@@ -77,7 +79,7 @@ dependencies = [
 
 [[package]]
 name = "larp-ir"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-bytecode",
  "larp-source",
@@ -86,15 +88,15 @@ dependencies = [
 
 [[package]]
 name = "larp-scenario-model"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 
 [[package]]
 name = "larp-source"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 
 [[package]]
 name = "larp-syntax"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-diagnostics",
  "larp-source",
@@ -103,11 +105,11 @@ dependencies = [
 
 [[package]]
 name = "larp-types"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 
 [[package]]
 name = "larp-vm"
-version = "0.1.0-preview.1"
+version = "0.2.0-dev"
 dependencies = [
  "larp-bytecode",
  "larp-diagnostics",
