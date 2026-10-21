@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "pitch",
+      "directory": "tests/projects/pitch",
+      "entry": "main.larp",
+      "sources": ["main.larp", "lib/founder.larp", "lib/training.larp"],
+      "stdout": "49\n20\nfr\n",
+      "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+    }
+  ]
+}

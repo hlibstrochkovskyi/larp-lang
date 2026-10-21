@@ -29,6 +29,7 @@ jobs:
       - run: python3 tools/run_conformance.py --formatted --artifacts --gc-stress
       - run: python3 tools/run_reference.py
       - run: python3 tools/run_reference.py --document README.md --contracts docs/readme-cases.json --output artifacts/readme-validation
+      - run: python3 tools/run_projects.py --bin target/debug/larp --output artifacts/project-validation
       - run: python3 tools/measure_resources.py --samples 1 --output artifacts/ci-resources
       - uses: actions/upload-artifact@v4
         if: always()
@@ -41,6 +42,12 @@ jobs:
         with:
           name: version-contract
           path: artifacts/version-contract/version-report.json
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: project-contract
+          path: artifacts/project-validation/project-report.json
           retention-days: 14
 
   reproducible-build:
@@ -100,6 +107,7 @@ jobs:
           path: |
             artifacts/candidate-compatibility/compatibility-report.json
             artifacts/candidate-compatibility/version-contract/version-report.json
+            artifacts/candidate-compatibility/projects/project-report.json
           retention-days: 14
 
   candidate-matrix:

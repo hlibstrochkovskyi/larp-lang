@@ -13,6 +13,29 @@ ROOT = Path(__file__).resolve().parents[1]
 HOSTS = {"ubuntu-24.04": "24.04", "ubuntu-26.04": "26.04"}
 MODES = [[], ["--gc-stress"], ["--artifacts", "--gc-stress"],
          ["--formatted", "--artifacts", "--gc-stress"]]
+PROJECT_MODES = ["source", "source-gc-stress", "artifact", "artifact-gc-stress",
+                 "formatted-artifact-gc-stress"]
+
+
+def validate_projects(projects: dict, binary_sha256: str) -> None:
+    """Require actual project execution, bound to one binary and fixture inventory."""
+    if (not isinstance(projects, dict) or projects.get("status") != "passed"
+            or projects.get("binary_sha256") != binary_sha256
+            or not re.fullmatch(r"[0-9a-f]{64}", projects.get("manifest_sha256", ""))):
+        raise ValueError("Missing or inconsistent packaged project evidence")
+    cases = projects.get("cases")
+    count = projects.get("project_count")
+    if (type(count) is not int or count < 1 or not isinstance(cases, list) or len(cases) != count
+            or type(projects.get("vm_executions")) is not int or projects["vm_executions"] != count * 5):
+        raise ValueError("Incomplete packaged project execution counts")
+    names = set()
+    for case in cases:
+        if (not isinstance(case, dict) or not isinstance(case.get("id"), str)
+                or not re.fullmatch(r"[a-z][a-z0-9-]*", case["id"])
+                or case["id"] in names or case.get("status") != "passed"
+                or case.get("modes") != PROJECT_MODES):
+            raise ValueError("Incomplete or repeated packaged project case")
+        names.add(case["id"])
 
 
 def validate(reports: dict, revision: str) -> dict:
@@ -22,7 +45,7 @@ def validate(reports: dict, revision: str) -> dict:
     common = None
     hosts = {}
     fields = ("revision", "archive", "archive_sha256", "binary_sha256", "version", "target",
-              "rustc", "cargo", "checker_sha256", "checksummed_files", "conformance_cases", "identity", "historical_versions", "preview")
+              "rustc", "cargo", "checker_sha256", "checksummed_files", "conformance_cases", "identity", "historical_versions", "preview", "projects")
     for label, release in HOSTS.items():
         report = reports[label]
         if (report.get("schema_version") != 1 or report.get("status") != "passed"
@@ -37,6 +60,7 @@ def validate(reports: dict, revision: str) -> dict:
             raise ValueError(f"Compatibility report is missing its version identity: {label}")
         validate_identity(identity, report["version"], identity["language_spec"])
         validate_preview_evidence(identity, report.get("preview"))
+        validate_projects(report.get("projects"), report["binary_sha256"])
         cases = report.get("conformance_cases")
         if report.get("historical_versions") != report.get("identity", {}).get("artifact", {}).get("read"):
             raise ValueError(f"Historical artifact execution does not cover declared read versions: {label}")

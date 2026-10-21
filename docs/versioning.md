@@ -7,7 +7,8 @@ commit, artifacts, and executed checks; the immutable [release notes](releases/0
 describe the shipped subset. This policy defines version identities and the
 evidence required for subsequent releases.
 
-The current branch is **`0.2.0-dev`**, which adds experimental file modules
+The current candidate is **`0.2.0-preview.1`** ([release notes](releases/0.2.0-preview.1.md)),
+which adds experimental file modules
 under [RFC 0001](rfcs/0001-file-modules.md). The `0.1` specification remains the
 single-file design baseline; this extension does not change the published
 preview, artifact wire encoding, or JSON schemas.
@@ -16,7 +17,7 @@ preview, artifact wire encoding, or JSON schemas.
 
 | Identity | Current value | Meaning |
 | --- | --- | --- |
-| Toolchain version | `0.2.0-dev` | CLI and workspace package version from the root Cargo manifest |
+| Toolchain version | `0.2.0-preview.1` | CLI and workspace package version from the root Cargo manifest |
 | Language specification | `0.1` | The [proposed language specification](spec/v0.1.md), with experimental implementation status |
 | Artifact wire version | Writer `2`; reader `1`, `2` | Explicit encodings accepted by the artifact decoder, subject to verification |
 | Diagnostic JSON schema | `1` | The [structured diagnostic protocol](diagnostics.md) |
@@ -72,7 +73,7 @@ The command emits one JSON object followed by a newline on stdout, exits
 successfully, and leaves stderr empty. For the current workspace it reports:
 
 ```json
-{"schema_version":1,"name":"larp","version":"0.2.0-dev","channel":"development","language_spec":"0.1","language_status":"experimental","artifact":{"write":2,"read":[1,2]},"diagnostics_schema":1}
+{"schema_version":1,"name":"larp","version":"0.2.0-preview.1","channel":"preview","language_spec":"0.1","language_status":"experimental","artifact":{"write":2,"read":[1,2]},"diagnostics_schema":1}
 ```
 
 `schema_version` versions this version-info object separately from diagnostics.

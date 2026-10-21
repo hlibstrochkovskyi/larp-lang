@@ -1,6 +1,6 @@
 # File modules
 
-Status: experimental **`0.2.0-dev`** functionality. Imports are absent from the
+Status: experimental **`0.2.0-preview.1`** functionality. Imports are absent from the
 published `v0.1.0-preview.1` binary. Build this branch before trying these commands.
 The [RFC](rfcs/0001-file-modules.md) defines the full contract; the
 [project fixture](../tests/projects/README.md) exercises it through the real VM.

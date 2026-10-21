@@ -1,4 +1,4 @@
-(* Experimental 0.2.0-dev source-unit extension to grammar.ebnf.
+(* Experimental 0.2.0-preview.1 source-unit extension to grammar.ebnf.
    Unlisted productions retain their baseline definition. These productions
    override program, declaration, type, archetype, and primary for unit mode.
    Import paths use the ordinary STRING token; resolver policy is separate.

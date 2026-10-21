@@ -1,6 +1,6 @@
 # Multi-file acceptance projects
 
-These projects exercise whole-project compilation in the development branch.
+These projects exercise whole-project compilation in the `0.2.0-preview.1` candidate.
 They extend the single-file corpus in `tests/conformance`; they are not features
 of the published `v0.1.0-preview.1` release. Each project has one entry unit and
 explicitly imported library units. Library files intentionally have no
@@ -58,3 +58,23 @@ acceptance test with:
 ```sh
 cargo test -p larp-cli --test projects --locked --offline committed_pitch_project
 ```
+
+## Packaged-binary acceptance
+
+The [manifest](manifest.json) binds the exact source inventory to stdout and
+inspection expectations. Run the standalone driver without rebuilding a CLI:
+
+```sh
+python3 tools/run_projects.py --bin target/debug/larp --output artifacts/project-validation
+```
+
+It executes one project in five modes: ordinary/stress source, ordinary/stress
+loaded artifact, and a formatted loaded artifact with stress GC. Formatting is
+checked per source unit; source snapshots are renamed and retained before
+artifact execution so the original embedded paths are unavailable. The driver
+retains commands, results, binary/manifest/source hashes, and a passed/failed
+report. Reusing nonempty output is rejected without overwriting prior evidence.
+
+CI runs this driver in its normal check job and against the identical packaged
+binary on Ubuntu 24.04 and 26.04. The candidate matrix rejects missing project
+execution, missing modes, or mismatched executable/fixture inventory.

@@ -3,7 +3,7 @@
 Status: M1 through M5 and the bounded M6 first-preview scope are implemented.
 [`v0.1.0-preview.1`](releases/0.1.0-preview.1-publication.md) is published as an
 experimental prerelease. Broader specification review and later language/tooling
-work remain open. File modules are implemented in the `0.2.0-dev` development
+work remain open. File modules are implemented in the `0.2.0-preview.1` development
 branch and are not part of the released compiler; the M7 local acceptance gate
 has passed, with hosted checks required for each commit.
 This is a sequence of acceptance gates, not a delivery-date promise.

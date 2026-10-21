@@ -9,7 +9,7 @@ The [preview audit](preview-readiness.md) records resolved semantic regressions,
 release evidence, and remaining design questions; a finite passing corpus and a
 published preview do not approve the whole proposed specification. File modules
 and package management are not implemented in this released subset. The current
-`0.2.0-dev` branch adds file modules as described below.
+`0.2.0-preview.1` branch adds file modules as described below.
 
 ## Working features
 
@@ -75,7 +75,7 @@ and package management are not implemented in this released subset. The current
   handles, explicit roots, stress collection, and execution statistics through
   the Rust VM API. Suspended collection callbacks and partial results remain rooted.
 
-## File modules (`0.2.0-dev`)
+## File modules (`0.2.0-preview.1`)
 
 [File modules](modules.md) extend the single-file baseline with explicit relative
 imports, private-by-default top-level declarations, `highkey` exports, and

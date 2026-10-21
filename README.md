@@ -20,7 +20,8 @@ LARP is an experimental, statically typed programming language with C-style
 syntax, objects, first-class functions, and controlled what-if execution.
 Written in Rust, it compiles to its own verified bytecode and runs on the LARP VM.
 
-This branch develops **`0.2.0-dev`**, adding [file modules](docs/modules.md).
+This branch prepares **`0.2.0-preview.1`**, adding [file modules](docs/modules.md).
+See the [candidate notes](docs/releases/0.2.0-preview.1.md); publication is pending.
 The downloadable first preview below remains `0.1.0-preview.1` and single-file.
 
 ## Pitch the unicorn. Keep the aura.

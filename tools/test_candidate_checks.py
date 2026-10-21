@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 from check_candidate import checked_contents
-from check_candidate_matrix import MODES, validate
+from check_candidate_matrix import MODES, PROJECT_MODES, validate
 from version_contract import preview_metadata, validate_identity, version_channel
 
 REVISION = "a" * 40
@@ -30,6 +30,9 @@ def synthetic_reports() -> dict:
                          "diagnostics_schema": 1, "artifact": {"write": 2, "read": [1, 2]}},
             "historical_versions": [1, 2],
             "preview": None,
+            "projects": {"status": "passed", "binary_sha256": "c" * 64, "manifest_sha256": "e" * 64,
+                         "project_count": 1, "vm_executions": 5,
+                         "cases": [{"id": "pitch", "status": "passed", "modes": copy.copy(PROJECT_MODES)}]},
             "conformance_modes": [{"flags": copy.copy(mode), "passed": 2, "pending": 0} for mode in MODES],
             "environment": {"system": "Linux", "machine": "x86_64", "glibc": "synthetic libc",
                             "os_release": {"ID": "ubuntu", "VERSION_ID": release},
@@ -39,6 +42,24 @@ def synthetic_reports() -> dict:
 
 
 class MatrixEvidenceTests(unittest.TestCase):
+    def test_missing_unexecuted_or_wrong_binary_projects_are_rejected(self):
+        for change in (None, {"status": "failed"}, {"binary_sha256": "f" * 64},
+                       {"vm_executions": 4}, {"project_count": True},
+                       {"cases": [{"id": "pitch", "status": "passed", "modes": ["source"]}]}):
+            reports = synthetic_reports()
+            if change is None:
+                reports["ubuntu-26.04"].pop("projects")
+            else:
+                reports["ubuntu-26.04"]["projects"].update(change)
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                validate(reports, REVISION)
+
+    def test_different_packaged_project_inventory_is_rejected(self):
+        reports = synthetic_reports()
+        reports["ubuntu-26.04"]["projects"]["manifest_sha256"] = "f" * 64
+        with self.assertRaises(ValueError):
+            validate(reports, REVISION)
+
     def test_matching_candidate_on_two_distinct_hosts(self):
         result = validate(synthetic_reports(), REVISION)
         self.assertEqual(set(result["hosts"]), {"ubuntu-24.04", "ubuntu-26.04"})

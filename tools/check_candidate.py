@@ -15,6 +15,7 @@ import tarfile
 import tomllib
 
 from version_contract import specification_version, validate_identity
+from check_candidate_matrix import validate_projects
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_BYTES = 128 * 1024 * 1024
@@ -212,6 +213,22 @@ def main() -> None:
                 raise RuntimeError("Packaged conformance corpus did not execute every declared case")
             report["conformance_modes"].append({"flags": flags, "passed": cases, "pending": 0})
             save()
+        project_output = output / "projects"
+        invoke([sys.executable, "-B", str(root / "tools/run_projects.py"), "--bin", str(executable),
+                "--output", str(project_output)], root, timeout=120)
+        projects = json.loads(project_output.joinpath("project-report.json").read_text(encoding="utf-8"))
+        project_summary = {key: projects[key] for key in
+                           ("status", "binary_sha256", "manifest_sha256", "project_count", "vm_executions")}
+        project_summary["cases"] = [{key: case[key] for key in ("id", "status", "modes")}
+                                    for case in projects["cases"]]
+        validate_projects(project_summary, contents["bin/larp"])
+        inventory = json.loads(root.joinpath("tests/projects/manifest.json").read_text(encoding="utf-8"))
+        if (projects.get("schema_version") != 1
+                or projects["manifest_sha256"] != contents["tests/projects/manifest.json"]
+                or [case["id"] for case in projects["cases"]] != [case["id"] for case in inventory["cases"]]):
+            raise RuntimeError("Packaged project execution differs from the archived fixture inventory")
+        report["projects"] = project_summary
+        save()
         if checked_contents(root) != contents:
             raise RuntimeError("Candidate payload changed during execution")
         report.update({"status": "passed", "conformance_cases": cases, "payload_unchanged": True})

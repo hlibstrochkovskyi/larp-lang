@@ -7,7 +7,7 @@ experimental release. The implementation status describes what works; the
 specification describes the design baseline. Neither a proposal nor a passing
 finite test suite establishes complete language correctness.
 
-Current development: **`0.2.0-dev`**, including [file modules](modules.md);
+Current development: **`0.2.0-preview.1`**, including [file modules](modules.md);
 imports are not available in the published first preview.
 
 ## Learn and run

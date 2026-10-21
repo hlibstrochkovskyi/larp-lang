@@ -7,6 +7,10 @@ See the [publication record](releases/0.1.0-preview.1-publication.md) for exact
 filenames, digests, source revision, and compatibility results. LARP remains an
 experimental developer preview under the [MIT License](../LICENSE).
 
+The next candidate is [`0.2.0-preview.1`](releases/0.2.0-preview.1.md), with
+file modules and explicit packaged-project execution gates. It is prepared for
+review, not yet published.
+
 The candidate packager described below produces reviewable archives and
 exercises their extracted CLI. Running it does not publish a tag or GitHub
 Release; publication is a separate maintainer-authorized action.
@@ -182,6 +186,16 @@ sandbox or publisher authentication for arbitrary downloaded programs.
 The packaged corpus inventory and all four conformance modes in the platform
 policy must pass. Commands run with EOF, captured stdout/stderr, and process-group
 timeouts; a timeout, failure, pending case, or unexpected stderr fails the job.
+For current candidates, the archived [project driver](../tools/run_projects.py)
+executes the [multi-file inventory](../tests/projects/manifest.json) with the same
+prebuilt binary. Each project passes source/source-stress, artifact/artifact-stress,
+and formatted-artifact-stress runs. Source snapshots are retained under renamed
+paths before artifact execution. Exact stdout/inspection, format idempotence,
+manifest/binary hashes, and all five executed modes are recorded. Both hosts
+must agree on this evidence; a missing mode or project fails the aggregate gate.
+This extends candidate policy after the first preview, whose archived driver
+retains its original single-file checks.
+
 Payload hashes are checked again after execution. Each new/empty output directory
 retains `compatibility-report.json`, its environment/image and libc/ELF details,
 hashes, command outcomes, and extraction. Existing evidence is never overwritten.
@@ -194,4 +208,6 @@ job prevents that aggregate gate from passing. `matrix-report.json` retains inpu
 report hashes and both recorded environments. Each artifact expires after 14 days;
 successful exact-commit evidence must be recorded before making a platform claim.
 Compatibility artifacts also retain each archived driver's `version-report.json`;
-the ordinary check job saves its own report as `version-contract`.
+the ordinary check job saves its own report as `version-contract`. Current
+project execution records are retained in `project-contract` and each compatibility
+host artifact as `projects/project-report.json`.
