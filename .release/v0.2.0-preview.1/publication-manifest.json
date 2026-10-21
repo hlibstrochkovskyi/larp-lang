@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "revision": "a053c991d298e8bf27197561c4df27042b5c7630",
+  "version": "0.2.0-preview.1",
+  "tag": "v0.2.0-preview.1",
+  "release_title": "LARP v0.2.0-preview.1 \u2014 File Modules",
+  "prerelease": true,
+  "target": "x86_64-unknown-linux-gnu",
+  "execution_hosts": [
+    "ubuntu-24.04",
+    "ubuntu-26.04"
+  ],
+  "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+  "ci_run": 39686149176,
+  "candidate_artifact_id": 12385689114,
+  "candidate_zip_sha256": "33ea5d2d1d14933639ad5fff80b3bcc4cc219e2c56e2ccdd3f91cf78a20fc162",
+  "notes_sha256": "456b1d48b4fcee6eeac0d7010b4c5823fd278badd73811dcf89eeba4df0cdf8f",
+  "assets": [
+    {
+      "name": "larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298.tar.gz",
+      "bytes": 3562384,
+      "sha256": "6f90477eedcd88dcb3cada38af95692182e43ce4d0b2afc31248515029a0464c"
+    },
+    {
+      "name": "larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298.tar.gz.sha256",
+      "bytes": 132,
+      "sha256": "59e2da05c4a011b9a56209292678ba080bcbe5b2a024bf95d279466d9ce60d70"
+    },
+    {
+      "name": "release-evidence.json",
+      "bytes": 189467,
+      "sha256": "7a98dc64db5ed3a1210ca72b715fb08f6dae314433357b6d5b613ea710b331e5"
+    }
+  ]
+}

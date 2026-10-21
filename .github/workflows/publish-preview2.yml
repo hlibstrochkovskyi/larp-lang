@@ -1,0 +1,40 @@
+name: Publish approved LARP modules preview
+
+on:
+  push:
+    branches: [release/preview2-publication]
+    paths:
+      - .release/**
+      - .github/workflows/publish-preview2.yml
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-larp-v0.2.0-preview.1
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'hlibstrochkovskyi/larp-lang' && github.ref == 'refs/heads/release/preview2-publication'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Publish the approved commit and existing candidate bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .release/publish_preview2.py --publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preview2-publication-result
+          path: artifacts/publication/publication-result.json
+          if-no-files-found: warn
+          retention-days: 14

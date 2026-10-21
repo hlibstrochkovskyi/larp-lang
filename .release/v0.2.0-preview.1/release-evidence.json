@@ -1,0 +1,3176 @@
+{
+  "schema_version": 1,
+  "status": "verification_passed",
+  "revision": "a053c991d298e8bf27197561c4df27042b5c7630",
+  "version": "0.2.0-preview.1",
+  "proposed_tag": "v0.2.0-preview.1",
+  "publication": "Separate maintainer approval is required; technical verification does not publish this release.",
+  "hosted_checks": {
+    "runs": [
+      {
+        "id": 39686149176,
+        "name": "Compiler and conformance",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630",
+        "url": "https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39686149176"
+      },
+      {
+        "id": 39686149181,
+        "name": "Bounded fuzz campaigns",
+        "status": "completed",
+        "conclusion": "success",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630",
+        "url": "https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39686149181"
+      }
+    ],
+    "jobs": [
+      {
+        "id": 119520585515,
+        "name": "reproducible-build",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39686149176,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@1.99.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run python3 tools/check_reproducible_build.py --output artifacts/reproducible-builds/ci",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run python3 tools/package_candidate.py --report artifacts/reproducible-builds/ci/report.json --output artifacts/package-ci",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 119520585891,
+        "name": "check",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39686149176,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@1.99.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run cargo fmt --all -- --check",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run cargo test --workspace --locked --offline",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run cargo test -p larp-compiler --release --locked --offline",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Run python3 tools/check_corpus.py",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Run python3 tools/check_version.py --bin target/debug/larp --output artifacts/version-contract",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Run python3 -m unittest discover -s tools -p 'test_candidate_checks.py'",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Run python3 tools/run_conformance.py",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Run python3 tools/run_conformance.py --gc-stress",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Run python3 tools/run_conformance.py --artifacts --gc-stress",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Run python3 tools/run_conformance.py --formatted --artifacts --gc-stress",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Run python3 tools/run_reference.py",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Run python3 tools/run_reference.py --document README.md --contracts docs/readme-cases.json --output artifacts/readme-validation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Run python3 tools/run_projects.py --bin target/debug/larp --output artifacts/project-validation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Run python3 tools/measure_resources.py --samples 1 --output artifacts/ci-resources",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 20
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 21
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 22
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 43
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 44
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 45
+          }
+        ]
+      },
+      {
+        "id": 119520832304,
+        "name": "candidate-compatibility (ubuntu-24.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39686149176,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/download-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify and execute the existing candidate",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          }
+        ]
+      },
+      {
+        "id": 119520832399,
+        "name": "candidate-compatibility (ubuntu-26.04)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39686149176,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/download-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify and execute the existing candidate",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          }
+        ]
+      },
+      {
+        "id": 119520947570,
+        "name": "candidate-matrix",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39686149176,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/download-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Require both platforms to have executed identical candidate bytes",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          }
+        ]
+      }
+    ],
+    "fuzz_jobs": [
+      {
+        "id": 119520585668,
+        "name": "fuzz",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 39686149181,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@1.99.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Build public corpus seeds",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@master",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Install pinned fuzz tooling",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Fetch standalone fuzz dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build instrumented targets",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Run four bounded campaigns",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 21
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 22
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          }
+        ]
+      }
+    ]
+  },
+  "ci_artifacts": [
+    {
+      "id": 12386876054,
+      "name": "candidate-compatibility-ubuntu-26.04",
+      "size_in_bytes": 10392,
+      "url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12386876054",
+      "archive_download_url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12386876054/zip",
+      "expired": false,
+      "created_at": "2026-10-21T22:24:24Z",
+      "expires_at": "2026-11-04T22:24:23Z",
+      "updated_at": "2026-10-21T22:24:24Z",
+      "digest": "sha256:3780b3b7887e5d13900e863642359df96488cd92a6fb920e749784da8ebc821f",
+      "workflow_run": {
+        "id": 39686149176,
+        "repository_id": 1423280717,
+        "head_repository_id": 1423280717,
+        "head_branch": "main",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630"
+      }
+    },
+    {
+      "id": 12386137467,
+      "name": "candidate-compatibility-ubuntu-24.04",
+      "size_in_bytes": 10382,
+      "url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12386137467",
+      "archive_download_url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12386137467/zip",
+      "expired": false,
+      "created_at": "2026-10-21T22:24:21Z",
+      "expires_at": "2026-11-04T22:24:20Z",
+      "updated_at": "2026-10-21T22:24:21Z",
+      "digest": "sha256:536371957cc16f2dcc6c33d0a876d8b3fa85f808531a86fcfe56e86aa92b4cea",
+      "workflow_run": {
+        "id": 39686149176,
+        "repository_id": 1423280717,
+        "head_repository_id": 1423280717,
+        "head_branch": "main",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630"
+      }
+    },
+    {
+      "id": 12385877422,
+      "name": "version-contract",
+      "size_in_bytes": 1838,
+      "url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385877422",
+      "archive_download_url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385877422/zip",
+      "expired": false,
+      "created_at": "2026-10-21T22:24:27Z",
+      "expires_at": "2026-11-04T22:24:26Z",
+      "updated_at": "2026-10-21T22:24:27Z",
+      "digest": "sha256:86f43ac51c1f62f46735745ed8b53c9977dc3a895b3a6fc619b1a420a81f13f9",
+      "workflow_run": {
+        "id": 39686149176,
+        "repository_id": 1423280717,
+        "head_repository_id": 1423280717,
+        "head_branch": "main",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630"
+      }
+    },
+    {
+      "id": 12385792673,
+      "name": "candidate-matrix",
+      "size_in_bytes": 1819,
+      "url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385792673",
+      "archive_download_url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385792673/zip",
+      "expired": false,
+      "created_at": "2026-10-21T22:24:33Z",
+      "expires_at": "2026-11-04T22:24:33Z",
+      "updated_at": "2026-10-21T22:24:33Z",
+      "digest": "sha256:c93089aa0132c5641204b1f0c77268fa98664171eb3f0f6e57a13a79ff09b264",
+      "workflow_run": {
+        "id": 39686149176,
+        "repository_id": 1423280717,
+        "head_repository_id": 1423280717,
+        "head_branch": "main",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630"
+      }
+    },
+    {
+      "id": 12385727807,
+      "name": "resource-evidence",
+      "size_in_bytes": 23670,
+      "url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385727807",
+      "archive_download_url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385727807/zip",
+      "expired": false,
+      "created_at": "2026-10-21T22:24:26Z",
+      "expires_at": "2026-11-04T22:24:25Z",
+      "updated_at": "2026-10-21T22:24:26Z",
+      "digest": "sha256:aedc147dd9d9d7b4961c259397ac72dba9eb77339355a2b6b1acc71886ea7e06",
+      "workflow_run": {
+        "id": 39686149176,
+        "repository_id": 1423280717,
+        "head_repository_id": 1423280717,
+        "head_branch": "main",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630"
+      }
+    },
+    {
+      "id": 12385689114,
+      "name": "larp-candidate-linux-x86_64",
+      "size_in_bytes": 3554660,
+      "url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385689114",
+      "archive_download_url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385689114/zip",
+      "expired": false,
+      "created_at": "2026-10-21T22:24:08Z",
+      "expires_at": "2026-11-04T22:24:08Z",
+      "updated_at": "2026-10-21T22:24:08Z",
+      "digest": "sha256:33ea5d2d1d14933639ad5fff80b3bcc4cc219e2c56e2ccdd3f91cf78a20fc162",
+      "workflow_run": {
+        "id": 39686149176,
+        "repository_id": 1423280717,
+        "head_repository_id": 1423280717,
+        "head_branch": "main",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630"
+      }
+    },
+    {
+      "id": 12385334875,
+      "name": "reproducibility-evidence",
+      "size_in_bytes": 6169,
+      "url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385334875",
+      "archive_download_url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385334875/zip",
+      "expired": false,
+      "created_at": "2026-10-21T22:24:07Z",
+      "expires_at": "2026-11-04T22:24:07Z",
+      "updated_at": "2026-10-21T22:24:07Z",
+      "digest": "sha256:d840192d03d8200081d408a969e4a6672759a31f3189c802cc5566147197c920",
+      "workflow_run": {
+        "id": 39686149176,
+        "repository_id": 1423280717,
+        "head_repository_id": 1423280717,
+        "head_branch": "main",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630"
+      }
+    },
+    {
+      "id": 12385269920,
+      "name": "project-contract",
+      "size_in_bytes": 1479,
+      "url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385269920",
+      "archive_download_url": "https://api.github.com/repos/hlibstrochkovskyi/larp-lang/actions/artifacts/12385269920/zip",
+      "expired": false,
+      "created_at": "2026-10-21T22:24:28Z",
+      "expires_at": "2026-11-04T22:24:27Z",
+      "updated_at": "2026-10-21T22:24:28Z",
+      "digest": "sha256:8175c310a3adb8fc195194ad101a8d739780adcd98b4c95e3623ab669bcf865e",
+      "workflow_run": {
+        "id": 39686149176,
+        "repository_id": 1423280717,
+        "head_repository_id": 1423280717,
+        "head_branch": "main",
+        "head_sha": "a053c991d298e8bf27197561c4df27042b5c7630"
+      }
+    }
+  ],
+  "reports": {
+    "candidate-matrix/matrix-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "revision": "a053c991d298e8bf27197561c4df27042b5c7630",
+      "report_hashes": {
+        "ubuntu-24.04": "d7956af29de69d29ddfd2dd48b22a2cc4eebf51a7e6a0bcf9ffae6281a63e68b",
+        "ubuntu-26.04": "fc71b62b91cef841e7dccbe4f46a896dfca3b32518c60640276a4b658d0cf9a1"
+      },
+      "archive": "larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298.tar.gz",
+      "archive_sha256": "6f90477eedcd88dcb3cada38af95692182e43ce4d0b2afc31248515029a0464c",
+      "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+      "version": "0.2.0-preview.1",
+      "target": "x86_64-unknown-linux-gnu",
+      "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
+      "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)\nrelease: 1.99.0\ncommit-hash: 5f94df4789f005f9a352888e8355ffc645b7ed0e\ncommit-date: 2026-08-27\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.6 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]",
+      "checker_sha256": "4b601c860b54fc201810d8ab11dd8788e901a8c19c461e5391e25a2b676312d2",
+      "checksummed_files": 322,
+      "conformance_cases": 89,
+      "identity": {
+        "schema_version": 1,
+        "name": "larp",
+        "version": "0.2.0-preview.1",
+        "channel": "preview",
+        "language_spec": "0.1",
+        "language_status": "experimental",
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1
+      },
+      "historical_versions": [
+        1,
+        2
+      ],
+      "preview": {
+        "schema_version": 1,
+        "version": "0.2.0-preview.1",
+        "proposed_tag": "v0.2.0-preview.1",
+        "notes": "docs/releases/0.2.0-preview.1.md",
+        "language_spec": "0.1",
+        "target": "x86_64-unknown-linux-gnu",
+        "execution_hosts": [
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1,
+        "identity_schema": 1,
+        "descriptor_sha256": "52ef8d5dbfcc8f9123491facf1a9056e32051a1c089dd04010ddbb652cd031b2",
+        "notes_sha256": "e7e0933dcaa0bad7cb72f8807a9668c5cc1b03af174ddbf6f987b59110aa49e1",
+        "relative_file_links_checked": 15
+      },
+      "projects": {
+        "status": "passed",
+        "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+        "manifest_sha256": "7ac7ceff4524584c6c40f533075a014b43fbf6b3fe782719d64a7f5d5f201196",
+        "project_count": 1,
+        "vm_executions": 5,
+        "cases": [
+          {
+            "id": "pitch",
+            "status": "passed",
+            "modes": [
+              "source",
+              "source-gc-stress",
+              "artifact",
+              "artifact-gc-stress",
+              "formatted-artifact-gc-stress"
+            ]
+          }
+        ]
+      },
+      "hosts": {
+        "ubuntu-24.04": {
+          "system": "Linux",
+          "machine": "x86_64",
+          "kernel": "7.0.0-1017-azure",
+          "os_release": {
+            "NAME": "Ubuntu",
+            "ID": "ubuntu",
+            "PRETTY_NAME": "Ubuntu 24.04.5 LTS",
+            "VERSION_ID": "24.04",
+            "VERSION": "24.04.5 LTS (Noble Numbat)",
+            "VERSION_CODENAME": "noble",
+            "ID_LIKE": "debian",
+            "HOME_URL": "https://www.ubuntu.com/",
+            "SUPPORT_URL": "https://help.ubuntu.com/",
+            "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+            "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+            "UBUNTU_CODENAME": "noble",
+            "LOGO": "ubuntu-logo"
+          },
+          "runner_image": {
+            "ImageOS": "ubuntu24",
+            "ImageVersion": "20261018.339.1",
+            "RUNNER_OS": "Linux",
+            "RUNNER_ARCH": "X64"
+          },
+          "glibc": "glibc 2.39"
+        },
+        "ubuntu-26.04": {
+          "system": "Linux",
+          "machine": "x86_64",
+          "kernel": "7.0.0-1017-azure",
+          "os_release": {
+            "NAME": "Ubuntu",
+            "ID": "ubuntu",
+            "PRETTY_NAME": "Ubuntu 26.04.1 LTS",
+            "VERSION_ID": "26.04",
+            "VERSION": "26.04.1 LTS (Resolute Raccoon)",
+            "VERSION_CODENAME": "resolute",
+            "ID_LIKE": "debian",
+            "HOME_URL": "https://www.ubuntu.com/",
+            "SUPPORT_URL": "https://help.ubuntu.com/",
+            "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+            "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+            "UBUNTU_CODENAME": "resolute",
+            "LOGO": "ubuntu-logo"
+          },
+          "runner_image": {
+            "ImageOS": "ubuntu26",
+            "ImageVersion": "20261018.168.1",
+            "RUNNER_OS": "Linux",
+            "RUNNER_ARCH": "X64"
+          },
+          "glibc": "glibc 2.43"
+        }
+      }
+    },
+    "candidate-compatibility-ubuntu-24.04/compatibility-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "revision": "a053c991d298e8bf27197561c4df27042b5c7630",
+      "checker_sha256": "4b601c860b54fc201810d8ab11dd8788e901a8c19c461e5391e25a2b676312d2",
+      "commands": [
+        {
+          "arguments": [
+            "getconf",
+            "GNU_LIBC_VERSION"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "glibc 2.39\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "readelf",
+            "--program-headers",
+            "--dynamic",
+            "--version-info",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "\nElf file type is DYN (Position-Independent Executable file)\nEntry point 0x58280\nThere are 12 program headers, starting at offset 64\n\nProgram Headers:\n  Type           Offset             VirtAddr           PhysAddr\n                 FileSiz            MemSiz              Flags  Align\n  PHDR           0x0000000000000040 0x0000000000000040 0x0000000000000040\n                 0x00000000000002a0 0x00000000000002a0  R      0x8\n  INTERP         0x00000000000002e0 0x00000000000002e0 0x00000000000002e0\n                 0x000000000000001c 0x000000000000001c  R      0x1\n      [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]\n  LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000\n                 0x000000000005727c 0x000000000005727c  R      0x1000\n  LOAD           0x0000000000057280 0x0000000000058280 0x0000000000058280\n                 0x0000000000122ed0 0x0000000000122ed0  R E    0x1000\n  LOAD           0x000000000017a150 0x000000000017c150 0x000000000017c150\n                 0x00000000000088c0 0x0000000000008eb0  RW     0x1000\n  LOAD           0x0000000000182a10 0x0000000000185a10 0x0000000000185a10\n                 0x0000000000000a90 0x0000000000000b73  RW     0x1000\n  TLS            0x000000000017a150 0x000000000017c150 0x000000000017c150\n                 0x0000000000000030 0x0000000000000068  R      0x8\n  DYNAMIC        0x0000000000181770 0x0000000000183770 0x0000000000183770\n                 0x00000000000001d0 0x00000000000001d0  RW     0x8\n  GNU_RELRO      0x000000000017a150 0x000000000017c150 0x000000000017c150\n                 0x00000000000088c0 0x0000000000008eb0  R      0x1\n  GNU_EH_FRAME   0x00000000000353cc 0x00000000000353cc 0x00000000000353cc\n                 0x000000000000434c 0x000000000000434c  R      0x4\n  GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000\n                 0x0000000000000000 0x0000000000000000  RW     0x0\n  NOTE           0x00000000000002fc 0x00000000000002fc 0x00000000000002fc\n                 0x0000000000000044 0x0000000000000044  R      0x4\n\n Section to Segment mapping:\n  Segment Sections...\n   00     \n   01     .interp \n   02     .interp .note.ABI-tag .note.gnu.build-id .dynsym .gnu.version .gnu.version_r .gnu.hash .dynstr .rela.dyn .rela.plt .gcc_except_table .rodata .eh_frame_hdr .eh_frame \n   03     .text .init .fini .plt \n   04     .tdata .fini_array .init_array .data.rel.ro .dynamic .got .got.plt .relro_padding \n   05     .tm_clone_table .data .bss \n   06     .tdata .tbss \n   07     .dynamic \n   08     .tdata .fini_array .init_array .data.rel.ro .dynamic .got .got.plt .relro_padding \n   09     .eh_frame_hdr \n   10     \n   11     .note.ABI-tag .note.gnu.build-id \n\nDynamic section at offset 0x181770 contains 29 entries:\n  Tag        Type                         Name/Value\n 0x0000000000000001 (NEEDED)             Shared library: [libgcc_s.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [ld-linux-x86-64.so.2]\n 0x000000000000001e (FLAGS)              BIND_NOW\n 0x000000006ffffffb (FLAGS_1)            Flags: NOW PIE\n 0x0000000000000015 (DEBUG)              0x0\n 0x0000000000000007 (RELA)               0x10d8\n 0x0000000000000008 (RELASZ)             47904 (bytes)\n 0x0000000000000009 (RELAENT)            24 (bytes)\n 0x000000006ffffff9 (RELACOUNT)          1922\n 0x0000000000000017 (JMPREL)             0xcbf8\n 0x0000000000000002 (PLTRELSZ)           48 (bytes)\n 0x0000000000000003 (PLTGOT)             0x1849e8\n 0x0000000000000014 (PLTREL)             RELA\n 0x0000000000000006 (SYMTAB)             0x340\n 0x000000000000000b (SYMENT)             24 (bytes)\n 0x0000000000000005 (STRTAB)             0xc64\n 0x000000000000000a (STRSZ)              1134 (bytes)\n 0x000000006ffffef5 (GNU_HASH)           0xc48\n 0x0000000000000019 (INIT_ARRAY)         0x17c188\n 0x000000000000001b (INIT_ARRAYSZ)       16 (bytes)\n 0x000000000000001a (FINI_ARRAY)         0x17c180\n 0x000000000000001c (FINI_ARRAYSZ)       8 (bytes)\n 0x000000000000000c (INIT)               0x17b0f4\n 0x000000000000000d (FINI)               0x17b110\n 0x000000006ffffff0 (VERSYM)             0xa78\n 0x000000006ffffffe (VERNEED)            0xb14\n 0x000000006fffffff (VERNEEDNUM)         3\n 0x0000000000000000 (NULL)               0x0\n\nVersion symbols section '.gnu.version' contains 77 entries:\n Addr: 0x0000000000000a78  Offset: 0x00000a78  Link: 4 (.dynsym)\n  000:   0 (*local*)       2 (GLIBC_2.34)    0 (*local*)       0 (*local*)    \n  004:   0 (*local*)       3 (GLIBC_2.2.5)   4 (GCC_3.0)       3 (GLIBC_2.2.5)\n  008:   3 (GLIBC_2.2.5)   5 (GLIBC_2.14)    3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  00c:   3 (GLIBC_2.2.5)   6 (GLIBC_2.3)     3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  010:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  014:   7 (GLIBC_2.33)    4 (GCC_3.0)       8 (GLIBC_2.30)    3 (GLIBC_2.2.5)\n  018:   3 (GLIBC_2.2.5)   4 (GCC_3.0)       4 (GCC_3.0)       3 (GLIBC_2.2.5)\n  01c:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  020:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  024:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   2 (GLIBC_2.34) \n  028:   2 (GLIBC_2.34)    3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  02c:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   9 (GCC_3.3)       3 (GLIBC_2.2.5)\n  030:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   a (GLIBC_2.32) \n  034:   2 (GLIBC_2.34)    3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  038:   3 (GLIBC_2.2.5)   7 (GLIBC_2.33)    2 (GLIBC_2.34)    3 (GLIBC_2.2.5)\n  03c:   b (GLIBC_2.3)     3 (GLIBC_2.2.5)   c (GLIBC_2.28)    d (GLIBC_2.25) \n  040:   e (GLIBC_2.18)    f (GLIBC_2.3.4)   2 (GLIBC_2.34)    3 (GLIBC_2.2.5)\n  044:  10 (GLIBC_2.16)    3 (GLIBC_2.2.5)   4 (GCC_3.0)      11 (GCC_4.2.0)  \n  048:   4 (GCC_3.0)       4 (GCC_3.0)       4 (GCC_3.0)       4 (GCC_3.0)    \n  04c:   4 (GCC_3.0)    \n\nVersion needs section '.gnu.version_r' contains 3 entries:\n Addr: 0x0000000000000b14  Offset: 0x00000b14  Link: 8 (.dynstr)\n  000000: Version: 1  File: libgcc_s.so.1  Cnt: 3\n  0x0030:   Name: GCC_3.0  Flags: none  Version: 4\n  0x0040:   Name: GCC_3.3  Flags: none  Version: 9\n  0x0050:   Name: GCC_4.2.0  Flags: none  Version: 17\n  0x0010: Version: 1  File: libc.so.6  Cnt: 12\n  0x0060:   Name: GLIBC_2.2.5  Flags: none  Version: 3\n  0x0070:   Name: GLIBC_2.3  Flags: none  Version: 11\n  0x0080:   Name: GLIBC_2.3.4  Flags: none  Version: 15\n  0x0090:   Name: GLIBC_2.14  Flags: none  Version: 5\n  0x00a0:   Name: GLIBC_2.16  Flags: none  Version: 16\n  0x00b0:   Name: GLIBC_2.18  Flags: WEAK  Version: 14\n  0x00c0:   Name: GLIBC_2.25  Flags: WEAK  Version: 13\n  0x00d0:   Name: GLIBC_2.28  Flags: WEAK  Version: 12\n  0x00e0:   Name: GLIBC_2.30  Flags: WEAK  Version: 8\n  0x00f0:   Name: GLIBC_2.32  Flags: none  Version: 10\n  0x0100:   Name: GLIBC_2.33  Flags: none  Version: 7\n  0x0110:   Name: GLIBC_2.34  Flags: none  Version: 2\n  0x0020: Version: 1  File: ld-linux-x86-64.so.2  Cnt: 1\n  0x0120:   Name: GLIBC_2.3  Flags: none  Version: 6\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "sha256sum",
+            "-c",
+            "SHA256SUMS"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": ".editorconfig: OK\n.github/ISSUE_TEMPLATE/bug_report.yml: OK\n.github/ISSUE_TEMPLATE/language_proposal.yml: OK\n.github/pull_request_template.md: OK\n.github/workflows/ci.yml: OK\n.github/workflows/fuzz.yml: OK\n.gitignore: OK\nAGENTS.md: OK\nBUILD.json: OK\nCONTRIBUTING.md: OK\nCargo.lock: OK\nCargo.toml: OK\nLICENSE: OK\nPACKAGE.md: OK\nREADME.md: OK\nTHIRD_PARTY.md: OK\nTHIRD_PARTY/rust/COPYRIGHT-library.html: OK\nTHIRD_PARTY/rust/licenses/Apache-2.0.txt: OK\nTHIRD_PARTY/rust/licenses/BSD-2-Clause.txt: OK\nTHIRD_PARTY/rust/licenses/CC-BY-SA-4.0.txt: OK\nTHIRD_PARTY/rust/licenses/GCC-exception-3.1.txt: OK\nTHIRD_PARTY/rust/licenses/GPL-2.0-only.txt: OK\nTHIRD_PARTY/rust/licenses/GPL-3.0-or-later.txt: OK\nTHIRD_PARTY/rust/licenses/ISC.txt: OK\nTHIRD_PARTY/rust/licenses/LLVM-exception.txt: OK\nTHIRD_PARTY/rust/licenses/MIT.txt: OK\nTHIRD_PARTY/rust/licenses/NCSA.txt: OK\nTHIRD_PARTY/rust/licenses/OFL-1.1.txt: OK\nTHIRD_PARTY/rust/licenses/Unicode-3.0.txt: OK\nbin/larp: OK\ncrates/larp-artifact/Cargo.toml: OK\ncrates/larp-artifact/src/codec.rs: OK\ncrates/larp-artifact/src/lib.rs: OK\ncrates/larp-bytecode/Cargo.toml: OK\ncrates/larp-bytecode/src/classes.rs: OK\ncrates/larp-bytecode/src/lib.rs: OK\ncrates/larp-bytecode/src/roles.rs: OK\ncrates/larp-bytecode/src/scenarios.rs: OK\ncrates/larp-bytecode/tests/arrays.rs: OK\ncrates/larp-bytecode/tests/classes.rs: OK\ncrates/larp-bytecode/tests/closures.rs: OK\ncrates/larp-bytecode/tests/lazy_and_suppression.rs: OK\ncrates/larp-bytecode/tests/roles.rs: OK\ncrates/larp-bytecode/tests/scenarios.rs: OK\ncrates/larp-bytecode/tests/verification.rs: OK\ncrates/larp-cli/Cargo.toml: OK\ncrates/larp-cli/src/main.rs: OK\ncrates/larp-cli/src/project.rs: OK\ncrates/larp-cli/src/version.rs: OK\ncrates/larp-cli/tests/cli.rs: OK\ncrates/larp-cli/tests/projects.rs: OK\ncrates/larp-compiler/Cargo.toml: OK\ncrates/larp-compiler/examples/resource_probe.rs: OK\ncrates/larp-compiler/examples/scenario_comparison.rs: OK\ncrates/larp-compiler/src/lib.rs: OK\ncrates/larp-compiler/src/project.rs: OK\ncrates/larp-compiler/src/semantics.rs: OK\ncrates/larp-compiler/src/semantics/arrays.rs: OK\ncrates/larp-compiler/src/semantics/bound_builtins.rs: OK\ncrates/larp-compiler/src/semantics/calls.rs: OK\ncrates/larp-compiler/src/semantics/closures.rs: OK\ncrates/larp-compiler/src/semantics/declarations.rs: OK\ncrates/larp-compiler/src/semantics/lazy.rs: OK\ncrates/larp-compiler/src/semantics/modules.rs: OK\ncrates/larp-compiler/src/semantics/objects.rs: OK\ncrates/larp-compiler/src/semantics/roles.rs: OK\ncrates/larp-compiler/src/semantics/scenarios.rs: OK\ncrates/larp-compiler/tests/bound_builtins.rs: OK\ncrates/larp-compiler/tests/collections.rs: OK\ncrates/larp-compiler/tests/constant_flow.rs: OK\ncrates/larp-compiler/tests/core.rs: OK\ncrates/larp-compiler/tests/functions_and_results.rs: OK\ncrates/larp-compiler/tests/grouped_places.rs: OK\ncrates/larp-compiler/tests/host_input.rs: OK\ncrates/larp-compiler/tests/lazy_and_suppression.rs: OK\ncrates/larp-compiler/tests/objects.rs: OK\ncrates/larp-compiler/tests/project_compilation.rs: OK\ncrates/larp-compiler/tests/project_graph.rs: OK\ncrates/larp-compiler/tests/roles.rs: OK\ncrates/larp-compiler/tests/scenarios.rs: OK\ncrates/larp-diagnostics/Cargo.toml: OK\ncrates/larp-diagnostics/src/json.rs: OK\ncrates/larp-diagnostics/src/lib.rs: OK\ncrates/larp-format/Cargo.toml: OK\ncrates/larp-format/src/lib.rs: OK\ncrates/larp-format/tests/adversarial.rs: OK\ncrates/larp-format/tests/units.rs: OK\ncrates/larp-fuzz-support/Cargo.toml: OK\ncrates/larp-fuzz-support/src/lib.rs: OK\ncrates/larp-ir/Cargo.toml: OK\ncrates/larp-ir/src/lib.rs: OK\ncrates/larp-ir/tests/lazy_and_suppression.rs: OK\ncrates/larp-ir/tests/scenarios.rs: OK\ncrates/larp-source/Cargo.toml: OK\ncrates/larp-source/src/lib.rs: OK\ncrates/larp-syntax/Cargo.toml: OK\ncrates/larp-syntax/src/lexer.rs: OK\ncrates/larp-syntax/src/lib.rs: OK\ncrates/larp-syntax/src/parser.rs: OK\ncrates/larp-syntax/tests/frontend.rs: OK\ncrates/larp-syntax/tests/lazy_and_suppression.rs: OK\ncrates/larp-syntax/tests/lossless.rs: OK\ncrates/larp-syntax/tests/objects.rs: OK\ncrates/larp-syntax/tests/roles.rs: OK\ncrates/larp-syntax/tests/scenarios.rs: OK\ncrates/larp-syntax/tests/source_units.rs: OK\ncrates/larp-types/Cargo.toml: OK\ncrates/larp-types/src/intrinsic.rs: OK\ncrates/larp-types/src/lib.rs: OK\ncrates/larp-types/tests/lazy.rs: OK\ncrates/larp-types/tests/snapshots.rs: OK\ncrates/larp-vm/Cargo.toml: OK\ncrates/larp-vm/src/heap.rs: OK\ncrates/larp-vm/src/host.rs: OK\ncrates/larp-vm/src/lazy_tests.rs: OK\ncrates/larp-vm/src/lib.rs: OK\ncrates/larp-vm/src/scenario.rs: OK\ncrates/larp-vm/src/scenario_tests.rs: OK\ncrates/larp-vm/src/value.rs: OK\ncrates/larp-vm/tests/collections.rs: OK\ncrates/larp-vm/tests/objects.rs: OK\ncrates/larp-vm/tests/roles.rs: OK\ndocs/LARP Programming Language Doodle Logo.png: OK\ndocs/LARP Programming Language Logo.png: OK\ndocs/README.md: OK\ndocs/architecture.md: OK\ndocs/bytecode-format-v1.md: OK\ndocs/bytecode-format-v2.md: OK\ndocs/data/scenario-comparison.csv: OK\ndocs/design-review.md: OK\ndocs/development.md: OK\ndocs/diagnostics.md: OK\ndocs/distribution.md: OK\ndocs/formatter.md: OK\ndocs/git-setup.md: OK\ndocs/host-input.md: OK\ndocs/implementation-status.md: OK\ndocs/modules.md: OK\ndocs/platforms.md: OK\ndocs/preview-design-review.md: OK\ndocs/preview-readiness.md: OK\ndocs/readme-cases.json: OK\ndocs/reference-cases.json: OK\ndocs/reference.md: OK\ndocs/releases/0.1.0-preview.1-publication.md: OK\ndocs/releases/0.1.0-preview.1.json: OK\ndocs/releases/0.1.0-preview.1.md: OK\ndocs/releases/0.2.0-preview.1.json: OK\ndocs/releases/0.2.0-preview.1.md: OK\ndocs/reproducible-builds.md: OK\ndocs/research.md: OK\ndocs/rfcs/0001-file-modules.md: OK\ndocs/roadmap.md: OK\ndocs/scenario-evaluation.md: OK\ndocs/spec/grammar.ebnf: OK\ndocs/spec/modules.ebnf: OK\ndocs/spec/v0.1.md: OK\ndocs/validation-artifacts.md: OK\ndocs/validation-collections.md: OK\ndocs/validation-contextual-equality.md: OK\ndocs/validation-control-flow.md: OK\ndocs/validation-file-modules.md: OK\ndocs/validation-formatter.md: OK\ndocs/validation-foundation.md: OK\ndocs/validation-functions-and-recovery.md: OK\ndocs/validation-fuzzing.md: OK\ndocs/validation-host-input.md: OK\ndocs/validation-lazy-and-suppression.md: OK\ndocs/validation-objects.md: OK\ndocs/validation-platforms.md: OK\ndocs/validation-reference.md: OK\ndocs/validation-resources.md: OK\ndocs/validation-roles-and-extensions.md: OK\ndocs/validation-scalar-core.md: OK\ndocs/validation-scenarios.md: OK\ndocs/versioning.md: OK\nexamples/callbacks.larp: OK\nexamples/collections.larp: OK\nexamples/config-tuning-explicit.larp: OK\nexamples/config-tuning.larp: OK\nexamples/game-training-explicit.larp: OK\nexamples/game-training.larp: OK\nexamples/hello.larp: OK\nexamples/input-sum.larp: OK\nexamples/lazy.larp: OK\nexamples/objects.larp: OK\nexamples/pitch-deck.larp: OK\nexamples/primes.larp: OK\nexamples/roles.larp: OK\nexperiments/scenario-model/Cargo.toml: OK\nexperiments/scenario-model/README.md: OK\nexperiments/scenario-model/src/lib.rs: OK\nfuzz/Cargo.lock: OK\nfuzz/Cargo.toml: OK\nfuzz/README.md: OK\nfuzz/fuzz_targets/artifact.rs: OK\nfuzz/fuzz_targets/compiler.rs: OK\nfuzz/fuzz_targets/formatter.rs: OK\nfuzz/fuzz_targets/frontend.rs: OK\nfuzz/regressions/README.md: OK\nfuzz/regressions/artifact/.gitkeep: OK\nfuzz/regressions/compiler/.gitkeep: OK\nfuzz/regressions/formatter/.gitkeep: OK\nfuzz/regressions/frontend/.gitkeep: OK\ntests/compatibility/artifacts/README.md: OK\ntests/compatibility/artifacts/collections-v1.larp: OK\ntests/compatibility/artifacts/collections-v1.larpbc.hex: OK\ntests/compatibility/artifacts/host-arguments-v2.larp: OK\ntests/compatibility/artifacts/host-arguments-v2.larpbc.hex: OK\ntests/compatibility/artifacts/manifest.json: OK\ntests/conformance/README.md: OK\ntests/conformance/fail/bound-effect-erasure.larp: OK\ntests/conformance/fail/canon-outside.larp: OK\ntests/conformance/fail/capture-write.larp: OK\ntests/conformance/fail/collection-callback-result.larp: OK\ntests/conformance/fail/constructor-mutation.larp: OK\ntests/conformance/fail/effect-callback.larp: OK\ntests/conformance/fail/empty-array.larp: OK\ntests/conformance/fail/extension-member-arity.larp: OK\ntests/conformance/fail/extension-private-priority.larp: OK\ntests/conformance/fail/fixed-array-length.larp: OK\ntests/conformance/fail/function-effect-erasure.larp: OK\ntests/conformance/fail/inference.larp: OK\ntests/conformance/fail/io-erasure.larp: OK\ntests/conformance/fail/io-indirect.larp: OK\ntests/conformance/fail/io-lazy.larp: OK\ntests/conformance/fail/io-scenario.larp: OK\ntests/conformance/fail/lambda-dead-return.larp: OK\ntests/conformance/fail/lazy-array-capture.larp: OK\ntests/conformance/fail/lazy-effect-erasure.larp: OK\ntests/conformance/fail/lazy-observation.larp: OK\ntests/conformance/fail/lazy-reassignment.larp: OK\ntests/conformance/fail/missing-field.larp: OK\ntests/conformance/fail/missing-return.larp: OK\ntests/conformance/fail/mixed-width.larp: OK\ntests/conformance/fail/narrowing.larp: OK\ntests/conformance/fail/nominal-classes.larp: OK\ntests/conformance/fail/partial-self.larp: OK\ntests/conformance/fail/private-field.larp: OK\ntests/conformance/fail/private-method.larp: OK\ntests/conformance/fail/role-effects.larp: OK\ntests/conformance/fail/role-missing.larp: OK\ntests/conformance/fail/role-nominal.larp: OK\ntests/conformance/fail/scenario-alias.larp: OK\ntests/conformance/fail/scenario-escape.larp: OK\ntests/conformance/fail/scenario-hidden-allocation.larp: OK\ntests/conformance/fail/scenario-nested.larp: OK\ntests/conformance/fail/scenario-reference-field.larp: OK\ntests/conformance/fail/scenario-return.larp: OK\ntests/conformance/fail/truthiness.larp: OK\ntests/conformance/fail/unconstrained-lambda.larp: OK\ntests/conformance/manifest.json: OK\ntests/conformance/pass/array-aliases.larp: OK\ntests/conformance/pass/array-function-results.larp: OK\ntests/conformance/pass/array-text.larp: OK\ntests/conformance/pass/bound-builtins.larp: OK\ntests/conformance/pass/bound-private.larp: OK\ntests/conformance/pass/branches.larp: OK\ntests/conformance/pass/closure-gc.larp: OK\ntests/conformance/pass/closures.larp: OK\ntests/conformance/pass/collections.larp: OK\ntests/conformance/pass/config-tuning-explicit.larp: OK\ntests/conformance/pass/config-tuning.larp: OK\ntests/conformance/pass/constant-flow.larp: OK\ntests/conformance/pass/constructor-flow.larp: OK\ntests/conformance/pass/conversions.larp: OK\ntests/conformance/pass/fixed-array.larp: OK\ntests/conformance/pass/fixed-literal-equality.larp: OK\ntests/conformance/pass/floats.larp: OK\ntests/conformance/pass/function-payloads.larp: OK\ntests/conformance/pass/functions.larp: OK\ntests/conformance/pass/game-training-explicit.larp: OK\ntests/conformance/pass/game-training.larp: OK\ntests/conformance/pass/grouped-places.larp: OK\ntests/conformance/pass/host-input.larp: OK\ntests/conformance/pass/input-eof.larp: OK\ntests/conformance/pass/input-sum.larp: OK\ntests/conformance/pass/lazy-capture.larp: OK\ntests/conformance/pass/lazy-scenario.larp: OK\ntests/conformance/pass/lazy-suppression.larp: OK\ntests/conformance/pass/lazy-unused.larp: OK\ntests/conformance/pass/loops.larp: OK\ntests/conformance/pass/objects.larp: OK\ntests/conformance/pass/recovery.larp: OK\ntests/conformance/pass/role-extension.larp: OK\ntests/conformance/pass/scalars.larp: OK\ntests/conformance/pass/scenario-method.larp: OK\ntests/conformance/pass/scenario-result-is-data.larp: OK\ntests/conformance/pass/scenario.larp: OK\ntests/conformance/pass/short-circuit.larp: OK\ntests/conformance/pass/string-output.larp: OK\ntests/conformance/runtime/array-bounds.larp: OK\ntests/conformance/runtime/assignment-bounds.larp: OK\ntests/conformance/runtime/callback-mutation.larp: OK\ntests/conformance/runtime/constructor-abort.larp: OK\ntests/conformance/runtime/conversion.larp: OK\ntests/conformance/runtime/lazy-division.larp: OK\ntests/conformance/runtime/overflow.larp: OK\ntests/conformance/runtime/scenario-abort.larp: OK\ntests/conformance/runtime/scenario-observed-abort.larp: OK\ntests/conformance/runtime/suppressed-abort.larp: OK\ntests/projects/README.md: OK\ntests/projects/manifest.json: OK\ntests/projects/pitch/lib/founder.larp: OK\ntests/projects/pitch/lib/training.larp: OK\ntests/projects/pitch/main.larp: OK\ntools/check_candidate.py: OK\ntools/check_candidate_matrix.py: OK\ntools/check_corpus.py: OK\ntools/check_reproducible_build.py: OK\ntools/check_version.py: OK\ntools/git-local.sh: OK\ntools/measure_resources.py: OK\ntools/package_candidate.py: OK\ntools/resource_launcher.c: OK\ntools/run_conformance.py: OK\ntools/run_fuzz.py: OK\ntools/run_projects.py: OK\ntools/run_reference.py: OK\ntools/seed_fuzz.py: OK\ntools/test_candidate_checks.py: OK\ntools/version_contract.py: OK\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--version"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "larp 0.2.0-preview.1 (objects, scenarios, and memoized lazy values)\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--version",
+            "--json"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "{\"schema_version\":1,\"name\":\"larp\",\"version\":\"0.2.0-preview.1\",\"channel\":\"preview\",\"language_spec\":\"0.1\",\"language_status\":\"experimental\",\"artifact\":{\"write\":2,\"read\":[1,2]},\"diagnostics_schema\":1}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "-B",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/check_version.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--output",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Verified 0.2.0-preview.1: artifact write 2, historical reads [1, 2], diagnostic schema 1\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/check_corpus.py"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_conformance.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\nPASS lambda-dead-return\nPASS grouped-places\nPASS constant-flow\nPASS missing-return\nPASS fixed-literal-equality\nPASS scalars\nPASS loops\nPASS functions\nPASS collections\nPASS recovery\nPASS role-extension\nPASS fixed-array\nPASS lazy-capture\nPASS scenario\nPASS scenario-method\nPASS scenario-result-is-data\nPASS truthiness\nPASS narrowing\nPASS mixed-width\nPASS inference\nPASS private-field\nPASS effect-callback\nPASS lazy-observation\nPASS scenario-alias\nPASS scenario-escape\nPASS scenario-nested\nPASS scenario-return\nPASS scenario-reference-field\nPASS canon-outside\nPASS scenario-hidden-allocation\nPASS overflow\nPASS scenario-abort\nPASS callback-mutation\nPASS short-circuit\nPASS floats\nPASS branches\nPASS string-output\nPASS closures\nPASS function-payloads\nPASS conversions\nPASS closure-gc\nPASS capture-write\nPASS function-effect-erasure\nPASS unconstrained-lambda\nPASS conversion\nPASS array-aliases\nPASS array-function-results\nPASS array-text\nPASS fixed-array-length\nPASS collection-callback-result\nPASS empty-array\nPASS array-bounds\nPASS assignment-bounds\nPASS objects\nPASS constructor-flow\nPASS bound-private\nPASS missing-field\nPASS partial-self\nPASS constructor-mutation\nPASS private-method\nPASS nominal-classes\nPASS constructor-abort\nPASS bound-builtins\nPASS role-missing\nPASS role-effects\nPASS role-nominal\nPASS extension-private-priority\nPASS extension-member-arity\nPASS bound-effect-erasure\nPASS config-tuning\nPASS config-tuning-explicit\nPASS game-training\nPASS game-training-explicit\nPASS scenario-observed-abort\nPASS lazy-unused\nPASS lazy-suppression\nPASS lazy-scenario\nPASS lazy-array-capture\nPASS lazy-effect-erasure\nPASS lazy-reassignment\nPASS lazy-division\nPASS suppressed-abort\nPASS host-input\nPASS input-sum\nPASS input-eof\nPASS io-indirect\nPASS io-erasure\nPASS io-scenario\nPASS io-lazy\n89/89 executed cases passed; 0 cases remain pending.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_conformance.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\nPASS lambda-dead-return\nPASS grouped-places\nPASS constant-flow\nPASS missing-return\nPASS fixed-literal-equality\nPASS scalars\nPASS loops\nPASS functions\nPASS collections\nPASS recovery\nPASS role-extension\nPASS fixed-array\nPASS lazy-capture\nPASS scenario\nPASS scenario-method\nPASS scenario-result-is-data\nPASS truthiness\nPASS narrowing\nPASS mixed-width\nPASS inference\nPASS private-field\nPASS effect-callback\nPASS lazy-observation\nPASS scenario-alias\nPASS scenario-escape\nPASS scenario-nested\nPASS scenario-return\nPASS scenario-reference-field\nPASS canon-outside\nPASS scenario-hidden-allocation\nPASS overflow\nPASS scenario-abort\nPASS callback-mutation\nPASS short-circuit\nPASS floats\nPASS branches\nPASS string-output\nPASS closures\nPASS function-payloads\nPASS conversions\nPASS closure-gc\nPASS capture-write\nPASS function-effect-erasure\nPASS unconstrained-lambda\nPASS conversion\nPASS array-aliases\nPASS array-function-results\nPASS array-text\nPASS fixed-array-length\nPASS collection-callback-result\nPASS empty-array\nPASS array-bounds\nPASS assignment-bounds\nPASS objects\nPASS constructor-flow\nPASS bound-private\nPASS missing-field\nPASS partial-self\nPASS constructor-mutation\nPASS private-method\nPASS nominal-classes\nPASS constructor-abort\nPASS bound-builtins\nPASS role-missing\nPASS role-effects\nPASS role-nominal\nPASS extension-private-priority\nPASS extension-member-arity\nPASS bound-effect-erasure\nPASS config-tuning\nPASS config-tuning-explicit\nPASS game-training\nPASS game-training-explicit\nPASS scenario-observed-abort\nPASS lazy-unused\nPASS lazy-suppression\nPASS lazy-scenario\nPASS lazy-array-capture\nPASS lazy-effect-erasure\nPASS lazy-reassignment\nPASS lazy-division\nPASS suppressed-abort\nPASS host-input\nPASS input-sum\nPASS input-eof\nPASS io-indirect\nPASS io-erasure\nPASS io-scenario\nPASS io-lazy\n89/89 executed cases passed; 0 cases remain pending.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_conformance.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--artifacts",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\nPASS lambda-dead-return\nPASS grouped-places\nPASS constant-flow\nPASS missing-return\nPASS fixed-literal-equality\nPASS scalars\nPASS loops\nPASS functions\nPASS collections\nPASS recovery\nPASS role-extension\nPASS fixed-array\nPASS lazy-capture\nPASS scenario\nPASS scenario-method\nPASS scenario-result-is-data\nPASS truthiness\nPASS narrowing\nPASS mixed-width\nPASS inference\nPASS private-field\nPASS effect-callback\nPASS lazy-observation\nPASS scenario-alias\nPASS scenario-escape\nPASS scenario-nested\nPASS scenario-return\nPASS scenario-reference-field\nPASS canon-outside\nPASS scenario-hidden-allocation\nPASS overflow\nPASS scenario-abort\nPASS callback-mutation\nPASS short-circuit\nPASS floats\nPASS branches\nPASS string-output\nPASS closures\nPASS function-payloads\nPASS conversions\nPASS closure-gc\nPASS capture-write\nPASS function-effect-erasure\nPASS unconstrained-lambda\nPASS conversion\nPASS array-aliases\nPASS array-function-results\nPASS array-text\nPASS fixed-array-length\nPASS collection-callback-result\nPASS empty-array\nPASS array-bounds\nPASS assignment-bounds\nPASS objects\nPASS constructor-flow\nPASS bound-private\nPASS missing-field\nPASS partial-self\nPASS constructor-mutation\nPASS private-method\nPASS nominal-classes\nPASS constructor-abort\nPASS bound-builtins\nPASS role-missing\nPASS role-effects\nPASS role-nominal\nPASS extension-private-priority\nPASS extension-member-arity\nPASS bound-effect-erasure\nPASS config-tuning\nPASS config-tuning-explicit\nPASS game-training\nPASS game-training-explicit\nPASS scenario-observed-abort\nPASS lazy-unused\nPASS lazy-suppression\nPASS lazy-scenario\nPASS lazy-array-capture\nPASS lazy-effect-erasure\nPASS lazy-reassignment\nPASS lazy-division\nPASS suppressed-abort\nPASS host-input\nPASS input-sum\nPASS input-eof\nPASS io-indirect\nPASS io-erasure\nPASS io-scenario\nPASS io-lazy\n89/89 executed cases passed; 0 cases remain pending.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_conformance.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--formatted",
+            "--artifacts",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\nPASS lambda-dead-return\nPASS grouped-places\nPASS constant-flow\nPASS missing-return\nPASS fixed-literal-equality\nPASS scalars\nPASS loops\nPASS functions\nPASS collections\nPASS recovery\nPASS role-extension\nPASS fixed-array\nPASS lazy-capture\nPASS scenario\nPASS scenario-method\nPASS scenario-result-is-data\nPASS truthiness\nPASS narrowing\nPASS mixed-width\nPASS inference\nPASS private-field\nPASS effect-callback\nPASS lazy-observation\nPASS scenario-alias\nPASS scenario-escape\nPASS scenario-nested\nPASS scenario-return\nPASS scenario-reference-field\nPASS canon-outside\nPASS scenario-hidden-allocation\nPASS overflow\nPASS scenario-abort\nPASS callback-mutation\nPASS short-circuit\nPASS floats\nPASS branches\nPASS string-output\nPASS closures\nPASS function-payloads\nPASS conversions\nPASS closure-gc\nPASS capture-write\nPASS function-effect-erasure\nPASS unconstrained-lambda\nPASS conversion\nPASS array-aliases\nPASS array-function-results\nPASS array-text\nPASS fixed-array-length\nPASS collection-callback-result\nPASS empty-array\nPASS array-bounds\nPASS assignment-bounds\nPASS objects\nPASS constructor-flow\nPASS bound-private\nPASS missing-field\nPASS partial-self\nPASS constructor-mutation\nPASS private-method\nPASS nominal-classes\nPASS constructor-abort\nPASS bound-builtins\nPASS role-missing\nPASS role-effects\nPASS role-nominal\nPASS extension-private-priority\nPASS extension-member-arity\nPASS bound-effect-erasure\nPASS config-tuning\nPASS config-tuning-explicit\nPASS game-training\nPASS game-training-explicit\nPASS scenario-observed-abort\nPASS lazy-unused\nPASS lazy-suppression\nPASS lazy-scenario\nPASS lazy-array-capture\nPASS lazy-effect-erasure\nPASS lazy-reassignment\nPASS lazy-division\nPASS suppressed-abort\nPASS host-input\nPASS input-sum\nPASS input-eof\nPASS io-indirect\nPASS io-erasure\nPASS io-scenario\nPASS io-lazy\n89/89 executed cases passed; 0 cases remain pending.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "-B",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_projects.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--output",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "PASS pitch\nValidated 1 projects, 5 VM executions, 23 CLI commands.\n",
+          "stderr": ""
+        }
+      ],
+      "environment": {
+        "system": "Linux",
+        "machine": "x86_64",
+        "kernel": "7.0.0-1017-azure",
+        "os_release": {
+          "NAME": "Ubuntu",
+          "ID": "ubuntu",
+          "PRETTY_NAME": "Ubuntu 24.04.5 LTS",
+          "VERSION_ID": "24.04",
+          "VERSION": "24.04.5 LTS (Noble Numbat)",
+          "VERSION_CODENAME": "noble",
+          "ID_LIKE": "debian",
+          "HOME_URL": "https://www.ubuntu.com/",
+          "SUPPORT_URL": "https://help.ubuntu.com/",
+          "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+          "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+          "UBUNTU_CODENAME": "noble",
+          "LOGO": "ubuntu-logo"
+        },
+        "runner_image": {
+          "ImageOS": "ubuntu24",
+          "ImageVersion": "20261018.339.1",
+          "RUNNER_OS": "Linux",
+          "RUNNER_ARCH": "X64"
+        },
+        "glibc": "glibc 2.39"
+      },
+      "archive": "larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298.tar.gz",
+      "archive_sha256": "6f90477eedcd88dcb3cada38af95692182e43ce4d0b2afc31248515029a0464c",
+      "version": "0.2.0-preview.1",
+      "target": "x86_64-unknown-linux-gnu",
+      "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
+      "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)\nrelease: 1.99.0\ncommit-hash: 5f94df4789f005f9a352888e8355ffc645b7ed0e\ncommit-date: 2026-08-27\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.6 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]",
+      "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+      "checksummed_files": 322,
+      "abi": {
+        "glibc_symbol_versions": [
+          "GLIBC_2.14",
+          "GLIBC_2.16",
+          "GLIBC_2.18",
+          "GLIBC_2.2.5",
+          "GLIBC_2.25",
+          "GLIBC_2.28",
+          "GLIBC_2.3",
+          "GLIBC_2.3.4",
+          "GLIBC_2.30",
+          "GLIBC_2.32",
+          "GLIBC_2.33",
+          "GLIBC_2.34"
+        ],
+        "needed": [
+          "libgcc_s.so.1",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ]
+      },
+      "identity": {
+        "schema_version": 1,
+        "name": "larp",
+        "version": "0.2.0-preview.1",
+        "channel": "preview",
+        "language_spec": "0.1",
+        "language_status": "experimental",
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1
+      },
+      "historical_versions": [
+        1,
+        2
+      ],
+      "preview": {
+        "schema_version": 1,
+        "version": "0.2.0-preview.1",
+        "proposed_tag": "v0.2.0-preview.1",
+        "notes": "docs/releases/0.2.0-preview.1.md",
+        "language_spec": "0.1",
+        "target": "x86_64-unknown-linux-gnu",
+        "execution_hosts": [
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1,
+        "identity_schema": 1,
+        "descriptor_sha256": "52ef8d5dbfcc8f9123491facf1a9056e32051a1c089dd04010ddbb652cd031b2",
+        "notes_sha256": "e7e0933dcaa0bad7cb72f8807a9668c5cc1b03af174ddbf6f987b59110aa49e1",
+        "relative_file_links_checked": 15
+      },
+      "conformance_modes": [
+        {
+          "flags": [],
+          "passed": 89,
+          "pending": 0
+        },
+        {
+          "flags": [
+            "--gc-stress"
+          ],
+          "passed": 89,
+          "pending": 0
+        },
+        {
+          "flags": [
+            "--artifacts",
+            "--gc-stress"
+          ],
+          "passed": 89,
+          "pending": 0
+        },
+        {
+          "flags": [
+            "--formatted",
+            "--artifacts",
+            "--gc-stress"
+          ],
+          "passed": 89,
+          "pending": 0
+        }
+      ],
+      "projects": {
+        "status": "passed",
+        "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+        "manifest_sha256": "7ac7ceff4524584c6c40f533075a014b43fbf6b3fe782719d64a7f5d5f201196",
+        "project_count": 1,
+        "vm_executions": 5,
+        "cases": [
+          {
+            "id": "pitch",
+            "status": "passed",
+            "modes": [
+              "source",
+              "source-gc-stress",
+              "artifact",
+              "artifact-gc-stress",
+              "formatted-artifact-gc-stress"
+            ]
+          }
+        ]
+      },
+      "conformance_cases": 89,
+      "payload_unchanged": true
+    },
+    "candidate-compatibility-ubuntu-24.04/version-contract/version-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "commands": [
+        {
+          "arguments": [
+            "--version",
+            "--json"
+          ],
+          "returncode": 0,
+          "stdout": "{\"schema_version\":1,\"name\":\"larp\",\"version\":\"0.2.0-preview.1\",\"channel\":\"preview\",\"language_spec\":\"0.1\",\"language_status\":\"experimental\",\"artifact\":{\"write\":2,\"read\":[1,2]},\"diagnostics_schema\":1}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--version"
+          ],
+          "returncode": 0,
+          "stdout": "larp 0.2.0-preview.1 (objects, scenarios, and memoized lazy values)\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--diagnostic-format=json",
+            "--version",
+            "--json"
+          ],
+          "returncode": 0,
+          "stdout": "{\"schema_version\":1,\"name\":\"larp\",\"version\":\"0.2.0-preview.1\",\"channel\":\"preview\",\"language_spec\":\"0.1\",\"language_status\":\"experimental\",\"artifact\":{\"write\":2,\"read\":[1,2]},\"diagnostics_schema\":1}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--diagnostic-format=json",
+            "--invalid-version-contract"
+          ],
+          "returncode": 2,
+          "stdout": "",
+          "stderr": "{\"schema_version\":1,\"kind\":\"cli_error\",\"code\":null,\"message\":\"error: invalid arguments\\n\\nLARP \u2014 Fake it till you compile.\\n\\nUsage:\\n  larp [--diagnostic-format=json|text] COMMAND ...\\n  larp --help\\n  larp --version [--json]\\n  larp explain CODE\\n  larp build FILE.larp [-o FILE.larpbc]\\n  larp check FILE.larp|FILE.larpbc\\n  larp run FILE.larp|FILE.larpbc [--fuel INSTRUCTIONS] [--gc-stress] [-- ARG...]\\n  larp dump FILE.larp|FILE.larpbc [--ir]\\n  larp fmt FILE.larp [--check|--stdout]\\n\\nImplemented: scalar types, first-class functions, closures, arrays, options/results,\\narchetypes, roles, extensions, constructors, private/public fields, bound methods,\\nbranches, loops, checked conversions, effect bounds, typed IR,\\nverified bytecode and versioned artifacts, eager collection pipelines, isolated scenarios,\\npure memoized lazy bindings, host arguments/stdin, dynamic observation suppression,\\nand tracing GC. palantir reports go to stderr.\\nArtifacts embed source maps and are verified again when loaded. --ir requires source.\\nfmt preserves tokens and comments; its default mode updates the source file.\\n--gc-stress collects at every object/array/closure/lazy allocation safepoint.\"}\n"
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/current.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/current.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/current.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/current.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "49\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v1.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v1.larpbc",
+            "--"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v1.larpbc",
+            "--gc-stress",
+            "--"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v2.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v2.larpbc",
+            "--",
+            "unc",
+            "bro"
+          ],
+          "returncode": 0,
+          "stdout": "2\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v2.larpbc",
+            "--gc-stress",
+            "--",
+            "unc",
+            "bro"
+          ],
+          "returncode": 0,
+          "stdout": "2\n",
+          "stderr": ""
+        }
+      ],
+      "driver_sha256": "55abf520a629199f30ec7aa3d17e2532d40ccd09a825a9a5b6b2023a167e089b",
+      "validator_sha256": "6b0d11efb2af64ae1577f232bf8f31d738859eecb3b5703f8d75e805b034f41f",
+      "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+      "identity": {
+        "schema_version": 1,
+        "name": "larp",
+        "version": "0.2.0-preview.1",
+        "channel": "preview",
+        "language_spec": "0.1",
+        "language_status": "experimental",
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1
+      },
+      "preview": {
+        "schema_version": 1,
+        "version": "0.2.0-preview.1",
+        "proposed_tag": "v0.2.0-preview.1",
+        "notes": "docs/releases/0.2.0-preview.1.md",
+        "language_spec": "0.1",
+        "target": "x86_64-unknown-linux-gnu",
+        "execution_hosts": [
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1,
+        "identity_schema": 1,
+        "descriptor_sha256": "52ef8d5dbfcc8f9123491facf1a9056e32051a1c089dd04010ddbb652cd031b2",
+        "notes_sha256": "e7e0933dcaa0bad7cb72f8807a9668c5cc1b03af174ddbf6f987b59110aa49e1",
+        "relative_file_links_checked": 15
+      },
+      "historical_versions": [
+        1,
+        2
+      ],
+      "fixture_manifest_sha256": "dc8c6984101e0e48d72785d8586d39e667de9c229dc4b95ad54903599a91fbed",
+      "emitted_version": 2
+    },
+    "candidate-compatibility-ubuntu-24.04/projects/project-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "manifest_sha256": "7ac7ceff4524584c6c40f533075a014b43fbf6b3fe782719d64a7f5d5f201196",
+      "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+      "cases": [
+        {
+          "id": "pitch",
+          "status": "passed",
+          "sources": {
+            "main.larp": "a12012c513a0d4240e6aa22e62dad8994dce9ef25e38f72f164ac0fbe25b0a58",
+            "lib/founder.larp": "206af8c58a1501cc66f07d48428bd472d1da5dc8bd39c62f4b5eacedda2d8aff",
+            "lib/training.larp": "df35cc78232d16692e0026e61a33a06352a082891d5b844fab5d4f68a9b49683"
+          },
+          "modes": [
+            "source",
+            "source-gc-stress",
+            "artifact",
+            "artifact-gc-stress",
+            "formatted-artifact-gc-stress"
+          ]
+        }
+      ],
+      "commands": [
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/source/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/source/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/source/main.larp",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/source/main.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "import \"lib/founder.larp\" as founders;\nimport \"lib/training.larp\" as training;\n\nmain_character {\n    founders::Founder bro = new founders::Founder(fortnine);\n    mfs<mf> clips = [2, 4, 49];\n    mf earned = training::earnedAura(clips);\n\n    larp (bro) as CrossFilePitch {\n        flex bro.valuation = 1_000_000_000;\n        founders::train(bro, earned);\n        canon bro.aura;\n        palantir(bro);\n    }\n\n    yap(bro.valuation);\n    yap(bro.aura);\n    yap(bro.isMogging(10));\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "import \"lib/founder.larp\" as founders;\nimport \"lib/training.larp\" as training;\n\nmain_character {\n    founders::Founder bro = new founders::Founder(fortnine);\n    mfs<mf> clips = [2, 4, 49];\n    mf earned = training::earnedAura(clips);\n\n    larp (bro) as CrossFilePitch {\n        flex bro.valuation = 1_000_000_000;\n        founders::train(bro, earned);\n        canon bro.aura;\n        palantir(bro);\n    }\n\n    yap(bro.valuation);\n    yap(bro.aura);\n    yap(bro.isMogging(10));\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/founder.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "highkey archetype Founder {\n    highkey unc valuation;\n    highkey mf aura;\n\n    init(unc seed) {\n        self.valuation = seed;\n        self.aura = 0;\n    }\n\n    highkey sidequest isMogging(mf rival) -> verdict uses(read) {\n        return self.aura mogg rival;\n    }\n}\n\nhighkey sidequest Founder.train(mf earned) -> unit uses(read, write, abort) {\n    self.aura += earned;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/founder.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/founder.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/founder.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "highkey archetype Founder {\n    highkey unc valuation;\n    highkey mf aura;\n\n    init(unc seed) {\n        self.valuation = seed;\n        self.aura = 0;\n    }\n\n    highkey sidequest isMogging(mf rival) -> verdict uses(read) {\n        return self.aura mogg rival;\n    }\n}\n\nhighkey sidequest Founder.train(mf earned) -> unit uses(read, write, abort) {\n    self.aura += earned;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/training.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "sidequest boost(mf score) -> mf uses(abort) {\n    return score + 1;\n}\n\nhighkey sidequest earnedAura(mfs<mf> clips) -> mf uses(read, write, abort) {\n    return clips.map(boost).filter(x => x mogg 4).size() * 10;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/training.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/training.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/training.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "sidequest boost(mf score) -> mf uses(abort) {\n    return score + 1;\n}\n\nhighkey sidequest earnedAura(mfs<mf> clips) -> mf uses(read, write, abort) {\n    return clips.map(boost).filter(x => x mogg 4).size() * 10;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        }
+      ],
+      "project_count": 1,
+      "vm_executions": 5
+    },
+    "candidate-compatibility-ubuntu-26.04/compatibility-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "revision": "a053c991d298e8bf27197561c4df27042b5c7630",
+      "checker_sha256": "4b601c860b54fc201810d8ab11dd8788e901a8c19c461e5391e25a2b676312d2",
+      "commands": [
+        {
+          "arguments": [
+            "getconf",
+            "GNU_LIBC_VERSION"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "glibc 2.43\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "readelf",
+            "--program-headers",
+            "--dynamic",
+            "--version-info",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "\nElf file type is DYN (Position-Independent Executable file)\nEntry point 0x58280\nThere are 12 program headers, starting at offset 64\n\nProgram Headers:\n  Type           Offset             VirtAddr           PhysAddr\n                 FileSiz            MemSiz              Flags  Align\n  PHDR           0x0000000000000040 0x0000000000000040 0x0000000000000040\n                 0x00000000000002a0 0x00000000000002a0  R      0x8\n  INTERP         0x00000000000002e0 0x00000000000002e0 0x00000000000002e0\n                 0x000000000000001c 0x000000000000001c  R      0x1\n      [Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]\n  LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000\n                 0x000000000005727c 0x000000000005727c  R      0x1000\n  LOAD           0x0000000000057280 0x0000000000058280 0x0000000000058280\n                 0x0000000000122ed0 0x0000000000122ed0  R E    0x1000\n  LOAD           0x000000000017a150 0x000000000017c150 0x000000000017c150\n                 0x00000000000088c0 0x0000000000008eb0  RW     0x1000\n  LOAD           0x0000000000182a10 0x0000000000185a10 0x0000000000185a10\n                 0x0000000000000a90 0x0000000000000b73  RW     0x1000\n  TLS            0x000000000017a150 0x000000000017c150 0x000000000017c150\n                 0x0000000000000030 0x0000000000000068  R      0x8\n  DYNAMIC        0x0000000000181770 0x0000000000183770 0x0000000000183770\n                 0x00000000000001d0 0x00000000000001d0  RW     0x8\n  GNU_RELRO      0x000000000017a150 0x000000000017c150 0x000000000017c150\n                 0x00000000000088c0 0x0000000000008eb0  R      0x1\n  GNU_EH_FRAME   0x00000000000353cc 0x00000000000353cc 0x00000000000353cc\n                 0x000000000000434c 0x000000000000434c  R      0x4\n  GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000\n                 0x0000000000000000 0x0000000000000000  RW     0x0\n  NOTE           0x00000000000002fc 0x00000000000002fc 0x00000000000002fc\n                 0x0000000000000044 0x0000000000000044  R      0x4\n\n Section to Segment mapping:\n  Segment Sections...\n   00     \n   01     .interp \n   02     .interp .note.ABI-tag .note.gnu.build-id .dynsym .gnu.version .gnu.version_r .gnu.hash .dynstr .rela.dyn .rela.plt .gcc_except_table .rodata .eh_frame_hdr .eh_frame \n   03     .text .init .fini .plt \n   04     .tdata .fini_array .init_array .data.rel.ro .dynamic .got .got.plt .relro_padding \n   05     .tm_clone_table .data .bss \n   06     .tdata .tbss \n   07     .dynamic \n   08     .tdata .fini_array .init_array .data.rel.ro .dynamic .got .got.plt .relro_padding \n   09     .eh_frame_hdr \n   10     \n   11     .note.ABI-tag .note.gnu.build-id \n\nDynamic section at offset 0x181770 contains 29 entries:\n  Tag        Type                         Name/Value\n 0x0000000000000001 (NEEDED)             Shared library: [libgcc_s.so.1]\n 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]\n 0x0000000000000001 (NEEDED)             Shared library: [ld-linux-x86-64.so.2]\n 0x000000000000001e (FLAGS)              BIND_NOW\n 0x000000006ffffffb (FLAGS_1)            Flags: NOW PIE\n 0x0000000000000015 (DEBUG)              0x0\n 0x0000000000000007 (RELA)               0x10d8\n 0x0000000000000008 (RELASZ)             47904 (bytes)\n 0x0000000000000009 (RELAENT)            24 (bytes)\n 0x000000006ffffff9 (RELACOUNT)          1922\n 0x0000000000000017 (JMPREL)             0xcbf8\n 0x0000000000000002 (PLTRELSZ)           48 (bytes)\n 0x0000000000000003 (PLTGOT)             0x1849e8\n 0x0000000000000014 (PLTREL)             RELA\n 0x0000000000000006 (SYMTAB)             0x340\n 0x000000000000000b (SYMENT)             24 (bytes)\n 0x0000000000000005 (STRTAB)             0xc64\n 0x000000000000000a (STRSZ)              1134 (bytes)\n 0x000000006ffffef5 (GNU_HASH)           0xc48\n 0x0000000000000019 (INIT_ARRAY)         0x17c188\n 0x000000000000001b (INIT_ARRAYSZ)       16 (bytes)\n 0x000000000000001a (FINI_ARRAY)         0x17c180\n 0x000000000000001c (FINI_ARRAYSZ)       8 (bytes)\n 0x000000000000000c (INIT)               0x17b0f4\n 0x000000000000000d (FINI)               0x17b110\n 0x000000006ffffff0 (VERSYM)             0xa78\n 0x000000006ffffffe (VERNEED)            0xb14\n 0x000000006fffffff (VERNEEDNUM)         3\n 0x0000000000000000 (NULL)               0x0\n\nVersion symbols section '.gnu.version' contains 77 entries:\n Addr: 0x0000000000000a78  Offset: 0x00000a78  Link: 4 (.dynsym)\n  000:   0 (*local*)       2 (GLIBC_2.34)    0 (*local*)       0 (*local*)    \n  004:   0 (*local*)       3 (GLIBC_2.2.5)   4 (GCC_3.0)       3 (GLIBC_2.2.5)\n  008:   3 (GLIBC_2.2.5)   5 (GLIBC_2.14)    3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  00c:   3 (GLIBC_2.2.5)   6 (GLIBC_2.3)     3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  010:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  014:   7 (GLIBC_2.33)    4 (GCC_3.0)       8 (GLIBC_2.30)    3 (GLIBC_2.2.5)\n  018:   3 (GLIBC_2.2.5)   4 (GCC_3.0)       4 (GCC_3.0)       3 (GLIBC_2.2.5)\n  01c:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  020:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  024:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   2 (GLIBC_2.34) \n  028:   2 (GLIBC_2.34)    3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  02c:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   9 (GCC_3.3)       3 (GLIBC_2.2.5)\n  030:   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   a (GLIBC_2.32) \n  034:   2 (GLIBC_2.34)    3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)   3 (GLIBC_2.2.5)\n  038:   3 (GLIBC_2.2.5)   7 (GLIBC_2.33)    2 (GLIBC_2.34)    3 (GLIBC_2.2.5)\n  03c:   b (GLIBC_2.3)     3 (GLIBC_2.2.5)   c (GLIBC_2.28)    d (GLIBC_2.25) \n  040:   e (GLIBC_2.18)    f (GLIBC_2.3.4)   2 (GLIBC_2.34)    3 (GLIBC_2.2.5)\n  044:  10 (GLIBC_2.16)    3 (GLIBC_2.2.5)   4 (GCC_3.0)      11 (GCC_4.2.0)  \n  048:   4 (GCC_3.0)       4 (GCC_3.0)       4 (GCC_3.0)       4 (GCC_3.0)    \n  04c:   4 (GCC_3.0)    \n\nVersion needs section '.gnu.version_r' contains 3 entries:\n Addr: 0x0000000000000b14  Offset: 0x00000b14  Link: 8 (.dynstr)\n  000000: Version: 1  File: libgcc_s.so.1  Cnt: 3\n  0x0030:   Name: GCC_3.0  Flags: none  Version: 4\n  0x0040:   Name: GCC_3.3  Flags: none  Version: 9\n  0x0050:   Name: GCC_4.2.0  Flags: none  Version: 17\n  0x0010: Version: 1  File: libc.so.6  Cnt: 12\n  0x0060:   Name: GLIBC_2.2.5  Flags: none  Version: 3\n  0x0070:   Name: GLIBC_2.3  Flags: none  Version: 11\n  0x0080:   Name: GLIBC_2.3.4  Flags: none  Version: 15\n  0x0090:   Name: GLIBC_2.14  Flags: none  Version: 5\n  0x00a0:   Name: GLIBC_2.16  Flags: none  Version: 16\n  0x00b0:   Name: GLIBC_2.18  Flags: WEAK  Version: 14\n  0x00c0:   Name: GLIBC_2.25  Flags: WEAK  Version: 13\n  0x00d0:   Name: GLIBC_2.28  Flags: WEAK  Version: 12\n  0x00e0:   Name: GLIBC_2.30  Flags: WEAK  Version: 8\n  0x00f0:   Name: GLIBC_2.32  Flags: none  Version: 10\n  0x0100:   Name: GLIBC_2.33  Flags: none  Version: 7\n  0x0110:   Name: GLIBC_2.34  Flags: none  Version: 2\n  0x0020: Version: 1  File: ld-linux-x86-64.so.2  Cnt: 1\n  0x0120:   Name: GLIBC_2.3  Flags: none  Version: 6\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "sha256sum",
+            "-c",
+            "SHA256SUMS"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": ".editorconfig: OK\n.github/ISSUE_TEMPLATE/bug_report.yml: OK\n.github/ISSUE_TEMPLATE/language_proposal.yml: OK\n.github/pull_request_template.md: OK\n.github/workflows/ci.yml: OK\n.github/workflows/fuzz.yml: OK\n.gitignore: OK\nAGENTS.md: OK\nBUILD.json: OK\nCONTRIBUTING.md: OK\nCargo.lock: OK\nCargo.toml: OK\nLICENSE: OK\nPACKAGE.md: OK\nREADME.md: OK\nTHIRD_PARTY.md: OK\nTHIRD_PARTY/rust/COPYRIGHT-library.html: OK\nTHIRD_PARTY/rust/licenses/Apache-2.0.txt: OK\nTHIRD_PARTY/rust/licenses/BSD-2-Clause.txt: OK\nTHIRD_PARTY/rust/licenses/CC-BY-SA-4.0.txt: OK\nTHIRD_PARTY/rust/licenses/GCC-exception-3.1.txt: OK\nTHIRD_PARTY/rust/licenses/GPL-2.0-only.txt: OK\nTHIRD_PARTY/rust/licenses/GPL-3.0-or-later.txt: OK\nTHIRD_PARTY/rust/licenses/ISC.txt: OK\nTHIRD_PARTY/rust/licenses/LLVM-exception.txt: OK\nTHIRD_PARTY/rust/licenses/MIT.txt: OK\nTHIRD_PARTY/rust/licenses/NCSA.txt: OK\nTHIRD_PARTY/rust/licenses/OFL-1.1.txt: OK\nTHIRD_PARTY/rust/licenses/Unicode-3.0.txt: OK\nbin/larp: OK\ncrates/larp-artifact/Cargo.toml: OK\ncrates/larp-artifact/src/codec.rs: OK\ncrates/larp-artifact/src/lib.rs: OK\ncrates/larp-bytecode/Cargo.toml: OK\ncrates/larp-bytecode/src/classes.rs: OK\ncrates/larp-bytecode/src/lib.rs: OK\ncrates/larp-bytecode/src/roles.rs: OK\ncrates/larp-bytecode/src/scenarios.rs: OK\ncrates/larp-bytecode/tests/arrays.rs: OK\ncrates/larp-bytecode/tests/classes.rs: OK\ncrates/larp-bytecode/tests/closures.rs: OK\ncrates/larp-bytecode/tests/lazy_and_suppression.rs: OK\ncrates/larp-bytecode/tests/roles.rs: OK\ncrates/larp-bytecode/tests/scenarios.rs: OK\ncrates/larp-bytecode/tests/verification.rs: OK\ncrates/larp-cli/Cargo.toml: OK\ncrates/larp-cli/src/main.rs: OK\ncrates/larp-cli/src/project.rs: OK\ncrates/larp-cli/src/version.rs: OK\ncrates/larp-cli/tests/cli.rs: OK\ncrates/larp-cli/tests/projects.rs: OK\ncrates/larp-compiler/Cargo.toml: OK\ncrates/larp-compiler/examples/resource_probe.rs: OK\ncrates/larp-compiler/examples/scenario_comparison.rs: OK\ncrates/larp-compiler/src/lib.rs: OK\ncrates/larp-compiler/src/project.rs: OK\ncrates/larp-compiler/src/semantics.rs: OK\ncrates/larp-compiler/src/semantics/arrays.rs: OK\ncrates/larp-compiler/src/semantics/bound_builtins.rs: OK\ncrates/larp-compiler/src/semantics/calls.rs: OK\ncrates/larp-compiler/src/semantics/closures.rs: OK\ncrates/larp-compiler/src/semantics/declarations.rs: OK\ncrates/larp-compiler/src/semantics/lazy.rs: OK\ncrates/larp-compiler/src/semantics/modules.rs: OK\ncrates/larp-compiler/src/semantics/objects.rs: OK\ncrates/larp-compiler/src/semantics/roles.rs: OK\ncrates/larp-compiler/src/semantics/scenarios.rs: OK\ncrates/larp-compiler/tests/bound_builtins.rs: OK\ncrates/larp-compiler/tests/collections.rs: OK\ncrates/larp-compiler/tests/constant_flow.rs: OK\ncrates/larp-compiler/tests/core.rs: OK\ncrates/larp-compiler/tests/functions_and_results.rs: OK\ncrates/larp-compiler/tests/grouped_places.rs: OK\ncrates/larp-compiler/tests/host_input.rs: OK\ncrates/larp-compiler/tests/lazy_and_suppression.rs: OK\ncrates/larp-compiler/tests/objects.rs: OK\ncrates/larp-compiler/tests/project_compilation.rs: OK\ncrates/larp-compiler/tests/project_graph.rs: OK\ncrates/larp-compiler/tests/roles.rs: OK\ncrates/larp-compiler/tests/scenarios.rs: OK\ncrates/larp-diagnostics/Cargo.toml: OK\ncrates/larp-diagnostics/src/json.rs: OK\ncrates/larp-diagnostics/src/lib.rs: OK\ncrates/larp-format/Cargo.toml: OK\ncrates/larp-format/src/lib.rs: OK\ncrates/larp-format/tests/adversarial.rs: OK\ncrates/larp-format/tests/units.rs: OK\ncrates/larp-fuzz-support/Cargo.toml: OK\ncrates/larp-fuzz-support/src/lib.rs: OK\ncrates/larp-ir/Cargo.toml: OK\ncrates/larp-ir/src/lib.rs: OK\ncrates/larp-ir/tests/lazy_and_suppression.rs: OK\ncrates/larp-ir/tests/scenarios.rs: OK\ncrates/larp-source/Cargo.toml: OK\ncrates/larp-source/src/lib.rs: OK\ncrates/larp-syntax/Cargo.toml: OK\ncrates/larp-syntax/src/lexer.rs: OK\ncrates/larp-syntax/src/lib.rs: OK\ncrates/larp-syntax/src/parser.rs: OK\ncrates/larp-syntax/tests/frontend.rs: OK\ncrates/larp-syntax/tests/lazy_and_suppression.rs: OK\ncrates/larp-syntax/tests/lossless.rs: OK\ncrates/larp-syntax/tests/objects.rs: OK\ncrates/larp-syntax/tests/roles.rs: OK\ncrates/larp-syntax/tests/scenarios.rs: OK\ncrates/larp-syntax/tests/source_units.rs: OK\ncrates/larp-types/Cargo.toml: OK\ncrates/larp-types/src/intrinsic.rs: OK\ncrates/larp-types/src/lib.rs: OK\ncrates/larp-types/tests/lazy.rs: OK\ncrates/larp-types/tests/snapshots.rs: OK\ncrates/larp-vm/Cargo.toml: OK\ncrates/larp-vm/src/heap.rs: OK\ncrates/larp-vm/src/host.rs: OK\ncrates/larp-vm/src/lazy_tests.rs: OK\ncrates/larp-vm/src/lib.rs: OK\ncrates/larp-vm/src/scenario.rs: OK\ncrates/larp-vm/src/scenario_tests.rs: OK\ncrates/larp-vm/src/value.rs: OK\ncrates/larp-vm/tests/collections.rs: OK\ncrates/larp-vm/tests/objects.rs: OK\ncrates/larp-vm/tests/roles.rs: OK\n'docs/LARP Programming Language Doodle Logo.png': OK\n'docs/LARP Programming Language Logo.png': OK\ndocs/README.md: OK\ndocs/architecture.md: OK\ndocs/bytecode-format-v1.md: OK\ndocs/bytecode-format-v2.md: OK\ndocs/data/scenario-comparison.csv: OK\ndocs/design-review.md: OK\ndocs/development.md: OK\ndocs/diagnostics.md: OK\ndocs/distribution.md: OK\ndocs/formatter.md: OK\ndocs/git-setup.md: OK\ndocs/host-input.md: OK\ndocs/implementation-status.md: OK\ndocs/modules.md: OK\ndocs/platforms.md: OK\ndocs/preview-design-review.md: OK\ndocs/preview-readiness.md: OK\ndocs/readme-cases.json: OK\ndocs/reference-cases.json: OK\ndocs/reference.md: OK\ndocs/releases/0.1.0-preview.1-publication.md: OK\ndocs/releases/0.1.0-preview.1.json: OK\ndocs/releases/0.1.0-preview.1.md: OK\ndocs/releases/0.2.0-preview.1.json: OK\ndocs/releases/0.2.0-preview.1.md: OK\ndocs/reproducible-builds.md: OK\ndocs/research.md: OK\ndocs/rfcs/0001-file-modules.md: OK\ndocs/roadmap.md: OK\ndocs/scenario-evaluation.md: OK\ndocs/spec/grammar.ebnf: OK\ndocs/spec/modules.ebnf: OK\ndocs/spec/v0.1.md: OK\ndocs/validation-artifacts.md: OK\ndocs/validation-collections.md: OK\ndocs/validation-contextual-equality.md: OK\ndocs/validation-control-flow.md: OK\ndocs/validation-file-modules.md: OK\ndocs/validation-formatter.md: OK\ndocs/validation-foundation.md: OK\ndocs/validation-functions-and-recovery.md: OK\ndocs/validation-fuzzing.md: OK\ndocs/validation-host-input.md: OK\ndocs/validation-lazy-and-suppression.md: OK\ndocs/validation-objects.md: OK\ndocs/validation-platforms.md: OK\ndocs/validation-reference.md: OK\ndocs/validation-resources.md: OK\ndocs/validation-roles-and-extensions.md: OK\ndocs/validation-scalar-core.md: OK\ndocs/validation-scenarios.md: OK\ndocs/versioning.md: OK\nexamples/callbacks.larp: OK\nexamples/collections.larp: OK\nexamples/config-tuning-explicit.larp: OK\nexamples/config-tuning.larp: OK\nexamples/game-training-explicit.larp: OK\nexamples/game-training.larp: OK\nexamples/hello.larp: OK\nexamples/input-sum.larp: OK\nexamples/lazy.larp: OK\nexamples/objects.larp: OK\nexamples/pitch-deck.larp: OK\nexamples/primes.larp: OK\nexamples/roles.larp: OK\nexperiments/scenario-model/Cargo.toml: OK\nexperiments/scenario-model/README.md: OK\nexperiments/scenario-model/src/lib.rs: OK\nfuzz/Cargo.lock: OK\nfuzz/Cargo.toml: OK\nfuzz/README.md: OK\nfuzz/fuzz_targets/artifact.rs: OK\nfuzz/fuzz_targets/compiler.rs: OK\nfuzz/fuzz_targets/formatter.rs: OK\nfuzz/fuzz_targets/frontend.rs: OK\nfuzz/regressions/README.md: OK\nfuzz/regressions/artifact/.gitkeep: OK\nfuzz/regressions/compiler/.gitkeep: OK\nfuzz/regressions/formatter/.gitkeep: OK\nfuzz/regressions/frontend/.gitkeep: OK\ntests/compatibility/artifacts/README.md: OK\ntests/compatibility/artifacts/collections-v1.larp: OK\ntests/compatibility/artifacts/collections-v1.larpbc.hex: OK\ntests/compatibility/artifacts/host-arguments-v2.larp: OK\ntests/compatibility/artifacts/host-arguments-v2.larpbc.hex: OK\ntests/compatibility/artifacts/manifest.json: OK\ntests/conformance/README.md: OK\ntests/conformance/fail/bound-effect-erasure.larp: OK\ntests/conformance/fail/canon-outside.larp: OK\ntests/conformance/fail/capture-write.larp: OK\ntests/conformance/fail/collection-callback-result.larp: OK\ntests/conformance/fail/constructor-mutation.larp: OK\ntests/conformance/fail/effect-callback.larp: OK\ntests/conformance/fail/empty-array.larp: OK\ntests/conformance/fail/extension-member-arity.larp: OK\ntests/conformance/fail/extension-private-priority.larp: OK\ntests/conformance/fail/fixed-array-length.larp: OK\ntests/conformance/fail/function-effect-erasure.larp: OK\ntests/conformance/fail/inference.larp: OK\ntests/conformance/fail/io-erasure.larp: OK\ntests/conformance/fail/io-indirect.larp: OK\ntests/conformance/fail/io-lazy.larp: OK\ntests/conformance/fail/io-scenario.larp: OK\ntests/conformance/fail/lambda-dead-return.larp: OK\ntests/conformance/fail/lazy-array-capture.larp: OK\ntests/conformance/fail/lazy-effect-erasure.larp: OK\ntests/conformance/fail/lazy-observation.larp: OK\ntests/conformance/fail/lazy-reassignment.larp: OK\ntests/conformance/fail/missing-field.larp: OK\ntests/conformance/fail/missing-return.larp: OK\ntests/conformance/fail/mixed-width.larp: OK\ntests/conformance/fail/narrowing.larp: OK\ntests/conformance/fail/nominal-classes.larp: OK\ntests/conformance/fail/partial-self.larp: OK\ntests/conformance/fail/private-field.larp: OK\ntests/conformance/fail/private-method.larp: OK\ntests/conformance/fail/role-effects.larp: OK\ntests/conformance/fail/role-missing.larp: OK\ntests/conformance/fail/role-nominal.larp: OK\ntests/conformance/fail/scenario-alias.larp: OK\ntests/conformance/fail/scenario-escape.larp: OK\ntests/conformance/fail/scenario-hidden-allocation.larp: OK\ntests/conformance/fail/scenario-nested.larp: OK\ntests/conformance/fail/scenario-reference-field.larp: OK\ntests/conformance/fail/scenario-return.larp: OK\ntests/conformance/fail/truthiness.larp: OK\ntests/conformance/fail/unconstrained-lambda.larp: OK\ntests/conformance/manifest.json: OK\ntests/conformance/pass/array-aliases.larp: OK\ntests/conformance/pass/array-function-results.larp: OK\ntests/conformance/pass/array-text.larp: OK\ntests/conformance/pass/bound-builtins.larp: OK\ntests/conformance/pass/bound-private.larp: OK\ntests/conformance/pass/branches.larp: OK\ntests/conformance/pass/closure-gc.larp: OK\ntests/conformance/pass/closures.larp: OK\ntests/conformance/pass/collections.larp: OK\ntests/conformance/pass/config-tuning-explicit.larp: OK\ntests/conformance/pass/config-tuning.larp: OK\ntests/conformance/pass/constant-flow.larp: OK\ntests/conformance/pass/constructor-flow.larp: OK\ntests/conformance/pass/conversions.larp: OK\ntests/conformance/pass/fixed-array.larp: OK\ntests/conformance/pass/fixed-literal-equality.larp: OK\ntests/conformance/pass/floats.larp: OK\ntests/conformance/pass/function-payloads.larp: OK\ntests/conformance/pass/functions.larp: OK\ntests/conformance/pass/game-training-explicit.larp: OK\ntests/conformance/pass/game-training.larp: OK\ntests/conformance/pass/grouped-places.larp: OK\ntests/conformance/pass/host-input.larp: OK\ntests/conformance/pass/input-eof.larp: OK\ntests/conformance/pass/input-sum.larp: OK\ntests/conformance/pass/lazy-capture.larp: OK\ntests/conformance/pass/lazy-scenario.larp: OK\ntests/conformance/pass/lazy-suppression.larp: OK\ntests/conformance/pass/lazy-unused.larp: OK\ntests/conformance/pass/loops.larp: OK\ntests/conformance/pass/objects.larp: OK\ntests/conformance/pass/recovery.larp: OK\ntests/conformance/pass/role-extension.larp: OK\ntests/conformance/pass/scalars.larp: OK\ntests/conformance/pass/scenario-method.larp: OK\ntests/conformance/pass/scenario-result-is-data.larp: OK\ntests/conformance/pass/scenario.larp: OK\ntests/conformance/pass/short-circuit.larp: OK\ntests/conformance/pass/string-output.larp: OK\ntests/conformance/runtime/array-bounds.larp: OK\ntests/conformance/runtime/assignment-bounds.larp: OK\ntests/conformance/runtime/callback-mutation.larp: OK\ntests/conformance/runtime/constructor-abort.larp: OK\ntests/conformance/runtime/conversion.larp: OK\ntests/conformance/runtime/lazy-division.larp: OK\ntests/conformance/runtime/overflow.larp: OK\ntests/conformance/runtime/scenario-abort.larp: OK\ntests/conformance/runtime/scenario-observed-abort.larp: OK\ntests/conformance/runtime/suppressed-abort.larp: OK\ntests/projects/README.md: OK\ntests/projects/manifest.json: OK\ntests/projects/pitch/lib/founder.larp: OK\ntests/projects/pitch/lib/training.larp: OK\ntests/projects/pitch/main.larp: OK\ntools/check_candidate.py: OK\ntools/check_candidate_matrix.py: OK\ntools/check_corpus.py: OK\ntools/check_reproducible_build.py: OK\ntools/check_version.py: OK\ntools/git-local.sh: OK\ntools/measure_resources.py: OK\ntools/package_candidate.py: OK\ntools/resource_launcher.c: OK\ntools/run_conformance.py: OK\ntools/run_fuzz.py: OK\ntools/run_projects.py: OK\ntools/run_reference.py: OK\ntools/seed_fuzz.py: OK\ntools/test_candidate_checks.py: OK\ntools/version_contract.py: OK\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--version"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "larp 0.2.0-preview.1 (objects, scenarios, and memoized lazy values)\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--version",
+            "--json"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "{\"schema_version\":1,\"name\":\"larp\",\"version\":\"0.2.0-preview.1\",\"channel\":\"preview\",\"language_spec\":\"0.1\",\"language_status\":\"experimental\",\"artifact\":{\"write\":2,\"read\":[1,2]},\"diagnostics_schema\":1}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "-B",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/check_version.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--output",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Verified 0.2.0-preview.1: artifact write 2, historical reads [1, 2], diagnostic schema 1\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/check_corpus.py"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_conformance.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\nPASS lambda-dead-return\nPASS grouped-places\nPASS constant-flow\nPASS missing-return\nPASS fixed-literal-equality\nPASS scalars\nPASS loops\nPASS functions\nPASS collections\nPASS recovery\nPASS role-extension\nPASS fixed-array\nPASS lazy-capture\nPASS scenario\nPASS scenario-method\nPASS scenario-result-is-data\nPASS truthiness\nPASS narrowing\nPASS mixed-width\nPASS inference\nPASS private-field\nPASS effect-callback\nPASS lazy-observation\nPASS scenario-alias\nPASS scenario-escape\nPASS scenario-nested\nPASS scenario-return\nPASS scenario-reference-field\nPASS canon-outside\nPASS scenario-hidden-allocation\nPASS overflow\nPASS scenario-abort\nPASS callback-mutation\nPASS short-circuit\nPASS floats\nPASS branches\nPASS string-output\nPASS closures\nPASS function-payloads\nPASS conversions\nPASS closure-gc\nPASS capture-write\nPASS function-effect-erasure\nPASS unconstrained-lambda\nPASS conversion\nPASS array-aliases\nPASS array-function-results\nPASS array-text\nPASS fixed-array-length\nPASS collection-callback-result\nPASS empty-array\nPASS array-bounds\nPASS assignment-bounds\nPASS objects\nPASS constructor-flow\nPASS bound-private\nPASS missing-field\nPASS partial-self\nPASS constructor-mutation\nPASS private-method\nPASS nominal-classes\nPASS constructor-abort\nPASS bound-builtins\nPASS role-missing\nPASS role-effects\nPASS role-nominal\nPASS extension-private-priority\nPASS extension-member-arity\nPASS bound-effect-erasure\nPASS config-tuning\nPASS config-tuning-explicit\nPASS game-training\nPASS game-training-explicit\nPASS scenario-observed-abort\nPASS lazy-unused\nPASS lazy-suppression\nPASS lazy-scenario\nPASS lazy-array-capture\nPASS lazy-effect-erasure\nPASS lazy-reassignment\nPASS lazy-division\nPASS suppressed-abort\nPASS host-input\nPASS input-sum\nPASS input-eof\nPASS io-indirect\nPASS io-erasure\nPASS io-scenario\nPASS io-lazy\n89/89 executed cases passed; 0 cases remain pending.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_conformance.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\nPASS lambda-dead-return\nPASS grouped-places\nPASS constant-flow\nPASS missing-return\nPASS fixed-literal-equality\nPASS scalars\nPASS loops\nPASS functions\nPASS collections\nPASS recovery\nPASS role-extension\nPASS fixed-array\nPASS lazy-capture\nPASS scenario\nPASS scenario-method\nPASS scenario-result-is-data\nPASS truthiness\nPASS narrowing\nPASS mixed-width\nPASS inference\nPASS private-field\nPASS effect-callback\nPASS lazy-observation\nPASS scenario-alias\nPASS scenario-escape\nPASS scenario-nested\nPASS scenario-return\nPASS scenario-reference-field\nPASS canon-outside\nPASS scenario-hidden-allocation\nPASS overflow\nPASS scenario-abort\nPASS callback-mutation\nPASS short-circuit\nPASS floats\nPASS branches\nPASS string-output\nPASS closures\nPASS function-payloads\nPASS conversions\nPASS closure-gc\nPASS capture-write\nPASS function-effect-erasure\nPASS unconstrained-lambda\nPASS conversion\nPASS array-aliases\nPASS array-function-results\nPASS array-text\nPASS fixed-array-length\nPASS collection-callback-result\nPASS empty-array\nPASS array-bounds\nPASS assignment-bounds\nPASS objects\nPASS constructor-flow\nPASS bound-private\nPASS missing-field\nPASS partial-self\nPASS constructor-mutation\nPASS private-method\nPASS nominal-classes\nPASS constructor-abort\nPASS bound-builtins\nPASS role-missing\nPASS role-effects\nPASS role-nominal\nPASS extension-private-priority\nPASS extension-member-arity\nPASS bound-effect-erasure\nPASS config-tuning\nPASS config-tuning-explicit\nPASS game-training\nPASS game-training-explicit\nPASS scenario-observed-abort\nPASS lazy-unused\nPASS lazy-suppression\nPASS lazy-scenario\nPASS lazy-array-capture\nPASS lazy-effect-erasure\nPASS lazy-reassignment\nPASS lazy-division\nPASS suppressed-abort\nPASS host-input\nPASS input-sum\nPASS input-eof\nPASS io-indirect\nPASS io-erasure\nPASS io-scenario\nPASS io-lazy\n89/89 executed cases passed; 0 cases remain pending.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_conformance.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--artifacts",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\nPASS lambda-dead-return\nPASS grouped-places\nPASS constant-flow\nPASS missing-return\nPASS fixed-literal-equality\nPASS scalars\nPASS loops\nPASS functions\nPASS collections\nPASS recovery\nPASS role-extension\nPASS fixed-array\nPASS lazy-capture\nPASS scenario\nPASS scenario-method\nPASS scenario-result-is-data\nPASS truthiness\nPASS narrowing\nPASS mixed-width\nPASS inference\nPASS private-field\nPASS effect-callback\nPASS lazy-observation\nPASS scenario-alias\nPASS scenario-escape\nPASS scenario-nested\nPASS scenario-return\nPASS scenario-reference-field\nPASS canon-outside\nPASS scenario-hidden-allocation\nPASS overflow\nPASS scenario-abort\nPASS callback-mutation\nPASS short-circuit\nPASS floats\nPASS branches\nPASS string-output\nPASS closures\nPASS function-payloads\nPASS conversions\nPASS closure-gc\nPASS capture-write\nPASS function-effect-erasure\nPASS unconstrained-lambda\nPASS conversion\nPASS array-aliases\nPASS array-function-results\nPASS array-text\nPASS fixed-array-length\nPASS collection-callback-result\nPASS empty-array\nPASS array-bounds\nPASS assignment-bounds\nPASS objects\nPASS constructor-flow\nPASS bound-private\nPASS missing-field\nPASS partial-self\nPASS constructor-mutation\nPASS private-method\nPASS nominal-classes\nPASS constructor-abort\nPASS bound-builtins\nPASS role-missing\nPASS role-effects\nPASS role-nominal\nPASS extension-private-priority\nPASS extension-member-arity\nPASS bound-effect-erasure\nPASS config-tuning\nPASS config-tuning-explicit\nPASS game-training\nPASS game-training-explicit\nPASS scenario-observed-abort\nPASS lazy-unused\nPASS lazy-suppression\nPASS lazy-scenario\nPASS lazy-array-capture\nPASS lazy-effect-erasure\nPASS lazy-reassignment\nPASS lazy-division\nPASS suppressed-abort\nPASS host-input\nPASS input-sum\nPASS input-eof\nPASS io-indirect\nPASS io-erasure\nPASS io-scenario\nPASS io-lazy\n89/89 executed cases passed; 0 cases remain pending.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_conformance.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--formatted",
+            "--artifacts",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "Validated 89 fixture definitions (89 active, 0 pending). No LARP programs were compiled or executed.\nPASS lambda-dead-return\nPASS grouped-places\nPASS constant-flow\nPASS missing-return\nPASS fixed-literal-equality\nPASS scalars\nPASS loops\nPASS functions\nPASS collections\nPASS recovery\nPASS role-extension\nPASS fixed-array\nPASS lazy-capture\nPASS scenario\nPASS scenario-method\nPASS scenario-result-is-data\nPASS truthiness\nPASS narrowing\nPASS mixed-width\nPASS inference\nPASS private-field\nPASS effect-callback\nPASS lazy-observation\nPASS scenario-alias\nPASS scenario-escape\nPASS scenario-nested\nPASS scenario-return\nPASS scenario-reference-field\nPASS canon-outside\nPASS scenario-hidden-allocation\nPASS overflow\nPASS scenario-abort\nPASS callback-mutation\nPASS short-circuit\nPASS floats\nPASS branches\nPASS string-output\nPASS closures\nPASS function-payloads\nPASS conversions\nPASS closure-gc\nPASS capture-write\nPASS function-effect-erasure\nPASS unconstrained-lambda\nPASS conversion\nPASS array-aliases\nPASS array-function-results\nPASS array-text\nPASS fixed-array-length\nPASS collection-callback-result\nPASS empty-array\nPASS array-bounds\nPASS assignment-bounds\nPASS objects\nPASS constructor-flow\nPASS bound-private\nPASS missing-field\nPASS partial-self\nPASS constructor-mutation\nPASS private-method\nPASS nominal-classes\nPASS constructor-abort\nPASS bound-builtins\nPASS role-missing\nPASS role-effects\nPASS role-nominal\nPASS extension-private-priority\nPASS extension-member-arity\nPASS bound-effect-erasure\nPASS config-tuning\nPASS config-tuning-explicit\nPASS game-training\nPASS game-training-explicit\nPASS scenario-observed-abort\nPASS lazy-unused\nPASS lazy-suppression\nPASS lazy-scenario\nPASS lazy-array-capture\nPASS lazy-effect-erasure\nPASS lazy-reassignment\nPASS lazy-division\nPASS suppressed-abort\nPASS host-input\nPASS input-sum\nPASS input-eof\nPASS io-indirect\nPASS io-erasure\nPASS io-scenario\nPASS io-lazy\n89/89 executed cases passed; 0 cases remain pending.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "/opt/hostedtoolcache/Python/3.11.17/x64/bin/python3",
+            "-B",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/tools/run_projects.py",
+            "--bin",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/unpacked/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298/bin/larp",
+            "--output",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "PASS pitch\nValidated 1 projects, 5 VM executions, 23 CLI commands.\n",
+          "stderr": ""
+        }
+      ],
+      "environment": {
+        "system": "Linux",
+        "machine": "x86_64",
+        "kernel": "7.0.0-1017-azure",
+        "os_release": {
+          "NAME": "Ubuntu",
+          "ID": "ubuntu",
+          "PRETTY_NAME": "Ubuntu 26.04.1 LTS",
+          "VERSION_ID": "26.04",
+          "VERSION": "26.04.1 LTS (Resolute Raccoon)",
+          "VERSION_CODENAME": "resolute",
+          "ID_LIKE": "debian",
+          "HOME_URL": "https://www.ubuntu.com/",
+          "SUPPORT_URL": "https://help.ubuntu.com/",
+          "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+          "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+          "UBUNTU_CODENAME": "resolute",
+          "LOGO": "ubuntu-logo"
+        },
+        "runner_image": {
+          "ImageOS": "ubuntu26",
+          "ImageVersion": "20261018.168.1",
+          "RUNNER_OS": "Linux",
+          "RUNNER_ARCH": "X64"
+        },
+        "glibc": "glibc 2.43"
+      },
+      "archive": "larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298.tar.gz",
+      "archive_sha256": "6f90477eedcd88dcb3cada38af95692182e43ce4d0b2afc31248515029a0464c",
+      "version": "0.2.0-preview.1",
+      "target": "x86_64-unknown-linux-gnu",
+      "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
+      "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)\nrelease: 1.99.0\ncommit-hash: 5f94df4789f005f9a352888e8355ffc645b7ed0e\ncommit-date: 2026-08-27\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.6 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]",
+      "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+      "checksummed_files": 322,
+      "abi": {
+        "glibc_symbol_versions": [
+          "GLIBC_2.14",
+          "GLIBC_2.16",
+          "GLIBC_2.18",
+          "GLIBC_2.2.5",
+          "GLIBC_2.25",
+          "GLIBC_2.28",
+          "GLIBC_2.3",
+          "GLIBC_2.3.4",
+          "GLIBC_2.30",
+          "GLIBC_2.32",
+          "GLIBC_2.33",
+          "GLIBC_2.34"
+        ],
+        "needed": [
+          "libgcc_s.so.1",
+          "libc.so.6",
+          "ld-linux-x86-64.so.2"
+        ]
+      },
+      "identity": {
+        "schema_version": 1,
+        "name": "larp",
+        "version": "0.2.0-preview.1",
+        "channel": "preview",
+        "language_spec": "0.1",
+        "language_status": "experimental",
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1
+      },
+      "historical_versions": [
+        1,
+        2
+      ],
+      "preview": {
+        "schema_version": 1,
+        "version": "0.2.0-preview.1",
+        "proposed_tag": "v0.2.0-preview.1",
+        "notes": "docs/releases/0.2.0-preview.1.md",
+        "language_spec": "0.1",
+        "target": "x86_64-unknown-linux-gnu",
+        "execution_hosts": [
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1,
+        "identity_schema": 1,
+        "descriptor_sha256": "52ef8d5dbfcc8f9123491facf1a9056e32051a1c089dd04010ddbb652cd031b2",
+        "notes_sha256": "e7e0933dcaa0bad7cb72f8807a9668c5cc1b03af174ddbf6f987b59110aa49e1",
+        "relative_file_links_checked": 15
+      },
+      "conformance_modes": [
+        {
+          "flags": [],
+          "passed": 89,
+          "pending": 0
+        },
+        {
+          "flags": [
+            "--gc-stress"
+          ],
+          "passed": 89,
+          "pending": 0
+        },
+        {
+          "flags": [
+            "--artifacts",
+            "--gc-stress"
+          ],
+          "passed": 89,
+          "pending": 0
+        },
+        {
+          "flags": [
+            "--formatted",
+            "--artifacts",
+            "--gc-stress"
+          ],
+          "passed": 89,
+          "pending": 0
+        }
+      ],
+      "projects": {
+        "status": "passed",
+        "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+        "manifest_sha256": "7ac7ceff4524584c6c40f533075a014b43fbf6b3fe782719d64a7f5d5f201196",
+        "project_count": 1,
+        "vm_executions": 5,
+        "cases": [
+          {
+            "id": "pitch",
+            "status": "passed",
+            "modes": [
+              "source",
+              "source-gc-stress",
+              "artifact",
+              "artifact-gc-stress",
+              "formatted-artifact-gc-stress"
+            ]
+          }
+        ]
+      },
+      "conformance_cases": 89,
+      "payload_unchanged": true
+    },
+    "candidate-compatibility-ubuntu-26.04/version-contract/version-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "commands": [
+        {
+          "arguments": [
+            "--version",
+            "--json"
+          ],
+          "returncode": 0,
+          "stdout": "{\"schema_version\":1,\"name\":\"larp\",\"version\":\"0.2.0-preview.1\",\"channel\":\"preview\",\"language_spec\":\"0.1\",\"language_status\":\"experimental\",\"artifact\":{\"write\":2,\"read\":[1,2]},\"diagnostics_schema\":1}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--version"
+          ],
+          "returncode": 0,
+          "stdout": "larp 0.2.0-preview.1 (objects, scenarios, and memoized lazy values)\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--diagnostic-format=json",
+            "--version",
+            "--json"
+          ],
+          "returncode": 0,
+          "stdout": "{\"schema_version\":1,\"name\":\"larp\",\"version\":\"0.2.0-preview.1\",\"channel\":\"preview\",\"language_spec\":\"0.1\",\"language_status\":\"experimental\",\"artifact\":{\"write\":2,\"read\":[1,2]},\"diagnostics_schema\":1}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--diagnostic-format=json",
+            "--invalid-version-contract"
+          ],
+          "returncode": 2,
+          "stdout": "",
+          "stderr": "{\"schema_version\":1,\"kind\":\"cli_error\",\"code\":null,\"message\":\"error: invalid arguments\\n\\nLARP \u2014 Fake it till you compile.\\n\\nUsage:\\n  larp [--diagnostic-format=json|text] COMMAND ...\\n  larp --help\\n  larp --version [--json]\\n  larp explain CODE\\n  larp build FILE.larp [-o FILE.larpbc]\\n  larp check FILE.larp|FILE.larpbc\\n  larp run FILE.larp|FILE.larpbc [--fuel INSTRUCTIONS] [--gc-stress] [-- ARG...]\\n  larp dump FILE.larp|FILE.larpbc [--ir]\\n  larp fmt FILE.larp [--check|--stdout]\\n\\nImplemented: scalar types, first-class functions, closures, arrays, options/results,\\narchetypes, roles, extensions, constructors, private/public fields, bound methods,\\nbranches, loops, checked conversions, effect bounds, typed IR,\\nverified bytecode and versioned artifacts, eager collection pipelines, isolated scenarios,\\npure memoized lazy bindings, host arguments/stdin, dynamic observation suppression,\\nand tracing GC. palantir reports go to stderr.\\nArtifacts embed source maps and are verified again when loaded. --ir requires source.\\nfmt preserves tokens and comments; its default mode updates the source file.\\n--gc-stress collects at every object/array/closure/lazy allocation safepoint.\"}\n"
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/current.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/current.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/current.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/current.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "49\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v1.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v1.larpbc",
+            "--"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v1.larpbc",
+            "--gc-stress",
+            "--"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v2.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v2.larpbc",
+            "--",
+            "unc",
+            "bro"
+          ],
+          "returncode": 0,
+          "stdout": "2\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/version-contract/historical-v2.larpbc",
+            "--gc-stress",
+            "--",
+            "unc",
+            "bro"
+          ],
+          "returncode": 0,
+          "stdout": "2\n",
+          "stderr": ""
+        }
+      ],
+      "driver_sha256": "55abf520a629199f30ec7aa3d17e2532d40ccd09a825a9a5b6b2023a167e089b",
+      "validator_sha256": "6b0d11efb2af64ae1577f232bf8f31d738859eecb3b5703f8d75e805b034f41f",
+      "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+      "identity": {
+        "schema_version": 1,
+        "name": "larp",
+        "version": "0.2.0-preview.1",
+        "channel": "preview",
+        "language_spec": "0.1",
+        "language_status": "experimental",
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1
+      },
+      "preview": {
+        "schema_version": 1,
+        "version": "0.2.0-preview.1",
+        "proposed_tag": "v0.2.0-preview.1",
+        "notes": "docs/releases/0.2.0-preview.1.md",
+        "language_spec": "0.1",
+        "target": "x86_64-unknown-linux-gnu",
+        "execution_hosts": [
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1,
+        "identity_schema": 1,
+        "descriptor_sha256": "52ef8d5dbfcc8f9123491facf1a9056e32051a1c089dd04010ddbb652cd031b2",
+        "notes_sha256": "e7e0933dcaa0bad7cb72f8807a9668c5cc1b03af174ddbf6f987b59110aa49e1",
+        "relative_file_links_checked": 15
+      },
+      "historical_versions": [
+        1,
+        2
+      ],
+      "fixture_manifest_sha256": "dc8c6984101e0e48d72785d8586d39e667de9c229dc4b95ad54903599a91fbed",
+      "emitted_version": 2
+    },
+    "candidate-compatibility-ubuntu-26.04/projects/project-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "manifest_sha256": "7ac7ceff4524584c6c40f533075a014b43fbf6b3fe782719d64a7f5d5f201196",
+      "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+      "cases": [
+        {
+          "id": "pitch",
+          "status": "passed",
+          "sources": {
+            "main.larp": "a12012c513a0d4240e6aa22e62dad8994dce9ef25e38f72f164ac0fbe25b0a58",
+            "lib/founder.larp": "206af8c58a1501cc66f07d48428bd472d1da5dc8bd39c62f4b5eacedda2d8aff",
+            "lib/training.larp": "df35cc78232d16692e0026e61a33a06352a082891d5b844fab5d4f68a9b49683"
+          },
+          "modes": [
+            "source",
+            "source-gc-stress",
+            "artifact",
+            "artifact-gc-stress",
+            "formatted-artifact-gc-stress"
+          ]
+        }
+      ],
+      "commands": [
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/source/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/source/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/source/main.larp",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/source/main.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "import \"lib/founder.larp\" as founders;\nimport \"lib/training.larp\" as training;\n\nmain_character {\n    founders::Founder bro = new founders::Founder(fortnine);\n    mfs<mf> clips = [2, 4, 49];\n    mf earned = training::earnedAura(clips);\n\n    larp (bro) as CrossFilePitch {\n        flex bro.valuation = 1_000_000_000;\n        founders::train(bro, earned);\n        canon bro.aura;\n        palantir(bro);\n    }\n\n    yap(bro.valuation);\n    yap(bro.aura);\n    yap(bro.isMogging(10));\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "import \"lib/founder.larp\" as founders;\nimport \"lib/training.larp\" as training;\n\nmain_character {\n    founders::Founder bro = new founders::Founder(fortnine);\n    mfs<mf> clips = [2, 4, 49];\n    mf earned = training::earnedAura(clips);\n\n    larp (bro) as CrossFilePitch {\n        flex bro.valuation = 1_000_000_000;\n        founders::train(bro, earned);\n        canon bro.aura;\n        palantir(bro);\n    }\n\n    yap(bro.valuation);\n    yap(bro.aura);\n    yap(bro.isMogging(10));\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/founder.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "highkey archetype Founder {\n    highkey unc valuation;\n    highkey mf aura;\n\n    init(unc seed) {\n        self.valuation = seed;\n        self.aura = 0;\n    }\n\n    highkey sidequest isMogging(mf rival) -> verdict uses(read) {\n        return self.aura mogg rival;\n    }\n}\n\nhighkey sidequest Founder.train(mf earned) -> unit uses(read, write, abort) {\n    self.aura += earned;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/founder.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/founder.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/founder.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "highkey archetype Founder {\n    highkey unc valuation;\n    highkey mf aura;\n\n    init(unc seed) {\n        self.valuation = seed;\n        self.aura = 0;\n    }\n\n    highkey sidequest isMogging(mf rival) -> verdict uses(read) {\n        return self.aura mogg rival;\n    }\n}\n\nhighkey sidequest Founder.train(mf earned) -> unit uses(read, write, abort) {\n    self.aura += earned;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/training.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "sidequest boost(mf score) -> mf uses(abort) {\n    return score + 1;\n}\n\nhighkey sidequest earnedAura(mfs<mf> clips) -> mf uses(read, write, abort) {\n    return clips.map(boost).filter(x => x mogg 4).size() * 10;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/training.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/training.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/lib/training.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "sidequest boost(mf score) -> mf uses(abort) {\n    return score + 1;\n}\n\nhighkey sidequest earnedAura(mfs<mf> clips) -> mf uses(read, write, abort) {\n    return clips.map(boost).filter(x => x mogg 4).size() * 10;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted/main.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/original.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/candidate-compatibility/projects/pitch/formatted.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        }
+      ],
+      "project_count": 1,
+      "vm_executions": 5
+    },
+    "reproducibility-evidence/package-ci/package-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "revision": "a053c991d298e8bf27197561c4df27042b5c7630",
+      "packaging_driver_sha256": "b0ff7c7c0d98bd4b6abb8945fcb0c66676738a9770df9193a6016db06973030f",
+      "commands": [
+        {
+          "arguments": [
+            "--version"
+          ],
+          "returncode": 0,
+          "stdout": "larp 0.2.0-preview.1 (objects, scenarios, and memoized lazy values)\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "examples/hello.larp"
+          ],
+          "returncode": 0,
+          "stdout": "Fake it till you compile.\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "examples/collections.larp"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "examples/collections.larp",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "build",
+            "examples/collections.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/package-ci/collection-smoke.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/package-ci/collection-smoke.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/package-ci/collection-smoke.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        }
+      ],
+      "archive": "/home/runner/work/larp-lang/larp-lang/artifacts/package-ci/larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298.tar.gz",
+      "archive_sha256": "6f90477eedcd88dcb3cada38af95692182e43ce4d0b2afc31248515029a0464c",
+      "archive_bytes": 3562384,
+      "archives_equal": true,
+      "checksum_utility": {
+        "returncode": 0,
+        "stdout": ".editorconfig: OK\n.github/ISSUE_TEMPLATE/bug_report.yml: OK\n.github/ISSUE_TEMPLATE/language_proposal.yml: OK\n.github/pull_request_template.md: OK\n.github/workflows/ci.yml: OK\n.github/workflows/fuzz.yml: OK\n.gitignore: OK\nAGENTS.md: OK\nBUILD.json: OK\nCONTRIBUTING.md: OK\nCargo.lock: OK\nCargo.toml: OK\nLICENSE: OK\nPACKAGE.md: OK\nREADME.md: OK\nTHIRD_PARTY.md: OK\nTHIRD_PARTY/rust/COPYRIGHT-library.html: OK\nTHIRD_PARTY/rust/licenses/Apache-2.0.txt: OK\nTHIRD_PARTY/rust/licenses/BSD-2-Clause.txt: OK\nTHIRD_PARTY/rust/licenses/CC-BY-SA-4.0.txt: OK\nTHIRD_PARTY/rust/licenses/GCC-exception-3.1.txt: OK\nTHIRD_PARTY/rust/licenses/GPL-2.0-only.txt: OK\nTHIRD_PARTY/rust/licenses/GPL-3.0-or-later.txt: OK\nTHIRD_PARTY/rust/licenses/ISC.txt: OK\nTHIRD_PARTY/rust/licenses/LLVM-exception.txt: OK\nTHIRD_PARTY/rust/licenses/MIT.txt: OK\nTHIRD_PARTY/rust/licenses/NCSA.txt: OK\nTHIRD_PARTY/rust/licenses/OFL-1.1.txt: OK\nTHIRD_PARTY/rust/licenses/Unicode-3.0.txt: OK\nbin/larp: OK\ncrates/larp-artifact/Cargo.toml: OK\ncrates/larp-artifact/src/codec.rs: OK\ncrates/larp-artifact/src/lib.rs: OK\ncrates/larp-bytecode/Cargo.toml: OK\ncrates/larp-bytecode/src/classes.rs: OK\ncrates/larp-bytecode/src/lib.rs: OK\ncrates/larp-bytecode/src/roles.rs: OK\ncrates/larp-bytecode/src/scenarios.rs: OK\ncrates/larp-bytecode/tests/arrays.rs: OK\ncrates/larp-bytecode/tests/classes.rs: OK\ncrates/larp-bytecode/tests/closures.rs: OK\ncrates/larp-bytecode/tests/lazy_and_suppression.rs: OK\ncrates/larp-bytecode/tests/roles.rs: OK\ncrates/larp-bytecode/tests/scenarios.rs: OK\ncrates/larp-bytecode/tests/verification.rs: OK\ncrates/larp-cli/Cargo.toml: OK\ncrates/larp-cli/src/main.rs: OK\ncrates/larp-cli/src/project.rs: OK\ncrates/larp-cli/src/version.rs: OK\ncrates/larp-cli/tests/cli.rs: OK\ncrates/larp-cli/tests/projects.rs: OK\ncrates/larp-compiler/Cargo.toml: OK\ncrates/larp-compiler/examples/resource_probe.rs: OK\ncrates/larp-compiler/examples/scenario_comparison.rs: OK\ncrates/larp-compiler/src/lib.rs: OK\ncrates/larp-compiler/src/project.rs: OK\ncrates/larp-compiler/src/semantics.rs: OK\ncrates/larp-compiler/src/semantics/arrays.rs: OK\ncrates/larp-compiler/src/semantics/bound_builtins.rs: OK\ncrates/larp-compiler/src/semantics/calls.rs: OK\ncrates/larp-compiler/src/semantics/closures.rs: OK\ncrates/larp-compiler/src/semantics/declarations.rs: OK\ncrates/larp-compiler/src/semantics/lazy.rs: OK\ncrates/larp-compiler/src/semantics/modules.rs: OK\ncrates/larp-compiler/src/semantics/objects.rs: OK\ncrates/larp-compiler/src/semantics/roles.rs: OK\ncrates/larp-compiler/src/semantics/scenarios.rs: OK\ncrates/larp-compiler/tests/bound_builtins.rs: OK\ncrates/larp-compiler/tests/collections.rs: OK\ncrates/larp-compiler/tests/constant_flow.rs: OK\ncrates/larp-compiler/tests/core.rs: OK\ncrates/larp-compiler/tests/functions_and_results.rs: OK\ncrates/larp-compiler/tests/grouped_places.rs: OK\ncrates/larp-compiler/tests/host_input.rs: OK\ncrates/larp-compiler/tests/lazy_and_suppression.rs: OK\ncrates/larp-compiler/tests/objects.rs: OK\ncrates/larp-compiler/tests/project_compilation.rs: OK\ncrates/larp-compiler/tests/project_graph.rs: OK\ncrates/larp-compiler/tests/roles.rs: OK\ncrates/larp-compiler/tests/scenarios.rs: OK\ncrates/larp-diagnostics/Cargo.toml: OK\ncrates/larp-diagnostics/src/json.rs: OK\ncrates/larp-diagnostics/src/lib.rs: OK\ncrates/larp-format/Cargo.toml: OK\ncrates/larp-format/src/lib.rs: OK\ncrates/larp-format/tests/adversarial.rs: OK\ncrates/larp-format/tests/units.rs: OK\ncrates/larp-fuzz-support/Cargo.toml: OK\ncrates/larp-fuzz-support/src/lib.rs: OK\ncrates/larp-ir/Cargo.toml: OK\ncrates/larp-ir/src/lib.rs: OK\ncrates/larp-ir/tests/lazy_and_suppression.rs: OK\ncrates/larp-ir/tests/scenarios.rs: OK\ncrates/larp-source/Cargo.toml: OK\ncrates/larp-source/src/lib.rs: OK\ncrates/larp-syntax/Cargo.toml: OK\ncrates/larp-syntax/src/lexer.rs: OK\ncrates/larp-syntax/src/lib.rs: OK\ncrates/larp-syntax/src/parser.rs: OK\ncrates/larp-syntax/tests/frontend.rs: OK\ncrates/larp-syntax/tests/lazy_and_suppression.rs: OK\ncrates/larp-syntax/tests/lossless.rs: OK\ncrates/larp-syntax/tests/objects.rs: OK\ncrates/larp-syntax/tests/roles.rs: OK\ncrates/larp-syntax/tests/scenarios.rs: OK\ncrates/larp-syntax/tests/source_units.rs: OK\ncrates/larp-types/Cargo.toml: OK\ncrates/larp-types/src/intrinsic.rs: OK\ncrates/larp-types/src/lib.rs: OK\ncrates/larp-types/tests/lazy.rs: OK\ncrates/larp-types/tests/snapshots.rs: OK\ncrates/larp-vm/Cargo.toml: OK\ncrates/larp-vm/src/heap.rs: OK\ncrates/larp-vm/src/host.rs: OK\ncrates/larp-vm/src/lazy_tests.rs: OK\ncrates/larp-vm/src/lib.rs: OK\ncrates/larp-vm/src/scenario.rs: OK\ncrates/larp-vm/src/scenario_tests.rs: OK\ncrates/larp-vm/src/value.rs: OK\ncrates/larp-vm/tests/collections.rs: OK\ncrates/larp-vm/tests/objects.rs: OK\ncrates/larp-vm/tests/roles.rs: OK\ndocs/LARP Programming Language Doodle Logo.png: OK\ndocs/LARP Programming Language Logo.png: OK\ndocs/README.md: OK\ndocs/architecture.md: OK\ndocs/bytecode-format-v1.md: OK\ndocs/bytecode-format-v2.md: OK\ndocs/data/scenario-comparison.csv: OK\ndocs/design-review.md: OK\ndocs/development.md: OK\ndocs/diagnostics.md: OK\ndocs/distribution.md: OK\ndocs/formatter.md: OK\ndocs/git-setup.md: OK\ndocs/host-input.md: OK\ndocs/implementation-status.md: OK\ndocs/modules.md: OK\ndocs/platforms.md: OK\ndocs/preview-design-review.md: OK\ndocs/preview-readiness.md: OK\ndocs/readme-cases.json: OK\ndocs/reference-cases.json: OK\ndocs/reference.md: OK\ndocs/releases/0.1.0-preview.1-publication.md: OK\ndocs/releases/0.1.0-preview.1.json: OK\ndocs/releases/0.1.0-preview.1.md: OK\ndocs/releases/0.2.0-preview.1.json: OK\ndocs/releases/0.2.0-preview.1.md: OK\ndocs/reproducible-builds.md: OK\ndocs/research.md: OK\ndocs/rfcs/0001-file-modules.md: OK\ndocs/roadmap.md: OK\ndocs/scenario-evaluation.md: OK\ndocs/spec/grammar.ebnf: OK\ndocs/spec/modules.ebnf: OK\ndocs/spec/v0.1.md: OK\ndocs/validation-artifacts.md: OK\ndocs/validation-collections.md: OK\ndocs/validation-contextual-equality.md: OK\ndocs/validation-control-flow.md: OK\ndocs/validation-file-modules.md: OK\ndocs/validation-formatter.md: OK\ndocs/validation-foundation.md: OK\ndocs/validation-functions-and-recovery.md: OK\ndocs/validation-fuzzing.md: OK\ndocs/validation-host-input.md: OK\ndocs/validation-lazy-and-suppression.md: OK\ndocs/validation-objects.md: OK\ndocs/validation-platforms.md: OK\ndocs/validation-reference.md: OK\ndocs/validation-resources.md: OK\ndocs/validation-roles-and-extensions.md: OK\ndocs/validation-scalar-core.md: OK\ndocs/validation-scenarios.md: OK\ndocs/versioning.md: OK\nexamples/callbacks.larp: OK\nexamples/collections.larp: OK\nexamples/config-tuning-explicit.larp: OK\nexamples/config-tuning.larp: OK\nexamples/game-training-explicit.larp: OK\nexamples/game-training.larp: OK\nexamples/hello.larp: OK\nexamples/input-sum.larp: OK\nexamples/lazy.larp: OK\nexamples/objects.larp: OK\nexamples/pitch-deck.larp: OK\nexamples/primes.larp: OK\nexamples/roles.larp: OK\nexperiments/scenario-model/Cargo.toml: OK\nexperiments/scenario-model/README.md: OK\nexperiments/scenario-model/src/lib.rs: OK\nfuzz/Cargo.lock: OK\nfuzz/Cargo.toml: OK\nfuzz/README.md: OK\nfuzz/fuzz_targets/artifact.rs: OK\nfuzz/fuzz_targets/compiler.rs: OK\nfuzz/fuzz_targets/formatter.rs: OK\nfuzz/fuzz_targets/frontend.rs: OK\nfuzz/regressions/README.md: OK\nfuzz/regressions/artifact/.gitkeep: OK\nfuzz/regressions/compiler/.gitkeep: OK\nfuzz/regressions/formatter/.gitkeep: OK\nfuzz/regressions/frontend/.gitkeep: OK\ntests/compatibility/artifacts/README.md: OK\ntests/compatibility/artifacts/collections-v1.larp: OK\ntests/compatibility/artifacts/collections-v1.larpbc.hex: OK\ntests/compatibility/artifacts/host-arguments-v2.larp: OK\ntests/compatibility/artifacts/host-arguments-v2.larpbc.hex: OK\ntests/compatibility/artifacts/manifest.json: OK\ntests/conformance/README.md: OK\ntests/conformance/fail/bound-effect-erasure.larp: OK\ntests/conformance/fail/canon-outside.larp: OK\ntests/conformance/fail/capture-write.larp: OK\ntests/conformance/fail/collection-callback-result.larp: OK\ntests/conformance/fail/constructor-mutation.larp: OK\ntests/conformance/fail/effect-callback.larp: OK\ntests/conformance/fail/empty-array.larp: OK\ntests/conformance/fail/extension-member-arity.larp: OK\ntests/conformance/fail/extension-private-priority.larp: OK\ntests/conformance/fail/fixed-array-length.larp: OK\ntests/conformance/fail/function-effect-erasure.larp: OK\ntests/conformance/fail/inference.larp: OK\ntests/conformance/fail/io-erasure.larp: OK\ntests/conformance/fail/io-indirect.larp: OK\ntests/conformance/fail/io-lazy.larp: OK\ntests/conformance/fail/io-scenario.larp: OK\ntests/conformance/fail/lambda-dead-return.larp: OK\ntests/conformance/fail/lazy-array-capture.larp: OK\ntests/conformance/fail/lazy-effect-erasure.larp: OK\ntests/conformance/fail/lazy-observation.larp: OK\ntests/conformance/fail/lazy-reassignment.larp: OK\ntests/conformance/fail/missing-field.larp: OK\ntests/conformance/fail/missing-return.larp: OK\ntests/conformance/fail/mixed-width.larp: OK\ntests/conformance/fail/narrowing.larp: OK\ntests/conformance/fail/nominal-classes.larp: OK\ntests/conformance/fail/partial-self.larp: OK\ntests/conformance/fail/private-field.larp: OK\ntests/conformance/fail/private-method.larp: OK\ntests/conformance/fail/role-effects.larp: OK\ntests/conformance/fail/role-missing.larp: OK\ntests/conformance/fail/role-nominal.larp: OK\ntests/conformance/fail/scenario-alias.larp: OK\ntests/conformance/fail/scenario-escape.larp: OK\ntests/conformance/fail/scenario-hidden-allocation.larp: OK\ntests/conformance/fail/scenario-nested.larp: OK\ntests/conformance/fail/scenario-reference-field.larp: OK\ntests/conformance/fail/scenario-return.larp: OK\ntests/conformance/fail/truthiness.larp: OK\ntests/conformance/fail/unconstrained-lambda.larp: OK\ntests/conformance/manifest.json: OK\ntests/conformance/pass/array-aliases.larp: OK\ntests/conformance/pass/array-function-results.larp: OK\ntests/conformance/pass/array-text.larp: OK\ntests/conformance/pass/bound-builtins.larp: OK\ntests/conformance/pass/bound-private.larp: OK\ntests/conformance/pass/branches.larp: OK\ntests/conformance/pass/closure-gc.larp: OK\ntests/conformance/pass/closures.larp: OK\ntests/conformance/pass/collections.larp: OK\ntests/conformance/pass/config-tuning-explicit.larp: OK\ntests/conformance/pass/config-tuning.larp: OK\ntests/conformance/pass/constant-flow.larp: OK\ntests/conformance/pass/constructor-flow.larp: OK\ntests/conformance/pass/conversions.larp: OK\ntests/conformance/pass/fixed-array.larp: OK\ntests/conformance/pass/fixed-literal-equality.larp: OK\ntests/conformance/pass/floats.larp: OK\ntests/conformance/pass/function-payloads.larp: OK\ntests/conformance/pass/functions.larp: OK\ntests/conformance/pass/game-training-explicit.larp: OK\ntests/conformance/pass/game-training.larp: OK\ntests/conformance/pass/grouped-places.larp: OK\ntests/conformance/pass/host-input.larp: OK\ntests/conformance/pass/input-eof.larp: OK\ntests/conformance/pass/input-sum.larp: OK\ntests/conformance/pass/lazy-capture.larp: OK\ntests/conformance/pass/lazy-scenario.larp: OK\ntests/conformance/pass/lazy-suppression.larp: OK\ntests/conformance/pass/lazy-unused.larp: OK\ntests/conformance/pass/loops.larp: OK\ntests/conformance/pass/objects.larp: OK\ntests/conformance/pass/recovery.larp: OK\ntests/conformance/pass/role-extension.larp: OK\ntests/conformance/pass/scalars.larp: OK\ntests/conformance/pass/scenario-method.larp: OK\ntests/conformance/pass/scenario-result-is-data.larp: OK\ntests/conformance/pass/scenario.larp: OK\ntests/conformance/pass/short-circuit.larp: OK\ntests/conformance/pass/string-output.larp: OK\ntests/conformance/runtime/array-bounds.larp: OK\ntests/conformance/runtime/assignment-bounds.larp: OK\ntests/conformance/runtime/callback-mutation.larp: OK\ntests/conformance/runtime/constructor-abort.larp: OK\ntests/conformance/runtime/conversion.larp: OK\ntests/conformance/runtime/lazy-division.larp: OK\ntests/conformance/runtime/overflow.larp: OK\ntests/conformance/runtime/scenario-abort.larp: OK\ntests/conformance/runtime/scenario-observed-abort.larp: OK\ntests/conformance/runtime/suppressed-abort.larp: OK\ntests/projects/README.md: OK\ntests/projects/manifest.json: OK\ntests/projects/pitch/lib/founder.larp: OK\ntests/projects/pitch/lib/training.larp: OK\ntests/projects/pitch/main.larp: OK\ntools/check_candidate.py: OK\ntools/check_candidate_matrix.py: OK\ntools/check_corpus.py: OK\ntools/check_reproducible_build.py: OK\ntools/check_version.py: OK\ntools/git-local.sh: OK\ntools/measure_resources.py: OK\ntools/package_candidate.py: OK\ntools/resource_launcher.c: OK\ntools/run_conformance.py: OK\ntools/run_fuzz.py: OK\ntools/run_projects.py: OK\ntools/run_reference.py: OK\ntools/seed_fuzz.py: OK\ntools/test_candidate_checks.py: OK\ntools/version_contract.py: OK\n",
+        "stderr": ""
+      },
+      "checksummed_files": 322,
+      "extracted_hashes_verified": true,
+      "executable_mode": "0755"
+    },
+    "reproducibility-evidence/reproducible-builds/ci/report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "revision": "a053c991d298e8bf27197561c4df27042b5c7630",
+      "git_metadata": "/home/runner/work/larp-lang/larp-lang/.git",
+      "target": "x86_64-unknown-linux-gnu",
+      "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+      "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
+      "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)\nrelease: 1.99.0\ncommit-hash: 5f94df4789f005f9a352888e8355ffc645b7ed0e\ncommit-date: 2026-08-27\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.6 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: Ubuntu 24.4.0 (noble) [64-bit]",
+      "cargo_executable": "/home/runner/.cargo/bin/cargo",
+      "rustc_executable": "/home/runner/.cargo/bin/rustc",
+      "driver_sha256": "6550fc5baf337263dbc553c9c0fcb278a9cde828f24e46a1e1b1784e27648d9b",
+      "removed_environment_keys": [
+        "CARGO_HOME",
+        "CARGO_INCREMENTAL"
+      ],
+      "controlled_environment": {
+        "CARGO_HOME": "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/cargo-home",
+        "RUSTC": "/home/runner/.cargo/bin/rustc",
+        "RUSTC_WRAPPER": "",
+        "RUSTC_WORKSPACE_WRAPPER": "",
+        "CARGO_INCREMENTAL": "0",
+        "CARGO_NET_OFFLINE": "true",
+        "CARGO_CACHE_AUTO_CLEAN_FREQUENCY": "never",
+        "SOURCE_DATE_EPOCH": "1792621383",
+        "TZ": "UTC",
+        "LC_ALL": "C"
+      },
+      "builds": [
+        {
+          "source": "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/first clean build/source",
+          "target": "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/first clean build/target",
+          "command": [
+            "/home/runner/.cargo/bin/cargo",
+            "build",
+            "-p",
+            "larp-cli",
+            "--bin",
+            "larp",
+            "--release",
+            "--locked",
+            "--offline",
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "--jobs",
+            "2"
+          ],
+          "rustflags": [
+            "--remap-path-prefix=/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/first clean build/source=/larp/source",
+            "--remap-path-prefix=/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/first clean build/target=/larp/target"
+          ],
+          "cargo_encoded_rustflags": "--remap-path-prefix=/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/first clean build/source=/larp/source\u001f--remap-path-prefix=/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/first clean build/target=/larp/target",
+          "elapsed_ns": 8735883774,
+          "returncode": 0,
+          "binary": "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/first clean build/target/x86_64-unknown-linux-gnu/release/larp",
+          "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+          "binary_bytes": 1999352
+        },
+        {
+          "source": "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/second independent build/source",
+          "target": "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/second independent build/target",
+          "command": [
+            "/home/runner/.cargo/bin/cargo",
+            "build",
+            "-p",
+            "larp-cli",
+            "--bin",
+            "larp",
+            "--release",
+            "--locked",
+            "--offline",
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "--jobs",
+            "2"
+          ],
+          "rustflags": [
+            "--remap-path-prefix=/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/second independent build/source=/larp/source",
+            "--remap-path-prefix=/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/second independent build/target=/larp/target"
+          ],
+          "cargo_encoded_rustflags": "--remap-path-prefix=/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/second independent build/source=/larp/source\u001f--remap-path-prefix=/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/second independent build/target=/larp/target",
+          "elapsed_ns": 8585961107,
+          "returncode": 0,
+          "binary": "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/second independent build/target/x86_64-unknown-linux-gnu/release/larp",
+          "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+          "binary_bytes": 1999352
+        }
+      ],
+      "smoke_commands": [
+        {
+          "binary": 1,
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke.larp"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "binary": 1,
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke.larp",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "binary": 1,
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke-1.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "binary": 1,
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke-1.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "binary": 1,
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke-1.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "binary": 2,
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke.larp"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "binary": 2,
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke.larp",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "binary": 2,
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke-2.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "binary": 2,
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke-2.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "binary": 2,
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/reproducible-builds/ci/smoke-2.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        }
+      ],
+      "archive_sha256": "7415552b2a62fbd46b78f1040caaa54b289768d1836cbd975833a350761075ec",
+      "binary_bytes_equal": true,
+      "binary_sha256_equal": true,
+      "embedded_source_or_target_paths": [],
+      "smoke_artifacts_equal": true
+    },
+    "version-contract/version-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "commands": [
+        {
+          "arguments": [
+            "--version",
+            "--json"
+          ],
+          "returncode": 0,
+          "stdout": "{\"schema_version\":1,\"name\":\"larp\",\"version\":\"0.2.0-preview.1\",\"channel\":\"preview\",\"language_spec\":\"0.1\",\"language_status\":\"experimental\",\"artifact\":{\"write\":2,\"read\":[1,2]},\"diagnostics_schema\":1}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--version"
+          ],
+          "returncode": 0,
+          "stdout": "larp 0.2.0-preview.1 (objects, scenarios, and memoized lazy values)\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--diagnostic-format=json",
+            "--version",
+            "--json"
+          ],
+          "returncode": 0,
+          "stdout": "{\"schema_version\":1,\"name\":\"larp\",\"version\":\"0.2.0-preview.1\",\"channel\":\"preview\",\"language_spec\":\"0.1\",\"language_status\":\"experimental\",\"artifact\":{\"write\":2,\"read\":[1,2]},\"diagnostics_schema\":1}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "--diagnostic-format=json",
+            "--invalid-version-contract"
+          ],
+          "returncode": 2,
+          "stdout": "",
+          "stderr": "{\"schema_version\":1,\"kind\":\"cli_error\",\"code\":null,\"message\":\"error: invalid arguments\\n\\nLARP \u2014 Fake it till you compile.\\n\\nUsage:\\n  larp [--diagnostic-format=json|text] COMMAND ...\\n  larp --help\\n  larp --version [--json]\\n  larp explain CODE\\n  larp build FILE.larp [-o FILE.larpbc]\\n  larp check FILE.larp|FILE.larpbc\\n  larp run FILE.larp|FILE.larpbc [--fuel INSTRUCTIONS] [--gc-stress] [-- ARG...]\\n  larp dump FILE.larp|FILE.larpbc [--ir]\\n  larp fmt FILE.larp [--check|--stdout]\\n\\nImplemented: scalar types, first-class functions, closures, arrays, options/results,\\narchetypes, roles, extensions, constructors, private/public fields, bound methods,\\nbranches, loops, checked conversions, effect bounds, typed IR,\\nverified bytecode and versioned artifacts, eager collection pipelines, isolated scenarios,\\npure memoized lazy bindings, host arguments/stdin, dynamic observation suppression,\\nand tracing GC. palantir reports go to stderr.\\nArtifacts embed source maps and are verified again when loaded. --ir requires source.\\nfmt preserves tokens and comments; its default mode updates the source file.\\n--gc-stress collects at every object/array/closure/lazy allocation safepoint.\"}\n"
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/current.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/current.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/current.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/current.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "stdout": "49\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/historical-v1.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/historical-v1.larpbc",
+            "--"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/historical-v1.larpbc",
+            "--gc-stress",
+            "--"
+          ],
+          "returncode": 0,
+          "stdout": "5\n50\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/historical-v2.larpbc"
+          ],
+          "returncode": 0,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/historical-v2.larpbc",
+            "--",
+            "unc",
+            "bro"
+          ],
+          "returncode": 0,
+          "stdout": "2\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/version-contract/historical-v2.larpbc",
+            "--gc-stress",
+            "--",
+            "unc",
+            "bro"
+          ],
+          "returncode": 0,
+          "stdout": "2\n",
+          "stderr": ""
+        }
+      ],
+      "driver_sha256": "55abf520a629199f30ec7aa3d17e2532d40ccd09a825a9a5b6b2023a167e089b",
+      "validator_sha256": "6b0d11efb2af64ae1577f232bf8f31d738859eecb3b5703f8d75e805b034f41f",
+      "binary_sha256": "3d805871d2c5c3c0f1dac5d25ebb2432337908fdfbc6cefae4aa3593c337346d",
+      "identity": {
+        "schema_version": 1,
+        "name": "larp",
+        "version": "0.2.0-preview.1",
+        "channel": "preview",
+        "language_spec": "0.1",
+        "language_status": "experimental",
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1
+      },
+      "preview": {
+        "schema_version": 1,
+        "version": "0.2.0-preview.1",
+        "proposed_tag": "v0.2.0-preview.1",
+        "notes": "docs/releases/0.2.0-preview.1.md",
+        "language_spec": "0.1",
+        "target": "x86_64-unknown-linux-gnu",
+        "execution_hosts": [
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "artifact": {
+          "write": 2,
+          "read": [
+            1,
+            2
+          ]
+        },
+        "diagnostics_schema": 1,
+        "identity_schema": 1,
+        "descriptor_sha256": "52ef8d5dbfcc8f9123491facf1a9056e32051a1c089dd04010ddbb652cd031b2",
+        "notes_sha256": "e7e0933dcaa0bad7cb72f8807a9668c5cc1b03af174ddbf6f987b59110aa49e1",
+        "relative_file_links_checked": 15
+      },
+      "historical_versions": [
+        1,
+        2
+      ],
+      "fixture_manifest_sha256": "dc8c6984101e0e48d72785d8586d39e667de9c229dc4b95ad54903599a91fbed",
+      "emitted_version": 2
+    },
+    "project-contract/project-report.json": {
+      "schema_version": 1,
+      "status": "passed",
+      "manifest_sha256": "7ac7ceff4524584c6c40f533075a014b43fbf6b3fe782719d64a7f5d5f201196",
+      "binary_sha256": "3d805871d2c5c3c0f1dac5d25ebb2432337908fdfbc6cefae4aa3593c337346d",
+      "cases": [
+        {
+          "id": "pitch",
+          "status": "passed",
+          "sources": {
+            "main.larp": "a12012c513a0d4240e6aa22e62dad8994dce9ef25e38f72f164ac0fbe25b0a58",
+            "lib/founder.larp": "206af8c58a1501cc66f07d48428bd472d1da5dc8bd39c62f4b5eacedda2d8aff",
+            "lib/training.larp": "df35cc78232d16692e0026e61a33a06352a082891d5b844fab5d4f68a9b49683"
+          },
+          "modes": [
+            "source",
+            "source-gc-stress",
+            "artifact",
+            "artifact-gc-stress",
+            "formatted-artifact-gc-stress"
+          ]
+        }
+      ],
+      "commands": [
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/source/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/source/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/source/main.larp",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/source/main.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/main.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "import \"lib/founder.larp\" as founders;\nimport \"lib/training.larp\" as training;\n\nmain_character {\n    founders::Founder bro = new founders::Founder(fortnine);\n    mfs<mf> clips = [2, 4, 49];\n    mf earned = training::earnedAura(clips);\n\n    larp (bro) as CrossFilePitch {\n        flex bro.valuation = 1_000_000_000;\n        founders::train(bro, earned);\n        canon bro.aura;\n        palantir(bro);\n    }\n\n    yap(bro.valuation);\n    yap(bro.aura);\n    yap(bro.isMogging(10));\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/main.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/main.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/main.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "import \"lib/founder.larp\" as founders;\nimport \"lib/training.larp\" as training;\n\nmain_character {\n    founders::Founder bro = new founders::Founder(fortnine);\n    mfs<mf> clips = [2, 4, 49];\n    mf earned = training::earnedAura(clips);\n\n    larp (bro) as CrossFilePitch {\n        flex bro.valuation = 1_000_000_000;\n        founders::train(bro, earned);\n        canon bro.aura;\n        palantir(bro);\n    }\n\n    yap(bro.valuation);\n    yap(bro.aura);\n    yap(bro.isMogging(10));\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/lib/founder.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "highkey archetype Founder {\n    highkey unc valuation;\n    highkey mf aura;\n\n    init(unc seed) {\n        self.valuation = seed;\n        self.aura = 0;\n    }\n\n    highkey sidequest isMogging(mf rival) -> verdict uses(read) {\n        return self.aura mogg rival;\n    }\n}\n\nhighkey sidequest Founder.train(mf earned) -> unit uses(read, write, abort) {\n    self.aura += earned;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/lib/founder.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/lib/founder.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/lib/founder.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "highkey archetype Founder {\n    highkey unc valuation;\n    highkey mf aura;\n\n    init(unc seed) {\n        self.valuation = seed;\n        self.aura = 0;\n    }\n\n    highkey sidequest isMogging(mf rival) -> verdict uses(read) {\n        return self.aura mogg rival;\n    }\n}\n\nhighkey sidequest Founder.train(mf earned) -> unit uses(read, write, abort) {\n    self.aura += earned;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/lib/training.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "sidequest boost(mf score) -> mf uses(abort) {\n    return score + 1;\n}\n\nhighkey sidequest earnedAura(mfs<mf> clips) -> mf uses(read, write, abort) {\n    return clips.map(boost).filter(x => x mogg 4).size() * 10;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/lib/training.larp"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/lib/training.larp",
+            "--check"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "fmt",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/lib/training.larp",
+            "--stdout"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "sidequest boost(mf score) -> mf uses(abort) {\n    return score + 1;\n}\n\nhighkey sidequest earnedAura(mfs<mf> clips) -> mf uses(read, write, abort) {\n    return clips.map(boost).filter(x => x mogg 4).size() * 10;\n}\n",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "build",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted/main.larp",
+            "-o",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/original.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/original.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        },
+        {
+          "arguments": [
+            "check",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted.larpbc"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "",
+          "stderr": ""
+        },
+        {
+          "arguments": [
+            "run",
+            "/home/runner/work/larp-lang/larp-lang/artifacts/project-validation/pitch/formatted.larpbc",
+            "--gc-stress"
+          ],
+          "returncode": 0,
+          "timed_out": false,
+          "stdout": "49\n20\nfr\n",
+          "stderr": "PALANTIR [CrossFilePitch]\nPROPERTY | REALITY | PERFORMED | LAST CLAIM | SELECTED\nvaluation | 49 | 1000000000 | 1000000000 | false\naura | 0 | 20 | - | true\n"
+        }
+      ],
+      "project_count": 1,
+      "vm_executions": 5
+    }
+  },
+  "local_checks": {
+    "workspace_tests": 480,
+    "optimized_compiler_tests": 193,
+    "release_tool_tests": 19,
+    "conformance_cases": 89,
+    "conformance_modes": 4,
+    "reference_vm_runs": 40,
+    "reference_cli_commands": 113,
+    "readme_vm_runs": 5,
+    "readme_cli_commands": 15,
+    "project_vm_runs": 5,
+    "project_cli_commands": 23,
+    "negative_expected_stdout_rejected": true,
+    "existing_evidence_preserved": true,
+    "downloaded_archive_status": "passed",
+    "downloaded_archive_sha256": "6f90477eedcd88dcb3cada38af95692182e43ce4d0b2afc31248515029a0464c",
+    "downloaded_binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+    "payload_unchanged": true,
+    "projects": {
+      "status": "passed",
+      "binary_sha256": "498f2b4c5d4bf5bd8a78f7755992d747e581e5a27b268e4c0d7f68fbba3abc98",
+      "manifest_sha256": "7ac7ceff4524584c6c40f533075a014b43fbf6b3fe782719d64a7f5d5f201196",
+      "project_count": 1,
+      "vm_executions": 5,
+      "cases": [
+        {
+          "id": "pitch",
+          "status": "passed",
+          "modes": [
+            "source",
+            "source-gc-stress",
+            "artifact",
+            "artifact-gc-stress",
+            "formatted-artifact-gc-stress"
+          ]
+        }
+      ]
+    },
+    "full_mit_holder_verified": "Hlib Strochkovskyi"
+  }
+}
