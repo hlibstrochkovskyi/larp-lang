@@ -1,11 +1,11 @@
 # Implementation roadmap
 
-Status: M1 through M5 and the bounded M6 first-preview scope are implemented.
+Status: M1 through M7 are implemented within their declared preview scopes.
 [`v0.1.0-preview.1`](releases/0.1.0-preview.1-publication.md) is published as an
 experimental prerelease. Broader specification review and later language/tooling
-work remain open. File modules are implemented in the `0.2.0-preview.1` development
-branch and are not part of the released compiler; the M7 local acceptance gate
-has passed, with hosted checks required for each commit.
+work remain open. File modules passed local and exact-commit hosted gates and
+are published in [`v0.2.0-preview.1`](releases/0.2.0-preview.1-publication.md).
+Later commits still require their own validation.
 This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -213,7 +213,7 @@ the declared release subset. Fuzz lexer/parser/loader and measure VM/GC resource
 limits. Preserve the selected MIT license and choose supported platforms. Run CI on the maintainer-selected
 GitHub remote; local checks do not prove hosted CI passed.
 
-## M7 — File modules and whole-project compilation (implemented; local gate passed)
+## M7 — File modules and whole-project compilation (published, experimental)
 
 [The file-module RFC](rfcs/0001-file-modules.md) specifies explicit file imports,
 private-by-default declarations and exports, module-qualified type/value lookup,
@@ -227,7 +227,9 @@ scenario specialization, and multi-source artifact encoding/execution. The
 [pitch project](../tests/projects/README.md) is the executable acceptance fixture.
 The [local validation record](validation-file-modules.md) covers focused project
 tests, the unchanged single-file corpus, historical artifact/version contracts,
-and full workspace checks. Hosted CI remains authoritative for each commit.
+and full workspace checks. The [publication record](releases/0.2.0-preview.1-publication.md)
+records the passed exact-commit hosted matrix and the published archive. Hosted
+CI remains authoritative for each later commit.
 
 Gate: execute direct/indirect imported calls, nominal classes/roles, lexical
 captures, extensions, lazy values, and scenarios through source and loaded

@@ -1,13 +1,14 @@
 # RFC 0001: File modules and whole-project compilation
 
-Status: **experimental implementation; local acceptance passed**.
-This RFC records the file-module contract being implemented for the development
-compiler. It extends the single-file v0.1 baseline; modules were not shipped in
+Status: **experimental implementation published in v0.2.0-preview.1**.
+This RFC records the file-module contract implemented by the released
+experimental compiler. It extends the single-file v0.1 baseline; modules were not shipped in
 `0.1.0-preview.1`. The source-unit parser, bounded graph, module-aware checking,
 CLI filesystem provider, formatter, and multi-source artifact path are present.
 The [local gate](../validation-file-modules.md) records workspace, corpus,
 artifact, and compatibility checks. Hosted CI remains commit-specific; this
-development functionality has not been published as a release.
+[publication record](../releases/0.2.0-preview.1-publication.md) identifies the
+released source and exact-commit evidence.
 
 ## Outcome and boundaries
 

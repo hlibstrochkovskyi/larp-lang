@@ -11,18 +11,19 @@
 *Fake it till you compile.*
 
 [![CI](https://github.com/hlibstrochkovskyi/larp-lang/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hlibstrochkovskyi/larp-lang/actions/workflows/ci.yml)
-[![Preview](https://img.shields.io/badge/preview-0.1.0--preview.1-8b5cf6)](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1)
+[![Preview](https://img.shields.io/badge/preview-0.2.0--preview.1-8b5cf6)](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.2.0-preview.1)
 [![MIT](https://img.shields.io/badge/license-MIT-8b5cf6)](LICENSE)
 
-[Download](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1) · [Learn](docs/reference.md) · [Documentation](docs/README.md) · [Contribute](CONTRIBUTING.md)
+[Download](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.2.0-preview.1) · [Learn](docs/reference.md) · [Documentation](docs/README.md) · [Contribute](CONTRIBUTING.md)
 
 LARP is an experimental, statically typed programming language with C-style
 syntax, objects, first-class functions, and controlled what-if execution.
 Written in Rust, it compiles to its own verified bytecode and runs on the LARP VM.
 
-This branch prepares **`0.2.0-preview.1`**, adding [file modules](docs/modules.md).
-See the [candidate notes](docs/releases/0.2.0-preview.1.md); publication is pending.
-The downloadable first preview below remains `0.1.0-preview.1` and single-file.
+**[v0.2.0-preview.1](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.2.0-preview.1)
+is out: File Modules.** Split programs into libraries, export declarations with
+`highkey`, and call them through `alias::name`. The whole project still compiles
+to one verified bytecode artifact. [Learn modules →](docs/modules.md)
 
 ## Pitch the unicorn. Keep the aura.
 
@@ -84,9 +85,9 @@ Scenario roots currently need value-only fields; selected fields keep their fina
 trial values on normal block completion. This preserves field types, not
 relationships between fields. See [scenario semantics and limits](docs/scenario-evaluation.md).
 
-## Try the first preview
+## Download and run
 
-**[v0.1.0-preview.1](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1)**
+**[v0.2.0-preview.1](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.2.0-preview.1)**
 is available for Linux x86-64 GNU, tested on Ubuntu 24.04 and 26.04.
 The archive includes the CLI, source, documentation, examples, and license notices.
 Running the prebuilt CLI requires no Rust installation.
@@ -94,21 +95,22 @@ Running the prebuilt CLI requires no Rust installation.
 Download the `.tar.gz` and its matching `.sha256` from the release, or use:
 
 ```sh
-larp_release=https://github.com/hlibstrochkovskyi/larp-lang/releases/download/v0.1.0-preview.1
-larp_archive=larp-0.1.0-preview.1-x86_64-unknown-linux-gnu-61cc9314916c.tar.gz
+larp_release=https://github.com/hlibstrochkovskyi/larp-lang/releases/download/v0.2.0-preview.1
+larp_archive=larp-0.2.0-preview.1-x86_64-unknown-linux-gnu-a053c991d298.tar.gz
 curl -fLO "$larp_release/$larp_archive"
 curl -fLO "$larp_release/$larp_archive.sha256"
 sha256sum -c "$larp_archive.sha256"
 tar -xzf "$larp_archive"
 cd "${larp_archive%.tar.gz}"
-./bin/larp run examples/hello.larp
+./bin/larp run examples/pitch-deck.larp
+./bin/larp run tests/projects/pitch/main.larp --gc-stress
 ```
 
-To try the pitch above with that binary, save the snippet as `pitch-deck.larp`
-and run `./bin/larp run pitch-deck.larp`. The example was added to the repository
-after publication, so its file is not in the frozen preview archive.
-See the [publication record](docs/releases/0.1.0-preview.1-publication.md)
-for the exact commit, checksums, and compatibility evidence.
+Both pitch programs are included in this archive. The multi-file version calls
+an exported extension inside a scenario and commits only the earned aura.
+See the [publication record](docs/releases/0.2.0-preview.1-publication.md) for the
+exact commit, checksums, and compatibility evidence. The [first preview](docs/releases/0.1.0-preview.1-publication.md)
+remains available as a historical release.
 
 ### Build from source
 
@@ -131,6 +133,7 @@ of the release compatibility policy.
 
 | LARP | What it does |
 | --- | --- |
+| `import`, `highkey`, `alias::name` | Explicit file modules, exports, and lexical namespaces with checked interfaces |
 | `mf`, `unc`, `geeked`, `verdict` | Exact i32, i64, f64, and Boolean types; no implicit truthiness or numeric conversions |
 | `archetype`, `role`, `sidequest` | Nominal objects, interfaces, and functions with checked signatures and effect bounds |
 | `mfs<T>`, `hediJeans<T,N>` | Shared dynamic arrays and fixed-size value arrays, with checked indexing |
@@ -142,10 +145,9 @@ Closures capture bindings as snapshots. A tracing collector manages objects,
 arrays, closures, and lazy cells. Source checks and an independent bytecode
 verifier preserve types, visibility, effects, and scenario restrictions.
 
-The first preview is experimental: programs occupy one source file; modules,
-user-defined generics, inheritance, async, FFI, and a native backend are absent.
-File imports are available in this development branch; packages and re-exports
-remain future work. There is no stable source/API compatibility promise or hostile-code sandbox.
+This preview supports standalone and multi-file programs. Packages, re-exports,
+user-defined generics, inheritance, async, FFI, and a native backend remain future
+work. There is no stable source/API compatibility promise or hostile-code sandbox.
 The [implementation status](docs/implementation-status.md) lists working features
 and precise limits; the [specification](docs/spec/v0.1.md) remains a design baseline.
 

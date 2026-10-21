@@ -1,7 +1,8 @@
 # File modules
 
-Status: experimental **`0.2.0-preview.1`** functionality. Imports are absent from the
-published `v0.1.0-preview.1` binary. Build this branch before trying these commands.
+Status: available in the experimental **[v0.2.0-preview.1 release](releases/0.2.0-preview.1-publication.md)**.
+The commands below use a source build at `target/debug/larp`; with the prebuilt
+archive, use `./bin/larp` instead. The historical `v0.1.0-preview.1` is single-file.
 The [RFC](rfcs/0001-file-modules.md) defines the full contract; the
 [project fixture](../tests/projects/README.md) exercises it through the real VM.
 

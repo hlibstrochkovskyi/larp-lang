@@ -4,12 +4,11 @@ The compiler currently implements algorithmic programs, nominal objects, and iso
 Specification v0.1. Programs are lexed, parsed, name/type/effect checked, lowered
 into typed control-flow IR, compiled to stack bytecode, verified, and executed by LARP's VM.
 No host `eval`, source-to-Python/JavaScript translation, or AST execution is used.
-The first public prerelease is [`v0.1.0-preview.1`](releases/0.1.0-preview.1-publication.md).
+The current public prerelease is [`v0.2.0-preview.1`](releases/0.2.0-preview.1-publication.md).
 The [preview audit](preview-readiness.md) records resolved semantic regressions,
 release evidence, and remaining design questions; a finite passing corpus and a
 published preview do not approve the whole proposed specification. File modules
-and package management are not implemented in this released subset. The current
-`0.2.0-preview.1` branch adds file modules as described below.
+are included in this release as described below; package management remains future work.
 
 ## Working features
 

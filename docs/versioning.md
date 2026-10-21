@@ -1,17 +1,16 @@
 # Versioning and compatibility
 
-Status: [`v0.1.0-preview.1`](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1)
-is the first public prerelease. The language remains experimental. The
-[publication record](releases/0.1.0-preview.1-publication.md) identifies its exact
-commit, artifacts, and executed checks; the immutable [release notes](releases/0.1.0-preview.1.md)
-describe the shipped subset. This policy defines version identities and the
-evidence required for subsequent releases.
+Status: [`v0.2.0-preview.1`](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.2.0-preview.1)
+is the current public prerelease. The [publication record](releases/0.2.0-preview.1-publication.md)
+identifies its exact commit, assets, executed checks, and archived notes.
+The [first preview](releases/0.1.0-preview.1-publication.md) remains immutable.
+The language is experimental; this policy defines identities and evidence for
+subsequent releases.
 
-The current candidate is **`0.2.0-preview.1`** ([release notes](releases/0.2.0-preview.1.md)),
-which adds experimental file modules
+The current toolchain is **`0.2.0-preview.1`**, with experimental file modules
 under [RFC 0001](rfcs/0001-file-modules.md). The `0.1` specification remains the
-single-file design baseline; this extension does not change the published
-preview, artifact wire encoding, or JSON schemas.
+single-file design baseline. The module extension keeps artifact wire encoding
+and JSON schemas unchanged; consult its release notes for migration and limits.
 
 ## Independent version identities
 

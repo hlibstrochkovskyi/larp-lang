@@ -5,9 +5,9 @@ clearer diagnostics, executable examples, documentation, and language-design
 feedback are all welcome. You do not need to understand the whole compiler to
 make a useful contribution.
 
-The first public prerelease is
-[v0.1.0-preview.1](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1).
-Current development uses `0.2.0-preview.1` and adds [file modules](docs/modules.md).
+The current public prerelease is
+[v0.2.0-preview.1 — File Modules](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.2.0-preview.1),
+including [file modules](docs/modules.md).
 The language and artifact formats remain experimental. Read the
 [implementation status](docs/implementation-status.md) for what works today;
 the [proposed specification](docs/spec/v0.1.md) also describes rules that need
@@ -59,7 +59,8 @@ files, credentials, and private notes out of reports.
 
 ## Prepare a focused pull request
 
-1. Create a branch from current `main` and keep the change about one problem.
+1. Create a feature branch from current `main` and keep the change about one problem.
+   Open a pull request against `main` for review and CI before merging.
 2. For compiler/runtime work, read the [specification](docs/spec/v0.1.md),
    [architecture](docs/architecture.md), and [roadmap](docs/roadmap.md). Preserve
    the relevant [engineering contracts](docs/development.md#contracts-to-preserve).
@@ -70,6 +71,10 @@ files, credentials, and private notes out of reports.
 Write repository prose, code comments, diagnostics, test descriptions, and commit
 messages in English. Use your own Git identity. Keep commits focused and do not include
 build output, generated evidence, or private design notes.
+
+Dedicated `release/*-publication` branches contain publication workflows and
+frozen asset manifests. They are operational release records and are not merged
+into `main` as language changes.
 
 A useful PR description states the concrete problem, the new behavior, and the
 checks run. Explain any compatibility change or remaining limitation. If you

@@ -1,15 +1,12 @@
 # Distribution and candidate packaging
 
-The first public prerelease is
-[`v0.1.0-preview.1`](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.1.0-preview.1).
+The current public prerelease is
+[`v0.2.0-preview.1 — File Modules`](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.2.0-preview.1).
 It includes a Linux x86-64 GNU archive, its SHA-256 sidecar, and release evidence.
-See the [publication record](releases/0.1.0-preview.1-publication.md) for exact
+See the [publication record](releases/0.2.0-preview.1-publication.md) for exact
 filenames, digests, source revision, and compatibility results. LARP remains an
-experimental developer preview under the [MIT License](../LICENSE).
-
-The next candidate is [`0.2.0-preview.1`](releases/0.2.0-preview.1.md), with
-file modules and explicit packaged-project execution gates. It is prepared for
-review, not yet published.
+experimental developer preview under the [MIT License](../LICENSE). The
+[first preview](releases/0.1.0-preview.1-publication.md) retains its original bytes.
 
 The candidate packager described below produces reviewable archives and
 exercises their extracted CLI. Running it does not publish a tag or GitHub

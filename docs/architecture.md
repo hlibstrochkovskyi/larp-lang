@@ -9,10 +9,10 @@ output suppression has explicit dynamic scope. Versioned artifacts embed source
 maps and pass a bounded loader and mandatory verification before execution.
 The pipeline below includes both current contracts and their intended extensions;
 see [implementation status](implementation-status.md) for the supported subset
-and the [first-preview publication record](releases/0.1.0-preview.1-publication.md)
-for the exact shipped revision. The released source frontend accepts one file;
-bytecode module metadata is distinct from a source-file import system. Current
-`0.2.0-preview.1` adds the source graph described below.
+and the [File Modules publication record](releases/0.2.0-preview.1-publication.md)
+for the exact shipped revision. The released frontend accepts standalone and
+multi-file programs; source modules are compile-time namespaces distinct from
+the resulting bytecode module metadata.
 
 ## Whole-project compilation (`0.2.0-preview.1`)
 

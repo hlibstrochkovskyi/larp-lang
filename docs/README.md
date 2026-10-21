@@ -2,13 +2,13 @@
 
 Start with the [practical reference](reference.md) to write a program, or
 [CONTRIBUTING](../CONTRIBUTING.md) to work on the compiler.
-[`v0.1.0-preview.1`](releases/0.1.0-preview.1-publication.md) is the first public
+[`v0.2.0-preview.1`](releases/0.2.0-preview.1-publication.md) is the current public
 experimental release. The implementation status describes what works; the
 specification describes the design baseline. Neither a proposal nor a passing
 finite test suite establishes complete language correctness.
 
-Current development: **`0.2.0-preview.1`**, including [file modules](modules.md);
-imports are not available in the published first preview.
+The current preview includes [file modules](modules.md); the historical
+`v0.1.0-preview.1` remains single-file.
 
 ## Learn and run
 
@@ -49,6 +49,11 @@ contributor prerequisite.
   artifact and JSON schemas.
 
 ## Releases and distribution
+
+- [File Modules preview publication](releases/0.2.0-preview.1-publication.md):
+  verified release bytes, source revision, platform results, and publication.
+- [Frozen File Modules candidate notes](releases/0.2.0-preview.1.md):
+  supported syntax, migration, and known limits in the archived snapshot.
 
 - [First preview publication](releases/0.1.0-preview.1-publication.md): exact
   source commit, downloadable binary, checksums, and hosted evidence.
