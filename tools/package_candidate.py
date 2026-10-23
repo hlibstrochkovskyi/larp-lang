@@ -19,12 +19,52 @@ from version_contract import preview_metadata, specification_version, validate_i
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE = {"Ideas-not-for push!", ".git", ".git-foundation", ".agents", ".codex", ".aws", "artifacts", "target"}
-RESERVED = {"bin/larp", "PACKAGE.md", "BUILD.json", "SHA256SUMS", "THIRD_PARTY.md"}
+RESERVED = {"bin/larp", "PACKAGE.md", "BUILD.json", "SHA256SUMS"}
 MAX_BYTES = 64 * 1024 * 1024
 
 
 def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def source_files(source_bytes: bytes) -> dict[str, tuple[bytes, int]]:
+    """Retain every supported tracked file, including vendored source and licenses."""
+    files: dict[str, tuple[bytes, int]] = {}
+    with tarfile.open(fileobj=io.BytesIO(source_bytes)) as source:
+        for member in source.getmembers():
+            path = PurePosixPath(member.name)
+            if (path.is_absolute() or ".." in path.parts or not path.parts or path.parts[0] in PRIVATE
+                    or any(character in member.name for character in "\n\r\\")):
+                raise ValueError(f"Unsupported source archive path: {member.name!r}")
+            if member.isdir():
+                continue
+            if not member.isfile() or str(path) in files or str(path) in RESERVED or path.parts[0] == "THIRD_PARTY":
+                raise ValueError(f"Unsupported, duplicate, or reserved source archive entry: {member.name!r}")
+            if member.size > MAX_BYTES or sum(len(data) for data, _ in files.values()) + member.size > MAX_BYTES:
+                raise ValueError("Candidate source contents exceed the 64 MiB packaging limit")
+            stream = source.extractfile(member)
+            assert stream is not None
+            files[str(path)] = (stream.read(), 0o755 if member.mode & 0o111 else 0o644)
+    return files
+
+
+def add_runtime_notice_index(files: dict[str, tuple[bytes, int]]) -> str:
+    """Add runtime notice documentation without replacing a source inventory."""
+    runtime = ("# Rust runtime notices\n\n"
+                       "The files under THIRD_PARTY/rust/ are copied unchanged from the exact Rust\n"
+                       "compiler distribution used for this binary. COPYRIGHT-library.html records\n"
+                       "the standard library's source and dependency notices; licenses/ retains the\n"
+                       "distribution's license texts. This upstream collection may cover more code\n"
+                       "than this particular executable uses. These components retain their own\n"
+                       "terms. LARP's original source is licensed under LICENSE (MIT).\n")
+    # The committed dependency inventory is source content, not generated output.
+    # Older source snapshots have no inventory and retain their previous index path.
+    if "THIRD_PARTY.md" in files:
+        destination = "THIRD_PARTY/RUST.md"
+    else:
+        destination = "THIRD_PARTY.md"
+    files[destination] = (runtime.encode(), 0o644)
+    return destination
 
 
 def main() -> None:
@@ -57,22 +97,10 @@ def main() -> None:
         parser.error("Source archive or binaries changed since the reproducibility check")
     if not binaries[0].startswith(b"\x7fELF\x02\x01") or binaries[0][18:20] != b"\x3e\x00":
         parser.error("Candidate binary must be a little-endian ELF64 x86-64 executable")
-    files: dict[str, tuple[bytes, int]] = {}
-    with tarfile.open(fileobj=io.BytesIO(source_bytes)) as source:
-        for member in source.getmembers():
-            path = PurePosixPath(member.name)
-            if (path.is_absolute() or ".." in path.parts or not path.parts or path.parts[0] in PRIVATE
-                    or any(character in member.name for character in "\n\r\\")):
-                parser.error(f"Unsupported source archive path: {member.name!r}")
-            if member.isdir():
-                continue
-            if not member.isfile() or str(path) in files or str(path) in RESERVED or path.parts[0] == "THIRD_PARTY":
-                parser.error(f"Unsupported, duplicate, or reserved source archive entry: {member.name!r}")
-            if member.size > MAX_BYTES or sum(len(data) for data, _ in files.values()) + member.size > MAX_BYTES:
-                parser.error("Candidate source contents exceed the 64 MiB packaging limit")
-            stream = source.extractfile(member)
-            assert stream is not None
-            files[str(path)] = (stream.read(), 0o755 if member.mode & 0o111 else 0o644)
+    try:
+        files = source_files(source_bytes)
+    except ValueError as error:
+        parser.error(str(error))
     package = tomllib.loads(files["Cargo.toml"][0].decode("utf-8"))["workspace"]["package"]
     version = package["version"]
     try:
@@ -119,14 +147,7 @@ def main() -> None:
             data = path.read_bytes()
             files[destination] = (data, 0o644)
             notice_manifest.append({"path": destination, "sha256": digest(data)})
-        third_party = ("# Rust runtime notices\n\n"
-                       "The files under THIRD_PARTY/rust/ are copied unchanged from the exact Rust\n"
-                       "compiler distribution used for this binary. COPYRIGHT-library.html records\n"
-                       "the standard library's source and dependency notices; licenses/ retains the\n"
-                       "distribution's license texts. This upstream collection may cover more code\n"
-                       "than this particular executable uses. These components retain their own\n"
-                       "terms. LARP's original source is licensed under LICENSE (MIT).\n")
-        files["THIRD_PARTY.md"] = (third_party.encode(), 0o644)
+        runtime_index = add_runtime_notice_index(files)
         abi = {"inspection": "not available", "glibc_symbol_versions": []}
         if shutil.which("readelf"):
             result = subprocess.run(["readelf", "--version-info", report["builds"][0]["binary"]],
@@ -149,7 +170,8 @@ def main() -> None:
         install = f"""# LARP {version} experimental candidate
 
 Source commit: `{revision}`. Target: `{report['target']}`. License: [MIT](LICENSE).
-Rust runtime notices are retained in [THIRD_PARTY.md](THIRD_PARTY.md).
+Third-party notices are retained in [THIRD_PARTY.md](THIRD_PARTY.md).
+Rust runtime details are retained in [{runtime_index}]({runtime_index}).
 This archive contains the tracked source snapshot, documentation, examples, and
 the prebuilt CLI at `bin/larp`. It is a local build candidate, not a published release.
 

@@ -8,7 +8,11 @@ The current public prerelease is [`v0.2.0-preview.1`](releases/0.2.0-preview.1-p
 The [preview audit](preview-readiness.md) records resolved semantic regressions,
 release evidence, and remaining design questions; a finite passing corpus and a
 published preview do not approve the whole proposed specification. File modules
-are included in this release as described below; package management remains future work.
+are included in this release as described below. This branch reports `0.3.0-dev`
+and adds manifest-based project commands; dependency package management remains
+future work. The implementation commit passed its [exact-commit hosted
+validation](validation-project-workflow.md#hosted-implementation-evidence); later
+revisions still require their own checks.
 
 ## Working features
 
@@ -83,8 +87,9 @@ unit is parsed and checked, including unused declarations. Shared dependencies
 retain one nominal identity; equal spellings from distinct files remain distinct.
 
 A pure injected-resolver graph and the CLI's canonical filesystem provider are
-separate boundaries. The default project root is the canonical entry's parent.
-Imports stay within that root, including after symlink resolution. Graph limits
+separate boundaries. Explicit-file commands use the canonical entry's parent
+as their root; development manifest commands use the canonical manifest parent.
+Imports stay within the selected root, including after symlink resolution. Graph limits
 are 64 files, 4096 import edges, 4 MiB aggregate source bytes, and 131072 lines.
 Cycles, wrong entry placement, inconsistent resolver identities, and duplicate
 aliases produce structured diagnostics. Public interfaces cannot expose private
@@ -101,6 +106,28 @@ specified file at a time. See [RFC 0001](rfcs/0001-file-modules.md) for the cont
 and [project fixtures](../tests/projects/README.md) for executable acceptance.
 The [local validation record](validation-file-modules.md) documents the passed
 gate and its limits; hosted results remain specific to their commit.
+
+## Manifest-based projects (`0.3.0-dev`)
+
+Implemented CLI paths include `larp new NAME`, schema-1 TOML manifests, nearest
+ancestor discovery, explicit `--manifest-path`, and no-file `check`, `run`, and
+`build`. The [project guide](projects.md) describes their actual contract.
+Scaffolds include a working entry and library, README, and `.gitignore`; no Git
+repository or license is created. Default artifacts go to the manifest root
+under `target/NAME.larpbc`. Build errors preserve existing output.
+
+Project mode allows imports between sibling directories inside the canonical
+manifest root; explicit-file mode retains the entry-parent rule and never
+discovers a manifest. Runtime cwd, stdin, argument handling, effects, resource
+limits and source/artifact verification remain unchanged. `fmt` and `dump`
+still require explicit files. There are no project dependencies, registry,
+workspaces, test runner, or incremental build cache.
+
+Manifest load/schema/path failures use `LARP-J001` through `J003`; scaffold
+failures use `J004`. Readable parse/schema errors retain diagnostic spans. The
+CLI uses a vendored upstream TOML parser rather than a custom TOML subset.
+This implementation is not yet a published release; local results and hosted
+checks must be tied to the exact commit independently of the M7 release record.
 
 ## Roles, extensions, and bound built-ins
 
@@ -237,7 +264,7 @@ executes it. Original source files are unnecessary when running an artifact.
 execution. `--gc-stress` collects at every object, array, closure, and lazy-cell allocation
 safepoint and may be combined with `--fuel`. `dump` emits disassembly
 or typed IR; `--ir` requires source because artifacts contain bytecode. Input is
-a UTF-8 entry source (with optional file imports in development) or a versioned artifact. `fmt SOURCE [--check|--stdout]` formats
+a UTF-8 entry source (with optional file imports) or a versioned artifact. `fmt SOURCE [--check|--stdout]` formats
 syntactically valid source without requiring type validity. It preserves raw
 tokens/comments and checks its result before publication. Default mode writes
 atomically; check/preview modes never write. See [formatter policy](formatter.md)
@@ -245,9 +272,21 @@ and the [artifact format](bytecode-format-v1.md) for baseline wire tables, limit
 [wire version 2](bytecode-format-v2.md), with version-1 loading retained.
 Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
+No-file project commands are available on this development branch:
+
+```sh
+larp new aura-app
+larp check --manifest-path aura-app/larp.toml
+larp run --manifest-path aura-app/larp.toml --gc-stress
+larp build --manifest-path aura-app/larp.toml
+```
+
+From the project directory or its descendants, omit `--manifest-path` to discover
+the nearest `larp.toml`. The published preview still requires explicit files.
+
 ## Not implemented yet
 
-Packages, re-exports, import cycles, separate compilation, and additional host
+Dependency packages, re-exports, import cycles, separate compilation, and additional host
 I/O APIs beyond arguments/stdin. These are tracked by the existing roadmap,
 not removed from the project objective. Later syntax is explicitly rejected.
 

@@ -7,7 +7,9 @@ make a useful contribution.
 
 The current public prerelease is
 [v0.2.0-preview.1 — File Modules](https://github.com/hlibstrochkovskyi/larp-lang/releases/tag/v0.2.0-preview.1),
-including [file modules](docs/modules.md).
+including [file modules](docs/modules.md). This branch is `0.3.0-dev`, with the
+[manifest-based project workflow](docs/projects.md) under development. Its exact
+commit needs its own validation; release evidence does not validate later work.
 The language and artifact formats remain experimental. Read the
 [implementation status](docs/implementation-status.md) for what works today;
 the [proposed specification](docs/spec/v0.1.md) also describes rules that need
@@ -17,8 +19,11 @@ continued review.
 
 Install Rust **1.99.0 or newer**, Cargo, rustfmt, Clippy, and Python **3.11 or
 newer**. CI uses Rust 1.99.0. A compatible system installation works; rustup is
-optional. The main Cargo workspace has no third-party dependencies, so its
-locked builds work offline. The separate fuzz workspace has additional setup.
+optional. The main Cargo workspace uses the vendored TOML parser and locked
+transitive sources described in [THIRD_PARTY.md](THIRD_PARTY.md). Its locked
+builds work offline, including with an empty Cargo cache. Preserve the relative
+`.cargo/config.toml` source replacement and upstream license/checksum files.
+The separate fuzz workspace has additional setup.
 
 ```sh
 git clone https://github.com/hlibstrochkovskyi/larp-lang.git
@@ -80,7 +85,10 @@ A useful PR description states the concrete problem, the new behavior, and the
 checks run. Explain any compatibility change or remaining limitation. If you
 change an observable language rule, include a before/after example and its
 acceptance criteria. New dependencies need a concrete purpose, license review,
-and a tracked lockfile update.
+and a tracked lockfile update. If a workspace dependency changes, update the
+reviewed vendor snapshot and [third-party inventory](THIRD_PARTY.md), and check
+an offline build with a fresh Cargo home; do not assume a warmed local cache
+proves source completeness.
 
 ## Check your change
 
