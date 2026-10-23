@@ -10,7 +10,9 @@ release evidence, and remaining design questions; a finite passing corpus and a
 published preview do not approve the whole proposed specification. File modules
 are included in this release as described below. This branch reports `0.3.0-dev`
 and adds manifest-based project commands; dependency package management remains
-future work. Exact-commit hosted validation of this development change is pending.
+future work. The implementation commit passed its [exact-commit hosted
+validation](validation-project-workflow.md#hosted-implementation-evidence); later
+revisions still require their own checks.
 
 ## Working features
 

@@ -75,3 +75,33 @@ sources retain their original notices; [THIRD_PARTY.md](../THIRD_PARTY.md)
 records provenance. These finite checks do not establish general language
 correctness, hostile-filesystem isolation, cross-toolchain reproducibility,
 additional platforms, a package registry, or a new public release.
+
+## Hosted implementation evidence
+
+Implementation commit
+[`bac24b951704ac087f28338e7db89b8e37a82206`](https://github.com/hlibstrochkovskyi/larp-lang/commit/bac24b951704ac087f28338e7db89b8e37a82206)
+passed all five jobs in
+[run 39915882362](https://github.com/hlibstrochkovskyi/larp-lang/actions/runs/39915882362):
+workspace/conformance checks, reproducible build and packaging, candidate execution
+on Ubuntu 24.04, candidate execution on Ubuntu 26.04, and the same-archive matrix.
+
+The downloaded matrix report records 4078 checksummed payload files, 89
+conformance cases, historical artifact versions 1 and 2, the existing pitch
+project's five VM executions, and the two new workflows' 14 VM executions on
+each platform. Both hosts used these exact candidate bytes:
+
+- Archive: `larp-0.3.0-dev-x86_64-unknown-linux-gnu-bac24b951704.tar.gz`.
+- Archive SHA-256: `56425e302ffd092d84ac4fd57faa8ceaee5401b2bd4e8adc27f89408d03f7c88`.
+- CLI SHA-256: `e015f4c3c2ec9e3164d71d42fc83815ad4444dde9c0e21556f9be902f5017323`.
+
+The CI artifact ZIP and its archive were downloaded and their recorded digests
+checked. The existing-candidate checker independently passed again on the local
+Arch Linux/glibc 2.44 host, including the manifest workflow. That additional run
+is local evidence, not an expansion of the declared Ubuntu support matrix.
+Two local clean Rust 1.99.0 release builds also matched one another; equality is
+within each controlled build run, not between system and hosted toolchains.
+
+[PR #1](https://github.com/hlibstrochkovskyi/larp-lang/pull/1) carries the change
+for maintainer review. Documentation commits after the implementation commit
+require their own exact-revision CI; they do not rewrite the evidence above.
+No tag, release publication or merge is established by this record.
