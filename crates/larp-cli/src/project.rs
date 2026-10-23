@@ -28,6 +28,19 @@ pub(super) fn open_entry(path: &Path) -> Result<(ModuleSource, FileResolver), St
         .parent()
         .ok_or_else(|| "entry source must have a parent directory".to_owned())?
         .to_path_buf();
+    open_project(&canonical, &root)
+}
+
+pub(super) fn open_project(
+    path: &Path,
+    root: &Path,
+) -> Result<(ModuleSource, FileResolver), String> {
+    let canonical = path
+        .canonicalize()
+        .map_err(|error| format!("cannot open entry {}: {error}", path.display()))?;
+    let root = root
+        .canonicalize()
+        .map_err(|error| format!("cannot open project root {}: {error}", root.display()))?;
     let mut resolver = FileResolver {
         root,
         sources: HashMap::new(),

@@ -13,6 +13,26 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-J001",
+        title: "Project manifest loading failed",
+        explanation: "No larp.toml was found, or the selected manifest could not be read as a regular UTF-8 file within the 64 KiB limit. Use --manifest-path to select an existing larp.toml explicitly. An invalid nearest manifest is never skipped.",
+    },
+    DiagnosticCode {
+        id: "LARP-J002",
+        title: "Invalid project manifest",
+        explanation: "larp.toml must be valid TOML with schema = 1 and a project table containing only the required name and entry strings. Correct the indicated syntax or field; unknown fields are rejected to expose misspellings.",
+    },
+    DiagnosticCode {
+        id: "LARP-J003",
+        title: "Invalid project path",
+        explanation: "The entry must be a relative .larp source within the canonical manifest root. Artifact output cannot replace the selected manifest or any loaded source. The default target directory must be a real directory, not a symlink.",
+    },
+    DiagnosticCode {
+        id: "LARP-J004",
+        title: "Project creation failed",
+        explanation: "larp new requires a portable project name and a fresh destination directory. Existing files are not overwritten. If a later write fails, the error identifies the partial project whose files were preserved.",
+    },
+    DiagnosticCode {
         id: "LARP-M001",
         title: "Module resolution failed",
         explanation: "An import could not be resolved, or a resolver returned inconsistent contents for one module identity. Check the import path and resolver configuration. The same identity must retain identical source text and display name throughout a project load.",
@@ -399,7 +419,7 @@ mod tests {
             let bytes = code.id.as_bytes();
             assert_eq!(bytes.len(), 9);
             assert!(code.id.starts_with("LARP-"));
-            assert!(b"LPNTESRCBM".contains(&bytes[5]));
+            assert!(b"LPNTESRCBMJ".contains(&bytes[5]));
             assert!(bytes[6..].iter().all(u8::is_ascii_digit));
             assert!(ids.insert(code.id));
             assert!(!code.title.is_empty());

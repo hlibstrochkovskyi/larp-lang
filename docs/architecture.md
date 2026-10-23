@@ -12,7 +12,9 @@ see [implementation status](implementation-status.md) for the supported subset
 and the [File Modules publication record](releases/0.2.0-preview.1-publication.md)
 for the exact shipped revision. The released frontend accepts standalone and
 multi-file programs; source modules are compile-time namespaces distinct from
-the resulting bytecode module metadata.
+the resulting bytecode module metadata. The `0.3.0-dev` branch adds
+[manifest-based project commands](projects.md) at the CLI boundary; these commands
+are not part of the published `0.2.0-preview.1` archive.
 
 ## Whole-project compilation (`0.2.0-preview.1`)
 
@@ -26,9 +28,10 @@ The CLI chooses the unit frontend when legacy parsing does not accept the source
 resolver, performs no filesystem I/O, and assigns deterministic breadth-first
 source identities. It deduplicates provider identities, bounds the graph, rejects
 cycles and invalid entry placement, and retains sources for diagnostics on errors.
-The CLI provider canonicalizes regular `.larp` files within the entry's parent,
-with cached snapshots and bounded reads. Canonical path containment is a path
-policy, not a hostile-filesystem race guarantee.
+The CLI provider canonicalizes regular `.larp` files within an explicit root,
+with cached snapshots and bounded reads. Explicit-file commands use the entry's
+parent; manifest-based commands use the canonical manifest parent. Canonical
+path containment is a path policy, not a hostile-filesystem race guarantee.
 
 `compile_project` borrows the original unit ASTs. Symbols are keyed by lexical
 `SourceId` and name, with explicit direct import edges and public-name sets.
@@ -45,6 +48,37 @@ ordinary members still win dot lookup. The resulting whole-project IR passes
 through the ordinary lowerer and independent verifier. Artifacts use the existing
 multi-source table and wire version 2; the runtime needs no module loader.
 See [RFC 0001](rfcs/0001-file-modules.md) and [module usage](modules.md).
+
+## Project workflow (`0.3.0-dev`)
+
+Manifest discovery, TOML/schema validation, path policy, scaffolding and command
+selection live in `larp-cli`. `manifest.rs` reads a bounded UTF-8 `larp.toml`,
+selects the canonical root and entry, and keeps parse/schema source spans.
+`scaffold.rs` reserves a fresh directory and writes a runnable two-file project
+using exclusive file creation. It never initializes Git or chooses a license.
+
+No-file `check`, `run`, and `build` discover the nearest ancestor manifest;
+`--manifest-path` selects it explicitly. Explicit-file commands bypass discovery
+and retain their entry-parent import boundary. The filesystem resolver accepts
+the manifest root for project mode, so sibling source directories inside that
+root are available without weakening containment. The pure compiler source
+resolver API and VM remain independent of manifests and host directories.
+
+Each project command compiles fresh source through the same frontend, type and
+effect checks, typed IR and verifier. There is no incremental cache, package
+registry, dependency fetching, or separate compilation. Project builds default
+to `ROOT/target/NAME.larpbc`, publish through the existing atomic file writer,
+and cannot replace loaded sources or the manifest. Source errors preserve the
+previous artifact. Run preserves the invocation working directory and existing
+stdin/argument/fuel/capability behavior.
+
+The parser is upstream `toml` with only `std` and `parse` features. Five external
+crates are compiled; the complete locked external dependency set is vendored to preserve
+empty-cache offline builds. See [THIRD_PARTY.md](../THIRD_PARTY.md) for provenance
+and upstream license notices. The protocol and compatibility contract is
+[RFC 0002](rfcs/0002-project-workflow.md); hosted validation remains specific to
+the eventual exact commit. This extension changes neither artifact wire version
+nor either JSON schema.
 
 ## Pipeline and contracts
 
@@ -137,7 +171,7 @@ Current crates:
 | `larp-vm` | Iterative frames/callbacks, tagged values, object/array/closure/lazy GC, checked execution, observations |
 | `larp-artifact` | Versioned encoding, bounded loading, source maps, mandatory verification |
 | `larp-format` | AST annotations, lossless token/comment layout, preservation checks |
-| `larp-cli` | `build`, `check`, `run`, `dump`, `fmt`, and `explain` |
+| `larp-cli` | Project discovery/scaffolding; `new`, `build`, `check`, `run`, `dump`, `fmt`, and `explain` |
 | `larp-fuzz-support` | Shared compiler/formatter/loader invariants for stable replay and libFuzzer |
 | `larp-scenario-model` | Isolated experiment, not linked into the CLI |
 
@@ -146,9 +180,10 @@ CLI to compiler/runtime, never from semantic libraries to CLI. The VM and
 bytecode format must not depend on AST types. Share only deliberately stable
 artifact types between the emitter and loader.
 
-The main workspace currently has no third-party Rust dependencies; the isolated
-fuzz workspace uses external instrumentation tooling. Evaluate libraries for CLI
-parsing, diagnostic rendering, serialization, and property testing when needed.
+The main workspace uses a vendored TOML parser for manifest syntax. The isolated
+fuzz workspace uses external instrumentation tooling. Evaluate libraries for
+additional CLI parsing, diagnostic rendering, serialization, and property testing
+when a concrete boundary needs them.
 A custom source location abstraction is small; a custom terminal layout engine
 or cryptographic artifact format is not a good use of engineering time.
 

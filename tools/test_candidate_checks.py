@@ -3,12 +3,16 @@
 import copy
 import hashlib
 import json
+import io
 from pathlib import Path
 import tempfile
+import tarfile
 import unittest
 
 from check_candidate import checked_contents
 from check_candidate_matrix import MODES, PROJECT_MODES, validate
+from check_project_workflow import STAGES, RUN_STAGES, expected_commands
+from package_candidate import add_runtime_notice_index, source_files
 from version_contract import preview_metadata, validate_identity, version_channel
 
 REVISION = "a" * 40
@@ -33,6 +37,14 @@ def synthetic_reports() -> dict:
             "projects": {"status": "passed", "binary_sha256": "c" * 64, "manifest_sha256": "e" * 64,
                          "project_count": 1, "vm_executions": 5,
                          "cases": [{"id": "pitch", "status": "passed", "modes": copy.copy(PROJECT_MODES)}]},
+            "project_workflow": {
+                "schema_version": 1, "status": "passed", "binary_sha256": "c" * 64,
+                "driver_sha256": "f" * 64, "vm_executions": len(STAGES) * len(RUN_STAGES),
+                "cases": [{"id": identifier, "status": "passed", "manifest_sha256": "a" * 64,
+                           "sources_unavailable": True,
+                           "sources": {"src/main.larp": "b" * 64,
+                                       "src/aura.larp" if identifier == "scaffold" else "lib/aura.larp": "d" * 64},
+                           "commands": expected_commands(identifier)} for identifier in STAGES]},
             "conformance_modes": [{"flags": copy.copy(mode), "passed": 2, "pending": 0} for mode in MODES],
             "environment": {"system": "Linux", "machine": "x86_64", "glibc": "synthetic libc",
                             "os_release": {"ID": "ubuntu", "VERSION_ID": release},
@@ -52,6 +64,54 @@ class MatrixEvidenceTests(unittest.TestCase):
             else:
                 reports["ubuntu-26.04"]["projects"].update(change)
             with self.subTest(change=change), self.assertRaises(ValueError):
+                validate(reports, REVISION)
+
+    def test_missing_or_claimed_only_manifest_workflow_is_rejected(self):
+        for change in (None, {"status": "failed"}, {"binary_sha256": "f" * 64},
+                       {"vm_executions": True}, {"vm_executions": 13}, {"cases": []}):
+            reports = synthetic_reports()
+            for report in reports.values():
+                if change is None:
+                    report.pop("project_workflow")
+                else:
+                    report["project_workflow"].update(change)
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                validate(reports, REVISION)
+
+    def test_incomplete_or_fabricated_workflow_steps_are_rejected_even_on_both_hosts(self):
+        def mutate(workflow, variant):
+            case = workflow["cases"][0]
+            if variant == "missing-command":
+                case["commands"].pop()
+            elif variant == "duplicate-command":
+                case["commands"][-1] = copy.deepcopy(case["commands"][-2])
+            elif variant == "sources-still-present":
+                case["sources_unavailable"] = False
+            elif variant == "no-source-inventory":
+                case["sources"] = {}
+            else:
+                command = next(command for command in case["commands"] if command["stage"] == "source-gc-stress")
+                field, value = {"failed-command": ("returncode", 1), "timeout": ("timed_out", True),
+                                "wrong-output": ("stdout", "invented\n"),
+                                "missing-gc-stress": ("arguments", ["run"])}[variant]
+                command[field] = value
+        for variant in ("missing-command", "duplicate-command", "sources-still-present", "no-source-inventory",
+                        "failed-command", "timeout", "wrong-output", "missing-gc-stress"):
+            reports = synthetic_reports()
+            for report in reports.values():
+                mutate(report["project_workflow"], variant)
+            with self.subTest(variant=variant), self.assertRaises(ValueError):
+                validate(reports, REVISION)
+
+    def test_different_workflow_driver_or_sources_across_hosts_are_rejected(self):
+        for field in ("driver_sha256", "source_sha256"):
+            reports = synthetic_reports()
+            workflow = reports["ubuntu-26.04"]["project_workflow"]
+            if field == "driver_sha256":
+                workflow[field] = "a" * 64
+            else:
+                workflow["cases"][1]["sources"]["lib/aura.larp"] = "a" * 64
+            with self.subTest(field=field), self.assertRaises(ValueError):
                 validate(reports, REVISION)
 
     def test_different_packaged_project_inventory_is_rejected(self):
@@ -146,6 +206,46 @@ class PayloadInventoryTests(unittest.TestCase):
             root.joinpath("SHA256SUMS").write_text(f"{'a' * 64}  ../outside.txt\n", encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "checksum path"):
                 checked_contents(root)
+
+
+class CandidateSourcePackagingTests(unittest.TestCase):
+    def archive(self, entries):
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode="w") as archive:
+            for path, data, mode in entries:
+                member = tarfile.TarInfo(path)
+                member.size, member.mode = len(data), mode
+                archive.addfile(member, io.BytesIO(data))
+        return stream.getvalue()
+
+    def test_tracked_vendor_config_license_and_source_inventory_are_preserved(self):
+        entries = [("THIRD_PARTY.md", b"Original dependency inventory\n", 0o644),
+                   ("vendor/toml/LICENSE-MIT", b"Original upstream license\n", 0o644),
+                   ("vendor/toml/src/parser.rs", b"upstream source\n", 0o644),
+                   (".cargo/config.toml", b"source replacement\n", 0o644),
+                   ("tools/script.py", b"script\n", 0o755)]
+        files = source_files(self.archive(entries))
+        self.assertEqual(files, {path: (data, mode) for path, data, mode in entries})
+        self.assertEqual(add_runtime_notice_index(files), "THIRD_PARTY/RUST.md")
+        self.assertEqual(files["THIRD_PARTY.md"], (entries[0][1], 0o644))
+        self.assertIn(b"exact Rust", files["THIRD_PARTY/RUST.md"][0])
+        for path, data, mode in entries:
+            self.assertEqual(files[path], (data, mode))
+
+    def test_older_snapshot_retains_generated_runtime_notice_index(self):
+        files = {"LICENSE": (b"MIT License\n", 0o644)}
+        self.assertEqual(add_runtime_notice_index(files), "THIRD_PARTY.md")
+        self.assertIn(b"Rust runtime notices", files["THIRD_PARTY.md"][0])
+
+    def test_private_and_reserved_archive_entries_are_rejected(self):
+        for path in ("Ideas-not-for push!/secret.md", ".git/config", "../outside", "/absolute",
+                     "bin/larp", "THIRD_PARTY/rust/LICENSE", "BUILD.json"):
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                source_files(self.archive([(path, b"preserve original", 0o644)]))
+
+    def test_duplicate_archive_entries_are_rejected(self):
+        with self.assertRaises(ValueError):
+            source_files(self.archive([("README.md", b"one", 0o644), ("README.md", b"two", 0o644)]))
 
 
 class PreviewNotesTests(unittest.TestCase):

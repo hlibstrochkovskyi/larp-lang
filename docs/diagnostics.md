@@ -9,11 +9,12 @@ larp --diagnostic-format=json run program.larpbc --gc-stress
 larp --diagnostic-format=text run main.larp
 ```
 
-The option applies to `check`, `build`, `run`, `dump`, and `fmt` failures.
+The option applies to `new`, `check`, `build`, `run`, `dump`, and `fmt` failures.
 Exit codes keep their ordinary meaning: 0 for success, 1 for compilation/runtime
 or file/tooling failure, 2 for invalid CLI usage. Successful commands emit no
 completion record. Stdout keeps its usual contents, including program output,
-formatted source, dumps, explanations, help, and version text. A value after
+formatted source, dumps, explanations, help, version text, and successful
+scaffold creation instructions. A value after
 `run ... --` is a program argument, even if it spells this global option.
 The separate `larp --version --json` command reports toolchain and format
 capabilities on stdout; its `schema_version` belongs to the
@@ -73,7 +74,7 @@ labels, and help can improve without changing the code. Diagnostics loaded from
 an artifact use its embedded original sources, even after the input file moves
 or the source is deleted.
 
-## Module diagnostics (`0.2.0-dev`)
+## Module diagnostics (`0.2.0-preview.1` and later)
 
 Project diagnostics preserve the defining file's source ID and original UTF-8
 byte offsets. Both text and JSON render each related label against its own source;
@@ -86,6 +87,29 @@ private nominal types in public interfaces, and `M007` ambiguous exported names.
 Unavailable private declarations use the ordinary name/type error; class-private
 access retains its existing diagnostics. See [file modules](modules.md).
 
+## Project diagnostics (`0.3.0-dev`)
+
+Manifest load/discovery errors use `LARP-J001`; TOML syntax and manifest schema
+errors use `LARP-J002`; entry/output path policy errors use `LARP-J003`; scaffold
+creation and name failures use `LARP-J004`. Use `larp explain CODE` for the
+registered explanation. These codes belong to the development project workflow,
+not the published `0.2.0-preview.1`.
+
+When manifest source is available, parse/schema and entry-policy failures use
+the ordinary `diagnostic` record above, with the canonical manifest path and
+validated UTF-8 span. Missing fields and some policy failures use an empty
+range at the beginning of the manifest; a precise field span is not fabricated.
+Failures without readable source, output-policy failures, and scaffold failures
+use `project_error` events with their non-null `LARP-J...` code. Manifest source
+IDs identify that diagnostic operation and are not import graph identities.
+
+Invalid CLI syntax and invalid `new` names exit 2 before discovery or execution;
+manifest, filesystem, compilation, and runtime failures exit 1. Ordinary command
+usage errors remain `cli_error` events with null code; invalid scaffold names
+use `project_error` and `LARP-J004`. Successful `check` and `build` remain silent;
+successful `new` prints its path and suggested commands on stdout. This adds an
+event kind while retaining diagnostic JSON schema 1.
+
 ## Other stderr events
 
 These events have `schema_version`, `kind`, nullable `code`, and `message`:
@@ -94,6 +118,7 @@ These events have `schema_version`, `kind`, nullable `code`, and `message`:
 | --- | --- |
 | `inspection` | A UTF-8 chunk of `palantir` output; code is null |
 | `cli_error` | File/argument/output failure without a source diagnostic; code is null |
+| `project_error` | Manifest/scaffold/output-policy failure without a source diagnostic; code is a `LARP-J...` identifier |
 | `artifact_error` | Artifact encode/load failure; code is a `LARP-B...` identifier |
 | `format_needed` | `fmt --check` found a formatting difference; code is null |
 

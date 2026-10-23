@@ -5,7 +5,9 @@ Status: M1 through M7 are implemented within their declared preview scopes.
 experimental prerelease. Broader specification review and later language/tooling
 work remain open. File modules passed local and exact-commit hosted gates and
 are published in [`v0.2.0-preview.1`](releases/0.2.0-preview.1-publication.md).
-Later commits still require their own validation.
+M8 manifest-based project commands are implemented on `0.3.0-dev`; their
+[validation gates](validation-project-workflow.md) require exact-commit evidence.
+Later commits require their own validation.
 This is a sequence of acceptance gates, not a delivery-date promise.
 
 ## M0 — Reviewable design and repository foundation (established)
@@ -240,9 +242,37 @@ violations. Preserve original source spans after deleting source files.
 Packages, re-exports, cyclic imports, separate compilation, and dynamic loading
 remain outside this gate.
 
+## M8 — Manifest-based projects (implemented; exact-commit acceptance gates)
+
+[RFC 0002](rfcs/0002-project-workflow.md) defines `larp.toml` schema 1, bounded TOML
+parsing, nearest-ancestor discovery, explicit `--manifest-path`, and a canonical
+manifest-root import boundary. `larp new NAME` writes a runnable two-file scaffold.
+No-file `check`, `run`, and `build` use the selected manifest; explicit-file CLI
+behavior remains available. Default output is `target/NAME.larpbc` under the root.
+The [project guide](projects.md) describes commands, path rules, diagnostics and
+limits. Vendored parser sources preserve empty-cache locked offline builds.
+
+Gate: execute a generated project through source and independently loaded
+artifacts, ordinary/stress GC, and after original sources become unavailable.
+Check nested discovery, explicit selection, sibling imports, source locations,
+stdin/arguments/fuel, malformed and oversized manifests, containment, option
+validation, and preservation of existing paths and build outputs. Run previous
+corpus/module/formatter/historical-artifact gates unchanged. Verify the packaged
+CLI workflow without Rust or network, dependency license notices, reproducibility
+and same-archive hosted compatibility before merging. A local test or this
+roadmap entry does not establish that the hosted gate passed.
+
+There is no dependency registry, project workspace, incremental build cache,
+recursive formatter, project test runner, or automatic release in this milestone.
+
+## Next language work
+
+Enums, richer pattern matching, and result propagation should form the next
+reviewable language slice, followed by user-defined generics and standard-library
+growth. These require separate RFCs and executable acceptance criteria.
+
 ## Later RFCs
 
-Packages and richer module APIs, user-defined generics, richer pattern matching and result
-propagation, scenario validation groups, nested/first-class scenarios, scenario
-object graphs, generalized effects, async, native backend, optimizer, debugger, LSP.
+Dependency packages and richer module APIs, scenario validation groups,
+nested/first-class scenarios, scenario object graphs, generalized effects, async, native backend, optimizer, debugger, LSP.
 Keep the typed IR backend-neutral, but do not promise native ABI compatibility.

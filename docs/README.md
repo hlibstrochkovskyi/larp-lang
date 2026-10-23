@@ -8,13 +8,17 @@ specification describes the design baseline. Neither a proposal nor a passing
 finite test suite establishes complete language correctness.
 
 The current preview includes [file modules](modules.md); the historical
-`v0.1.0-preview.1` remains single-file.
+`v0.1.0-preview.1` remains single-file. The `0.3.0-dev` development branch adds
+[manifest-based projects](projects.md), specified by [RFC 0002](rfcs/0002-project-workflow.md).
+That workflow is not included in the current public release; exact-commit hosted
+validation is still required before merging and publication.
 
 ## Learn and run
 
 | Guide | Use it for |
 | --- | --- |
 | [Practical reference](reference.md) | Types, control flow, functions, objects, effects, and complete runnable examples |
+| [Projects](projects.md) | Development workflow: `larp new`, `larp.toml`, discovery, and project check/run/build |
 | [File modules](modules.md) | Imports, exports, lexical namespaces, extensions, and whole-project artifacts |
 | [Example programs](../examples/) | Collections, roles, lazy values, input, and scenario comparisons |
 | [Implementation status](implementation-status.md) | Supported syntax, CLI commands, restrictions, and runtime limits |
@@ -32,6 +36,7 @@ The current preview includes [file modules](modules.md); the historical
 | [Architecture](architecture.md) | Compiler phases, crate responsibilities, verifier, GC, and runtime boundaries |
 | [Roadmap](roadmap.md) | Completed milestones and the next language/tooling work |
 | [Conformance corpus](../tests/conformance/README.md) | Positive, compile-fail, and runtime-error contracts |
+| [Third-party sources](../THIRD_PARTY.md) | Vendored parser dependencies, license notices, and offline updates |
 | [Fuzzing](../fuzz/README.md) | Separate instrumented workspace and stable regression replay |
 | [State-model experiment](../experiments/scenario-model/README.md) | Independent Rust transition model and its limited scope |
 
@@ -75,7 +80,7 @@ source revisions matter; an old passing result does not validate a newer commit.
 | --- | --- |
 | Foundation and algorithms | [Foundation](validation-foundation.md), [scalars](validation-scalar-core.md), [functions/recovery](validation-functions-and-recovery.md) |
 | Types and control flow | [Contextual equality](validation-contextual-equality.md), [constant control flow](validation-control-flow.md) |
-| File modules | [Whole-project compilation](validation-file-modules.md) |
+| File modules and projects | [Whole-project compilation](validation-file-modules.md), [manifest workflow](validation-project-workflow.md) |
 | Collections and objects | [Collections](validation-collections.md), [objects](validation-objects.md), [roles/extensions](validation-roles-and-extensions.md) |
 | Alternative state | [Scenarios](validation-scenarios.md), [lazy/suppression](validation-lazy-and-suppression.md) |
 | CLI and persisted programs | [Artifacts](validation-artifacts.md), [formatter](validation-formatter.md), [input](validation-host-input.md), [reference examples](validation-reference.md) |

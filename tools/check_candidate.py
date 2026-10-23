@@ -15,7 +15,8 @@ import tarfile
 import tomllib
 
 from version_contract import specification_version, validate_identity
-from check_candidate_matrix import validate_projects
+from check_candidate_matrix import validate_projects, validate_workflow
+from check_project_workflow import summary as workflow_summary
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_BYTES = 128 * 1024 * 1024
@@ -228,6 +229,15 @@ def main() -> None:
                 or [case["id"] for case in projects["cases"]] != [case["id"] for case in inventory["cases"]]):
             raise RuntimeError("Packaged project execution differs from the archived fixture inventory")
         report["projects"] = project_summary
+        workflow_output = output / "project-workflow"
+        invoke([sys.executable, "-B", str(root / "tools/check_project_workflow.py"), "--bin", str(executable),
+                "--output", str(workflow_output)], output, timeout=120)
+        workflow = json.loads(workflow_output.joinpath("workflow-report.json").read_text(encoding="utf-8"))
+        portable_workflow = workflow_summary(workflow)
+        validate_workflow(portable_workflow, contents["bin/larp"])
+        if workflow["driver_sha256"] != contents["tools/check_project_workflow.py"]:
+            raise RuntimeError("Project workflow did not execute the archived validation driver")
+        report["project_workflow"] = portable_workflow
         save()
         if checked_contents(root) != contents:
             raise RuntimeError("Candidate payload changed during execution")
