@@ -10,7 +10,9 @@ release evidence, and remaining design questions; a finite passing corpus and a
 published preview do not approve the whole proposed specification. File modules
 are included in this release as described below. This branch reports `0.3.0-dev`
 and adds manifest-based project commands plus the M9 enum/match/propagation
-slice described below. M9 acceptance checks remain in progress; dependency
+slice described below. The M9 implementation candidate passed
+[local and hosted gates](validation-patterns.md); later revisions need their own
+checks. Dependency
 package management remains future work. The M8 implementation commit passed its
 [exact-commit hosted validation](validation-project-workflow.md#hosted-implementation-evidence); later
 revisions still require their own checks.
@@ -136,7 +138,8 @@ The development compiler implements [RFC 0003](rfcs/0003-enums-patterns-and-prop
 through typed IR, independent bytecode verification, and the VM. The current
 public release does not include this slice. The [practical guide](patterns.md)
 has complete examples exercised by ordered [execution contracts](pattern-cases.json);
-its local executions do not establish full M9 acceptance or hosted compatibility.
+the [validation record](validation-patterns.md) identifies the passed local and
+exact-commit hosted candidate checks without claiming a new release.
 
 - Nominal `enum` values have nullary or positional-payload variants, pure
   first-class payload constructors, and exact type identity across files.

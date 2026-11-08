@@ -12,8 +12,9 @@ The current preview includes [file modules](modules.md); the historical
 [manifest-based projects](projects.md), specified by [RFC 0002](rfcs/0002-project-workflow.md),
 and [enums, matching, and result propagation](patterns.md), specified by
 [RFC 0003](rfcs/0003-enums-patterns-and-propagation.md). These development features
-are not included in the current public release. M9 acceptance checks and its
-exact-commit hosted validation remain in progress.
+are not included in the current public release. The M9 implementation candidate
+passed [local and exact-commit hosted validation](validation-patterns.md); later
+revisions require their own evidence.
 
 ## Learn and run
 

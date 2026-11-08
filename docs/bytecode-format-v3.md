@@ -96,8 +96,8 @@ section framing and new type/opcode gates are checked independently.
 
 Codec tests cover explicit tags, truncations, prior-type references, bounded
 layout counts, deterministic enum payload-dispatch roundtrips and mandatory
-nominal verification. Runtime acceptance, including a frozen executable v3
-fixture, must pass before claiming reader-3 execution compatibility. Existing
+nominal verification. The [validation record](validation-patterns.md) identifies the candidate that
+passed runtime acceptance, including a genuine frozen executable v3 fixture. Existing
 version-1/2 compatibility fixtures retain their original source and artifact
 hashes. See the [version policy](versioning.md) and RFC acceptance gates for the
 full compiler/VM evidence required by this milestone.

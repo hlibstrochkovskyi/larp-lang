@@ -1,7 +1,8 @@
 # Enums, matching, and result propagation
 
-Status: implemented development features on **`0.3.0-dev`**, with the M9
-acceptance checks still in progress. The current public release,
+Status: implemented development features on **`0.3.0-dev`**. The implementation
+candidate passed [local and exact-commit hosted checks](validation-patterns.md).
+The current public release,
 [`v0.2.0-preview.1`](releases/0.2.0-preview.1-publication.md), does not include
 `enum`, `match`, or `?`. [RFC 0003](rfcs/0003-enums-patterns-and-propagation.md)
 and its [grammar extension](spec/patterns.ebnf) define the contract.

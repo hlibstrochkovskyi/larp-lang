@@ -1,8 +1,9 @@
 # RFC 0003 — Nominal enums, exhaustive match, and result propagation
 
 Status: implemented development slice on `feature/patterns`, based on
-`feature/projects` while PR #1 is under review. Local compiler/VM examples pass;
-frozen version-3 and exact-commit hosted acceptance remain separate gates.
+`feature/projects` while PR #1 is under review. Local compiler/VM, frozen
+version-3 and exact-commit hosted candidate checks passed as recorded in
+[validation](../validation-patterns.md). Later revisions need their own checks.
 The published preview does not implement this RFC. Toolchain version remains
 `0.3.0-dev`; release publication is a separate decision.
 

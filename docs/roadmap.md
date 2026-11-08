@@ -265,7 +265,7 @@ roadmap entry does not establish that the hosted gate passed.
 There is no dependency registry, project workspace, incremental build cache,
 recursive formatter, project test runner, or automatic release in this milestone.
 
-## M9 — Nominal sums and expected-error flow (implementation; acceptance in progress)
+## M9 — Nominal sums and expected-error flow (implemented; candidate validated)
 
 [RFC 0003](rfcs/0003-enums-patterns-and-propagation.md) defines nominal value
 `enum` declarations, exhaustive expression-oriented `match`, and postfix result
@@ -285,7 +285,9 @@ contracts. Preserve genuine historical v1/v2 artifacts and add a genuine frozen
 v3 producer fixture. Required workspace, corpus, guide, project, version,
 resource and reproducibility gates, plus packaged Ubuntu 24.04/26.04 same-archive
 execution, must pass for the exact proposed commit before M9 is marked complete.
-Current local examples are evidence of implementation, not completion of that gate.
+The [validation record](validation-patterns.md) identifies the candidate that
+passed these gates locally and on both hosted platforms. Later revisions require
+their own exact-head checks. Publication and maintainer review remain separate.
 
 ## Next language work
 

@@ -16,7 +16,8 @@ the resulting bytecode module metadata. The `0.3.0-dev` branch adds
 [manifest-based project commands](projects.md) at the CLI boundary; these commands
 are not part of the published `0.2.0-preview.1` archive. The same development
 branch implements [nominal enums, exhaustive matching, and result propagation](patterns.md);
-the M9 acceptance gate is still in progress.
+the [implementation candidate passed local and exact-commit hosted gates](validation-patterns.md).
+Later revisions require their own checks.
 
 ## Whole-project compilation (`0.2.0-preview.1`)
 
