@@ -372,7 +372,7 @@
       "status": "active",
       "expect": {
         "kind": "run",
-        "stdout": "line\r\n🦀\t\"\n"
+        "stdout": "line\r\n\ud83e\udd80\t\"\n"
       }
     },
     {
@@ -483,7 +483,7 @@
       "status": "active",
       "expect": {
         "kind": "run",
-        "stdout": "a\né\n🦀\n3\n"
+        "stdout": "a\n\u00e9\n\ud83e\udd80\n3\n"
       }
     },
     {
@@ -845,12 +845,12 @@
       "status": "active",
       "expect": {
         "kind": "run",
-        "stdout": "49\n🦀\n--fuel\none\n\nEOF\n"
+        "stdout": "49\n\ud83e\udd80\n--fuel\none\n\nEOF\n"
       },
       "input": {
         "args": [
           "49",
-          "🦀",
+          "\ud83e\udd80",
           "--fuel"
         ],
         "stdin": "one\r\n\n"
@@ -923,6 +923,116 @@
       "expect": {
         "kind": "compile_error",
         "code": "LARP-E001"
+      }
+    },
+    {
+      "id": "enum-results",
+      "path": "pass/enum-results.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "49\n490\n20\n7\n"
+      }
+    },
+    {
+      "id": "enum-managed",
+      "path": "pass/enum-managed.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "49\n41\n8\n"
+      }
+    },
+    {
+      "id": "propagation-order",
+      "path": "pass/propagation-order.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "run",
+        "stdout": "first\n0\nfirst\nlast\n49\n7\naudible\n"
+      }
+    },
+    {
+      "id": "enum-recursive",
+      "path": "fail/enum-recursive.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T015"
+      }
+    },
+    {
+      "id": "enum-duplicate",
+      "path": "fail/enum-duplicate.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T015"
+      }
+    },
+    {
+      "id": "match-incomplete",
+      "path": "fail/match-incomplete.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T016"
+      }
+    },
+    {
+      "id": "match-duplicate",
+      "path": "fail/match-duplicate.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T016"
+      }
+    },
+    {
+      "id": "match-nominal",
+      "path": "fail/match-nominal.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T016"
+      }
+    },
+    {
+      "id": "propagation-error-type",
+      "path": "fail/propagation-error-type.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T017"
+      }
+    },
+    {
+      "id": "propagation-main",
+      "path": "fail/propagation-main.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-T017"
+      }
+    },
+    {
+      "id": "enum-snapshot",
+      "path": "fail/enum-snapshot.larp",
+      "milestone": "M9",
+      "status": "active",
+      "expect": {
+        "kind": "compile_error",
+        "code": "LARP-S001"
       }
     }
   ]

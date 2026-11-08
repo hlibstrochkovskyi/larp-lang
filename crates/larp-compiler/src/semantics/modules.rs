@@ -38,6 +38,13 @@ impl<T> Scope<T> {
                                 .insert((module.source, item.item.name.text.clone()));
                         }
                     }
+                    for item in &module.unit.enums {
+                        if item.public {
+                            scope
+                                .public
+                                .insert((module.source, item.item.name.text.clone()));
+                        }
+                    }
                     for item in &module.unit.roles {
                         if item.public {
                             scope
@@ -69,6 +76,11 @@ impl<T> Scope<T> {
     pub(super) fn insert(&mut self, name: &Name, value: T) -> Option<T> {
         self.symbols
             .insert((name.span.source(), name.text.clone()), value)
+    }
+
+    pub(super) fn is_alias(&self, name: &Name) -> bool {
+        self.imports
+            .contains_key(&(name.span.source(), name.text.clone()))
     }
 
     pub(super) fn get(&self, name: &Name) -> Option<&T> {
@@ -204,6 +216,7 @@ pub(super) fn display_name(name: &Name, project: bool) -> String {
 /// Borrowed declaration inventory: the original ASTs, names and source spans
 /// remain intact throughout whole-project checking.
 pub(super) struct Declarations<'a> {
+    pub enums: Vec<&'a ast::Enum>,
     pub roles: Vec<&'a ast::Role>,
     pub classes: Vec<&'a ast::Class>,
     pub functions: Vec<&'a ast::Function>,
@@ -213,6 +226,7 @@ pub(super) struct Declarations<'a> {
 impl<'a> Declarations<'a> {
     pub(super) fn single(program: &'a ast::Program) -> Self {
         Self {
+            enums: program.enums.iter().collect(),
             roles: program.roles.iter().collect(),
             classes: program.classes.iter().collect(),
             functions: program.functions.iter().collect(),
@@ -222,6 +236,11 @@ impl<'a> Declarations<'a> {
 
     pub(super) fn project(project: &'a Project) -> Self {
         Self {
+            enums: project
+                .modules()
+                .iter()
+                .flat_map(|m| m.unit.enums.iter().map(|d| &d.item))
+                .collect(),
             roles: project
                 .modules()
                 .iter()
@@ -268,6 +287,7 @@ pub(super) fn validate_exports(
         let mut pending = vec![ty];
         while let Some(ty) = pending.pop() {
             let declaration = match ty {
+                Type::Enum(layout) => Some(&declarations.enums[layout.id].name),
                 Type::Class(id, _) => Some(&declarations.classes[*id].name),
                 Type::Role(id, _) => Some(&declarations.roles[*id].name),
                 Type::Baddie(value)
@@ -329,6 +349,15 @@ pub(super) fn validate_exports(
         check(&function.result)
     };
     for module in project.modules() {
+        for item in &module.unit.enums {
+            if item.public {
+                for variant in &item.item.variants {
+                    for payload in &variant.payloads {
+                        check(payload)?;
+                    }
+                }
+            }
+        }
         for item in &module.unit.functions {
             if item.public {
                 function(&item.item)?;

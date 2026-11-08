@@ -133,6 +133,7 @@ fn module(scenario_code: Vec<Op>) -> Module {
     );
     scenario.scenario = Some(context());
     Module {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         entry: 0,

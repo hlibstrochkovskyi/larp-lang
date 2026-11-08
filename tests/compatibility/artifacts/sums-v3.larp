@@ -1,0 +1,19 @@
+enum Ticket {
+    Unknown,
+    Ready(mf, text),
+}
+
+sidequest ticket(text input) -> result<Ticket, text> uses() {
+    mf score = parseScore(input)?;
+    return win(Ticket::Ready(score, "aura"));
+}
+
+main_character {
+    Ticket selected = ticket("49").cope(error => Ticket::Unknown);
+    mf score = match (selected) {
+        Ticket::Unknown => 0,
+        Ticket::Ready(value, _) => value,
+    };
+    yap(score);
+    yap(ticket("unc").isOk());
+}

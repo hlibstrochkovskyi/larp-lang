@@ -68,6 +68,7 @@ fn entry(locals: Vec<Type>, code: Vec<Op>) -> Function {
 
 fn module(main: Function) -> Module {
     let mut module = Module {
+        enums: Vec::new(),
         entry: 0,
         roles: vec![
             Role {

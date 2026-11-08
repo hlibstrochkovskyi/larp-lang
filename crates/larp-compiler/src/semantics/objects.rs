@@ -401,6 +401,7 @@ impl Builder<'_> {
                     ..
                 } => vec![when_true, when_false],
                 Terminator::MatchResult { success, error, .. } => vec![success, error],
+                Terminator::MatchSum { ref targets, .. } => targets.clone(),
                 _ => vec![],
             };
             for next in targets {

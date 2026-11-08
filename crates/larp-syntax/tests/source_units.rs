@@ -221,17 +221,13 @@ fn declaration_binding_parameter_and_member_names_cannot_be_qualified() {
 }
 
 #[test]
-fn legacy_parse_still_requires_main_allows_import_identifiers_and_rejects_project_syntax() {
+fn legacy_parse_requires_main_and_keeps_import_identifiers_without_import_declarations() {
     parse(&source("sidequest import(mf import) -> mf { return import; } main_character { let import = 2; yap(import); }")).unwrap();
     for text in [
         "",
         "sidequest f() -> unit {}",
         "import \"math.larp\" as math; main_character {}",
         "highkey sidequest f() -> unit {} main_character {}",
-        "main_character { let x = math::double; }",
-        "main_character { math::Founder x = new math::Founder(); }",
-        "archetype C : math::R {} main_character {}",
-        "sidequest math::Founder.foo() -> unit {} main_character {}",
     ] {
         assert!(parse(&source(text)).is_err(), "{text}");
     }

@@ -5,6 +5,10 @@ The commands below use a source build at `target/debug/larp`; with the prebuilt
 archive, use `./bin/larp` instead. The historical `v0.1.0-preview.1` is single-file.
 The [RFC](rfcs/0001-file-modules.md) defines the full contract; the
 [project fixture](../tests/projects/README.md) exercises it through the real VM.
+The development `0.3.0-dev` compiler additionally accepts exported enums and
+qualified variants under [RFC 0003](rfcs/0003-enums-patterns-and-propagation.md);
+see [enum modules and boundaries](patterns.md#modules-boundaries-and-compatibility).
+Those enum features are not in the published module preview.
 
 ## Split a program
 
@@ -92,7 +96,9 @@ target/debug/larp fmt tests/projects/pitch/lib/founder.larp --stdout
 
 One `.larpbc` contains the whole checked graph and original source maps. Running
 it requires no original files or resolver. The existing mandatory bytecode
-verifier still checks the program; the artifact wire version remains 2.
+verifier still checks the program. The published module preview uses wire 2;
+the development enum slice writes [wire 3](bytecode-format-v3.md) and retains
+readers 1/2/3. A wire-3 artifact cannot run on the published wire-2 reader.
 `fmt` processes one source unit at a time and can format a library without its
 dependencies. Graph limits are 64 files, 4096 edges, 4 MiB total UTF-8 bytes, and
 131072 source lines, in addition to existing compiler/artifact budgets.

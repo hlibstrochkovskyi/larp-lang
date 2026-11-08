@@ -1,0 +1,10 @@
+highkey enum Funding {
+    Bootstrapped,
+    Angel(unc),
+    Deal(text, unc),
+}
+
+highkey sidequest parseFunding(text input) -> result<Funding, text> uses(abort) {
+    mf amount = parseScore(input)?;
+    return win(Funding::Angel(fraud<unc>(amount)));
+}

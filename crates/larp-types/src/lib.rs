@@ -24,6 +24,24 @@ pub enum Type {
     ConversionError,
     Class(usize, Arc<str>),
     Role(usize, Arc<str>),
+    Enum(Arc<EnumType>),
+}
+
+pub const MAX_ENUM_VARIANTS: usize = 256;
+pub const MAX_ENUM_PAYLOAD: usize = 64;
+
+/// Immutable nominal enum descriptor. The bytecode module owns its canonical copy.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct EnumType {
+    pub id: usize,
+    pub name: Arc<str>,
+    pub variants: Vec<EnumVariant>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct EnumVariant {
+    pub name: Arc<str>,
+    pub payload: Vec<Type>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -34,6 +52,24 @@ pub struct Signature {
 }
 
 impl Type {
+    /// Ordered payload types for total finite-sum dispatch.
+    pub fn alternatives(&self) -> Option<Vec<Vec<Type>>> {
+        if !self.is_well_formed() {
+            return None;
+        }
+        Some(match self {
+            Self::Enum(layout) => layout
+                .variants
+                .iter()
+                .map(|variant| variant.payload.clone())
+                .collect(),
+            Self::Baddie(payload) => vec![vec![], vec![payload.as_ref().clone()]],
+            Self::Result(payloads) => vec![vec![payloads.0.clone()], vec![payloads.1.clone()]],
+            Self::Verdict => vec![vec![], vec![]],
+            _ => return None,
+        })
+    }
+
     pub fn role(id: usize, name: impl AsRef<str>) -> Self {
         Self::Role(id, Arc::from(name.as_ref()))
     }
@@ -134,6 +170,9 @@ impl Type {
                     pending.push(&payloads.0);
                     pending.push(&payloads.1);
                 }
+                Self::Enum(layout) => {
+                    pending.extend(layout.variants.iter().flat_map(|variant| &variant.payload))
+                }
                 _ => return false,
             }
         }
@@ -141,15 +180,25 @@ impl Type {
     }
 
     pub fn supports_equality(&self) -> bool {
-        match self {
-            Self::Unit | Self::Function(_) | Self::Lazy(..) | Self::Array(_) => false,
-            Self::FixedArray(element, _) => element.supports_equality(),
-            Self::Baddie(payload) => payload.supports_equality(),
-            Self::Result(payloads) => {
-                payloads.0.supports_equality() && payloads.1.supports_equality()
-            }
-            _ => true,
+        if !self.is_well_formed() {
+            return false;
         }
+        let mut pending = vec![self];
+        while let Some(ty) = pending.pop() {
+            match ty {
+                Self::Unit | Self::Function(_) | Self::Lazy(..) | Self::Array(_) => return false,
+                Self::FixedArray(element, _) | Self::Baddie(element) => pending.push(element),
+                Self::Result(payloads) => {
+                    pending.push(&payloads.0);
+                    pending.push(&payloads.1);
+                }
+                Self::Enum(layout) => {
+                    pending.extend(layout.variants.iter().flat_map(|variant| &variant.payload))
+                }
+                _ => {}
+            }
+        }
+        true
     }
 
     /// Bound expanded size as well as depth, including shared type DAGs. This
@@ -164,7 +213,9 @@ impl Type {
             }
             match ty {
                 Self::Function(signature) => {
-                    if signature.parameters.len() > 4096 {
+                    if signature.parameters.len().saturating_add(1)
+                        > 4096usize.saturating_sub(visited + pending.len())
+                    {
                         return false;
                     }
                     pending.push((&signature.result, depth + 1));
@@ -182,6 +233,30 @@ impl Type {
                 Self::Result(payloads) => {
                     pending.push((&payloads.0, depth + 1));
                     pending.push((&payloads.1, depth + 1));
+                }
+                Self::Enum(layout) => {
+                    if layout.variants.len() > MAX_ENUM_VARIANTS
+                        || layout
+                            .variants
+                            .iter()
+                            .any(|variant| variant.payload.len() > MAX_ENUM_PAYLOAD)
+                    {
+                        return false;
+                    }
+                    let children = layout
+                        .variants
+                        .iter()
+                        .map(|variant| variant.payload.len())
+                        .sum::<usize>();
+                    if children > 4096usize.saturating_sub(visited + pending.len()) {
+                        return false;
+                    }
+                    pending.extend(
+                        layout
+                            .variants
+                            .iter()
+                            .flat_map(|variant| variant.payload.iter().map(|ty| (ty, depth + 1))),
+                    );
                 }
                 _ => {}
             }
@@ -220,6 +295,21 @@ impl Type {
                     pending.push(&payloads.0);
                     pending.push(&payloads.1);
                 }
+                Self::Enum(layout) => {
+                    if layout.name.is_empty() || layout.variants.is_empty() {
+                        return false;
+                    }
+                    let mut names = std::collections::HashSet::new();
+                    for variant in &layout.variants {
+                        if variant.name.is_empty()
+                            || !names.insert(variant.name.as_ref())
+                            || variant.payload.contains(&Self::Unit)
+                        {
+                            return false;
+                        }
+                        pending.extend(&variant.payload);
+                    }
+                }
                 _ => {}
             }
         }
@@ -252,6 +342,7 @@ impl fmt::Display for Type {
             Self::Result(payloads) => write!(f, "result<{}, {}>", payloads.0, payloads.1),
             Self::Array(element) => write!(f, "mfs<{element}>"),
             Self::FixedArray(element, length) => write!(f, "hediJeans<{element}, {length}>"),
+            Self::Enum(layout) => f.write_str(&layout.name),
             Self::ConversionError => f.write_str("ConversionError"),
             Self::Class(_, name) | Self::Role(_, name) => f.write_str(name),
             _ => f.write_str(match self {

@@ -41,6 +41,25 @@ pub(super) fn validate_type(
                     ));
                 }
             }
+            Type::Enum(descriptor) => {
+                if module
+                    .enums
+                    .get(descriptor.id)
+                    .is_none_or(|canonical| canonical != descriptor)
+                {
+                    return Err(invalid(
+                        function,
+                        instruction,
+                        "Invalid nominal enum identity or descriptor",
+                    ));
+                }
+                pending.extend(
+                    descriptor
+                        .variants
+                        .iter()
+                        .flat_map(|variant| &variant.payload),
+                );
+            }
             Type::Class(id, name) => {
                 if module
                     .classes
@@ -80,8 +99,45 @@ pub(super) fn preflight_types(module: &Module) -> Result<(), VerifyError> {
     if module.classes.len() > 4096 {
         return Err(invalid(module.entry, None, "Class count limit exceeded").resource());
     }
+    if module.enums.len() > 4096 {
+        return Err(invalid(module.entry, None, "Enum count limit exceeded").resource());
+    }
+    // Bound every canonical descriptor before any descriptor equality below.
+    for (id, descriptor) in module.enums.iter().enumerate() {
+        let ty = Type::Enum(descriptor.clone());
+        if !ty.within_limits() {
+            return Err(
+                invalid(module.entry, None, "Enum type complexity limit exceeded").resource(),
+            );
+        }
+        if descriptor.id != id || !ty.is_well_formed() {
+            return Err(invalid(
+                module.entry,
+                None,
+                "Malformed canonical enum descriptor",
+            ));
+        }
+    }
     let mut members = 0usize;
     let mut names = HashSet::new();
+    for descriptor in &module.enums {
+        if descriptor.name.is_empty() || !names.insert(descriptor.name.as_ref()) {
+            return Err(invalid(module.entry, None, "Duplicate or empty enum name"));
+        }
+        members = members
+            .saturating_add(descriptor.variants.len())
+            .saturating_add(
+                descriptor
+                    .variants
+                    .iter()
+                    .map(|variant| variant.payload.len())
+                    .sum::<usize>(),
+            );
+        if members > 65_536 {
+            return Err(invalid(module.entry, None, "Enum member limit exceeded").resource());
+        }
+        validate_type(module, &Type::Enum(descriptor.clone()), module.entry, None)?;
+    }
     for role in &module.roles {
         if role.name.is_empty() || !names.insert(role.name.as_str()) {
             return Err(invalid(
@@ -183,7 +239,9 @@ pub(super) fn preflight_types(module: &Module) -> Result<(), VerifyError> {
                 | Op::Binary(_, ty)
                 | Op::Force(ty)
                 | Op::CallIndirect(ty)
-                | Op::MatchResult { ty, .. } => validate_type(module, ty, index, Some(pc))?,
+                | Op::MatchResult { ty, .. }
+                | Op::MakeEnum { ty, .. }
+                | Op::MatchSum { ty, .. } => validate_type(module, ty, index, Some(pc))?,
                 Op::Intrinsic(operation) => {
                     for ty in operation.types() {
                         validate_type(module, ty, index, Some(pc))?;

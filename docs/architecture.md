@@ -14,7 +14,9 @@ for the exact shipped revision. The released frontend accepts standalone and
 multi-file programs; source modules are compile-time namespaces distinct from
 the resulting bytecode module metadata. The `0.3.0-dev` branch adds
 [manifest-based project commands](projects.md) at the CLI boundary; these commands
-are not part of the published `0.2.0-preview.1` archive.
+are not part of the published `0.2.0-preview.1` archive. The same development
+branch implements [nominal enums, exhaustive matching, and result propagation](patterns.md);
+the M9 acceptance gate is still in progress.
 
 ## Whole-project compilation (`0.2.0-preview.1`)
 
@@ -79,6 +81,49 @@ and upstream license notices. The protocol and compatibility contract is
 [RFC 0002](rfcs/0002-project-workflow.md); hosted validation remains specific to
 the eventual exact commit. This extension changes neither artifact wire version
 nor either JSON schema.
+
+## Nominal sums and error flow (`0.3.0-dev`)
+
+[RFC 0003](rfcs/0003-enums-patterns-and-propagation.md) adds enum declarations,
+match expressions, and postfix propagation to the parser and typed semantic pass.
+Nominal enum descriptors are allocated with stable identities and acyclic payload
+dependencies. Type limits, equality, public-interface checks, and SnapshotValue
+eligibility traverse every variant. Equal-spelled enums in distinct source files
+remain distinct. Imported variants resolve their enum prefix as a type.
+
+A match evaluates its scrutinee once. Static coverage chooses a total ordered
+set of alternatives, with typed payload adapter blocks feeding arm-local binders
+or a shared wildcard body. CFG edges exist before body checking so lambda return
+inference and constructor initialization see actual reachability. Normally
+completing arms merge through a typed value; all other bodies retain their
+source control-flow boundaries. Every body is checked even if a constant verdict
+selects one runtime edge. Block arms have ordinary unit fallthrough semantics.
+
+IR blocks now have multiple typed parameters. `MakeEnum` constructs an owned
+wrapper; `MatchSum` dispatches enum, option, result, or verdict alternatives and
+passes only that alternative's ordered payload types. Lowering stores incoming
+payload slots in reverse stack order. Before instruction dataflow, the verifier
+checks enum identities against canonical module layouts throughout nested types
+and dead instructions. It then checks discriminants, payload types, total target
+counts, target bounds, and successor stacks independently of the frontend.
+There is no unchecked projection instruction.
+
+Postfix `?` lowers to existing typed result dispatch. Success continues with the
+payload; failure reconstructs the enclosing result's error alternative, exits
+crossed local suppression scopes and returns. Error types agree exactly while
+success types may differ. Result-typed lazy initializers deliberately own their
+own deferred return boundary. Direct exits across a scenario entry remain
+forbidden; regional helpers returning ordinary error data do not cancel commit.
+No new effect or exception mechanism is introduced.
+
+Enum wrappers own active payload values. GC marking traverses them wherever they
+occur in stacks, heap fields, captures or suspended operations; copied reference
+payloads retain identity. Structural equality and snapshot formatting follow the
+tag and active fields, while eligibility checks cover all possible variants.
+Regional construction/dispatch checks remain explicit, including dead operations.
+Artifact wire 3 encodes canonical enum descriptors and the new instructions;
+readers 1 and 2 retain their previous empty-enum interpretation. The
+[format extension](bytecode-format-v3.md) specifies exact tags and bounds.
 
 ## Pipeline and contracts
 
@@ -363,8 +408,9 @@ through a saved method cannot erase them or bypass active iteration guards.
 ## Runtime representation and memory
 
 The current VM uses tagged Rust `Value` variants: scalar values, tagged
-option/result payloads, fixed arrays, nominal conversion errors, and handles for
-objects, arrays, closures, and lazy cells. Options, results, and fixed arrays own their payloads; tracing walks
+option/result/enum payloads, fixed arrays, nominal conversion errors, and handles
+for objects, arrays, closures, and lazy cells. Options, results, enums, and fixed
+arrays own their payloads; tracing walks
 through those wrappers to find contained handles. Text currently uses owned
 immutable storage. Avoid NaN boxing until profiling proves a need.
 
@@ -379,7 +425,7 @@ Objects, arrays, closures, and lazy cells share a non-moving arena of optional t
 with a generation in each reusable handle. Stale generations cannot resolve to a newly
 allocated entry; generation overflow is a checked resource failure. The collector
 uses iterative marking and sweeping, including transitive handles in captured
-options/results/fixed arrays. Object fields, mutable arrays, and closures can
+options/results/enums/fixed arrays. Object fields, mutable arrays, and closures can
 form cycles; unreachable cycles are reclaimed without recursive graph destruction.
 
 Collection occurs before object/closure/array/lazy construction and sorting while
@@ -468,11 +514,14 @@ compiled explicit-copy comparisons, failure modes, and measured costs.
 ## Bytecode artifacts
 
 `larp-artifact` defines a versioned explicit wire format around verified stack
-bytecode. Header magic/version/flags and seven ordered bounded sections contain
+bytecode. Header magic/version/flags and ordered bounded sections contain
 source text/spans, topological types, roles, classes, extensions, functions, and
-entry identity. No Rust enum discriminants or host object layouts are serialized.
-See the [version 1 baseline](bytecode-format-v1.md) and
-[version 2 input additions](bytecode-format-v2.md) for exact tags and limits.
+entry identity. Development wire 3 appends an eighth canonical enum table section
+to the original seven; the reader retains wire versions 1 and 2. No Rust enum
+discriminants or host object layouts are serialized. See the
+[version 1 baseline](bytecode-format-v1.md),
+[version 2 input additions](bytecode-format-v2.md), and
+[version 3 enums/dispatch additions](bytecode-format-v3.md) for exact tags and limits.
 
 The decoder validates framing, UTF-8/source boundaries, type shape/expanded work,
 counts, and shared logical allocation budgets before independently invoking the
@@ -524,7 +573,8 @@ lexical API. See [formatter policy](formatter.md).
 Commands already available: `explain`, artifact `build`, source/artifact `check`
 and `run`, IR/bytecode `dump` (`--ir` requires source), and source `fmt` in
 write/check/stdout modes. Disassembly includes role method signatures, class implementation tables,
-concrete extension metadata, lazy construction/forcing, and silence operations.
+concrete extension metadata, enum variants and typed sum dispatch, lazy
+construction/forcing, and silence operations.
 Packages, additional host APIs, and tooling integrations remain later work;
 there is no language server, incremental query engine, package manager, or
 optimizer in this preview.

@@ -73,6 +73,7 @@ fn module() -> Module {
     );
     getter.owner = Some(0);
     Module {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         entry: 0,
@@ -506,4 +507,33 @@ fn regional_lazy_cells_cannot_cross_regions_or_import_an_ordinary_initializer() 
     let mut bad = good;
     bad.functions[0].code.push(instruction(Op::MakeLazy(4)));
     reject(bad, "cross scenario regions");
+}
+
+#[test]
+fn unreachable_stack_only_enum_construction_and_dispatch_keep_regional_restrictions() {
+    use larp_types::{EnumType, EnumVariant};
+    use std::sync::Arc;
+    let descriptor = Arc::new(EnumType {
+        id: 0,
+        name: Arc::from("External"),
+        variants: vec![EnumVariant {
+            name: Arc::from("Array"),
+            payload: vec![Type::array(Type::Mf)],
+        }],
+    });
+    for op in [
+        Op::MakeEnum {
+            ty: Type::Enum(descriptor.clone()),
+            variant: 0,
+        },
+        Op::MatchSum {
+            ty: Type::Enum(descriptor.clone()),
+            targets: vec![0],
+        },
+    ] {
+        let mut bad = module();
+        bad.enums.push(descriptor.clone());
+        append(&mut bad, 3, op);
+        reject(bad, "snapshot values");
+    }
 }

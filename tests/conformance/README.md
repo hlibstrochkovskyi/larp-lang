@@ -3,7 +3,7 @@
 [Project overview](../../README.md) · [Specification](../../docs/spec/v0.1.md) · [Contributing](../../CONTRIBUTING.md)
 
 The [manifest](manifest.json) defines executable acceptance cases for the real
-LARP toolchain. It currently contains **89 active cases and no pending cases**.
+LARP toolchain. It currently contains **100 active cases and no pending cases**.
 A passing finite corpus provides evidence for these programs; it does not prove
 all specification rules or replace the other release checks.
 
@@ -50,7 +50,7 @@ Cases have an ID, source path, milestone, status, and expectation. Every `.larp`
 file in this directory must appear exactly once in the manifest. **Active**
 cases are required to pass; **pending** cases describe future milestones and
 must not be reported as passing tests or silently skipped within a release's
-declared subset. With the present inventory, `--all` selects the same 89 cases.
+declared subset. With the present inventory, `--all` selects the same 100 cases.
 
 | Expectation | Required behavior |
 | --- | --- |

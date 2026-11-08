@@ -29,7 +29,7 @@ fn scenario_lowering_preserves_region_targets_metadata_and_source_spans() {
         effects,
         locals,
         blocks: vec![Block {
-            parameter: None,
+            parameters: Vec::new(),
             instructions: kinds
                 .into_iter()
                 .map(|kind| Instruction { kind, span })
@@ -110,6 +110,7 @@ fn scenario_lowering_preserves_region_targets_metadata_and_source_spans() {
     );
     scenario.scenario = Some(context);
     let program = Program {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         entry: 0,

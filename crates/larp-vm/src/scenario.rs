@@ -103,6 +103,24 @@ impl fmt::Display for Snapshot<'_> {
             Value::Option(Some(value)) => write!(output, "some({})", Snapshot(value)),
             Value::Result(Ok(value)) => write!(output, "win({})", Snapshot(value)),
             Value::Result(Err(value)) => write!(output, "fumble({})", Snapshot(value)),
+            Value::Enum {
+                ty,
+                variant,
+                fields,
+            } => {
+                write!(output, "{}::{}", ty.name, ty.variants[*variant].name)?;
+                if !fields.is_empty() {
+                    output.write_str("(")?;
+                    for (index, value) in fields.iter().enumerate() {
+                        if index != 0 {
+                            output.write_str(", ")?;
+                        }
+                        Snapshot(value).fmt(output)?;
+                    }
+                    output.write_str(")")?;
+                }
+                Ok(())
+            }
             Value::FixedArray(values) => {
                 output.write_str("[")?;
                 for (index, value) in values.iter().enumerate() {

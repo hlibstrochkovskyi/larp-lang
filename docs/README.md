@@ -9,9 +9,11 @@ finite test suite establishes complete language correctness.
 
 The current preview includes [file modules](modules.md); the historical
 `v0.1.0-preview.1` remains single-file. The `0.3.0-dev` development branch adds
-[manifest-based projects](projects.md), specified by [RFC 0002](rfcs/0002-project-workflow.md).
-That workflow is not included in the current public release; exact-commit hosted
-validation is still required before merging and publication.
+[manifest-based projects](projects.md), specified by [RFC 0002](rfcs/0002-project-workflow.md),
+and [enums, matching, and result propagation](patterns.md), specified by
+[RFC 0003](rfcs/0003-enums-patterns-and-propagation.md). These development features
+are not included in the current public release. M9 acceptance checks and its
+exact-commit hosted validation remain in progress.
 
 ## Learn and run
 
@@ -19,6 +21,7 @@ validation is still required before merging and publication.
 | --- | --- |
 | [Practical reference](reference.md) | Types, control flow, functions, objects, effects, and complete runnable examples |
 | [Projects](projects.md) | Development workflow: `larp new`, `larp.toml`, discovery, and project check/run/build |
+| [Enums, matching, and propagation](patterns.md) | Development syntax, exhaustive arms, payload identity, and exact-error `?` |
 | [File modules](modules.md) | Imports, exports, lexical namespaces, extensions, and whole-project artifacts |
 | [Example programs](../examples/) | Collections, roles, lazy values, input, and scenario comparisons |
 | [Implementation status](implementation-status.md) | Supported syntax, CLI commands, restrictions, and runtime limits |
@@ -46,10 +49,13 @@ contributor prerequisite.
 
 ## Language and runtime contracts
 
-- [Specification v0.1](spec/v0.1.md) and [grammar](spec/grammar.ebnf).
+- [Specification v0.1](spec/v0.1.md) and [grammar](spec/grammar.ebnf), with
+  [file-module](spec/modules.ebnf) and [enum/match/propagation](spec/patterns.ebnf)
+  grammar extensions.
 - [Design review](design-review.md), [preview policy review](preview-design-review.md),
   and [research sources](research.md).
-- [Bytecode v1](bytecode-format-v1.md) and [v2 input additions](bytecode-format-v2.md).
+- [Bytecode v1](bytecode-format-v1.md), [v2 input additions](bytecode-format-v2.md),
+  and [v3 enum/dispatch additions](bytecode-format-v3.md).
 - [Version identities and compatibility](versioning.md), including independent
   artifact and JSON schemas.
 

@@ -57,6 +57,7 @@ python3 tools/run_conformance.py --artifacts --gc-stress
 python3 tools/run_conformance.py --formatted --artifacts --gc-stress
 python3 tools/run_reference.py --output artifacts/reference-my-change
 python3 tools/run_reference.py --document README.md --contracts docs/readme-cases.json --output artifacts/readme-my-change
+python3 tools/run_reference.py --document docs/patterns.md --contracts docs/pattern-cases.json --bin target/debug/larp --output artifacts/patterns-my-change
 python3 tools/check_version.py --bin target/debug/larp --output artifacts/version-my-change
 python3 tools/run_projects.py --bin target/debug/larp --output artifacts/projects-my-change
 python3 -m unittest discover -s tools -p 'test_candidate_checks.py'

@@ -249,7 +249,13 @@ pub(super) fn validate_instruction(
                 ));
             }
         }
-        Op::Unary(_, ty) | Op::Binary(_, ty) | Op::MatchResult { ty, .. } if !ty.is_snapshot() => {
+        Op::Unary(_, ty)
+        | Op::Binary(_, ty)
+        | Op::MatchResult { ty, .. }
+        | Op::MakeEnum { ty, .. }
+        | Op::MatchSum { ty, .. }
+            if !ty.is_snapshot() =>
+        {
             return Err(bad("Scenario operands must be snapshot values"));
         }
         _ => {}

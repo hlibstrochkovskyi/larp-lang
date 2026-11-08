@@ -8,20 +8,21 @@ use larp_bytecode::{
     RoleMethod, ScenarioContext, VerifiedModule, VerifyError,
 };
 use larp_source::{SourceFile, SourceId, Span};
-use larp_types::{Effects, Type};
+use larp_types::{Effects, EnumType, EnumVariant, MAX_ENUM_PAYLOAD, MAX_ENUM_VARIANTS, Type};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Read;
 use std::mem::size_of;
 use std::rc::Rc;
+use std::sync::Arc;
 
 mod codec;
 
 pub const MAGIC: &[u8; 8] = b"LARPBC\r\n";
-pub const VERSION: u16 = 2;
+pub const VERSION: u16 = 3;
 /// Wire versions accepted by the decoder, independently of the toolchain version.
-pub const SUPPORTED_VERSIONS: &[u16] = &[1, VERSION];
+pub const SUPPORTED_VERSIONS: &[u16] = &[1, 2, VERSION];
 pub const MAX_FILE_BYTES: usize = 16 * 1024 * 1024;
 const MAX_ALLOCATED: usize = 64 * 1024 * 1024;
 const MAX_STRING_BYTES: usize = 1024 * 1024;
@@ -503,6 +504,13 @@ impl TypeTable {
                 self.intern(&payloads.0)?;
                 self.intern(&payloads.1)?;
             }
+            Type::Enum(layout) => {
+                for variant in &layout.variants {
+                    for payload in &variant.payload {
+                        self.intern(payload)?;
+                    }
+                }
+            }
             _ => {}
         }
         if self.types.len() >= MAX_TYPES {
@@ -533,6 +541,40 @@ fn type_nodes(ty: &Type) -> Result<usize> {
                         Error::resource("Artifact nominal type name work limit exceeded")
                     })?;
             }
+            Type::Enum(layout) => {
+                if layout.variants.len() > MAX_ENUM_VARIANTS
+                    || layout
+                        .variants
+                        .iter()
+                        .any(|variant| variant.payload.len() > MAX_ENUM_PAYLOAD)
+                {
+                    return Err(Error::resource("Artifact enum shape limit exceeded"));
+                }
+                let children = layout
+                    .variants
+                    .iter()
+                    .map(|variant| variant.payload.len())
+                    .sum::<usize>();
+                if children > 4096usize.saturating_sub(count + pending.len()) {
+                    return Err(Error::resource(
+                        "Artifact enum type complexity limit exceeded",
+                    ));
+                }
+                for name in std::iter::once(layout.name.as_ref())
+                    .chain(layout.variants.iter().map(|variant| variant.name.as_ref()))
+                {
+                    work = work
+                        .checked_add(name.len())
+                        .filter(|work| *work <= MAX_TYPE_WORK)
+                        .ok_or_else(|| Error::resource("Artifact enum name work limit exceeded"))?;
+                }
+                pending.extend(
+                    layout
+                        .variants
+                        .iter()
+                        .flat_map(|variant| variant.payload.iter().map(|ty| (ty, depth + 1))),
+                );
+            }
             Type::Function(signature) => {
                 if signature.parameters.len() + 1 > 4096_usize.saturating_sub(count + pending.len())
                 {
@@ -559,6 +601,9 @@ fn type_nodes(ty: &Type) -> Result<usize> {
 
 fn collect_types(module: &Module) -> Result<TypeTable> {
     let mut table = TypeTable::default();
+    for layout in &module.enums {
+        table.intern(&Type::Enum(Arc::clone(layout)))?;
+    }
     for role in &module.roles {
         for method in &role.methods {
             for ty in &method.parameters {
@@ -594,7 +639,8 @@ fn collect_types(module: &Module) -> Result<TypeTable> {
 
 // Type tags: 0 Mf, 1 Unc, 2 Geeked, 3 Verdict, 4 Text, 5 Unit,
 // 6 Function, 7 Baddie, 8 Result, 9 Array, 10 FixedArray,
-// 11 ConversionError, 12 Class, 13 Role, 14 Lazy. Child references precede parents.
+// 11 ConversionError, 12 Class, 13 Role, 14 Lazy; version 3 adds 15 Enum.
+// Child references precede parents.
 fn write_type(w: &mut Writer, table: &TypeTable, ty: &Type) -> Result {
     let tag = match ty {
         Type::Mf => 0,
@@ -612,6 +658,7 @@ fn write_type(w: &mut Writer, table: &TypeTable, ty: &Type) -> Result {
         Type::Class(..) => 12,
         Type::Role(..) => 13,
         Type::Lazy(..) => 14,
+        Type::Enum(_) => 15,
     };
     w.u8(tag)?;
     match ty {
@@ -632,6 +679,15 @@ fn write_type(w: &mut Writer, table: &TypeTable, ty: &Type) -> Result {
         Type::Class(index, name) | Type::Role(index, name) => {
             w.index(*index)?;
             w.string(name)?;
+        }
+        Type::Enum(layout) => {
+            w.index(layout.id)?;
+            w.string(&layout.name)?;
+            w.index(layout.variants.len())?;
+            for variant in &layout.variants {
+                w.string(&variant.name)?;
+                w.types(table, &variant.payload)?;
+            }
         }
         Type::Lazy(result, effects) => {
             w.ty(table, result)?;
@@ -682,7 +738,30 @@ fn read_type(r: &mut Reader<'_>, types: &[Type]) -> Result<Type> {
             let result = r.ty(types)?;
             Type::lazy(result, r.effects()?)
         }
-        _ => return Err(r.invalid("Unknown type tag")),
+        15 if r.version >= 3 => {
+            let id = r.index()?;
+            let name = r.string()?;
+            r.budget
+                .borrow_mut()
+                .allocation(name.len() + size_of::<EnumType>())?;
+            let variants = r.vector(MAX_ENUM_VARIANTS, 8, |r| {
+                let name = r.string()?;
+                r.budget.borrow_mut().allocation(name.len())?;
+                let payload = r.vector(MAX_ENUM_PAYLOAD, 4, |r| r.ty(types))?;
+                r.members(payload.len())?;
+                Ok(EnumVariant {
+                    name: Arc::from(name),
+                    payload,
+                })
+            })?;
+            r.members(variants.len())?;
+            Type::Enum(Arc::new(EnumType {
+                id,
+                name: Arc::from(name),
+                variants,
+            }))
+        }
+        _ => return Err(r.invalid("Unknown type tag for this artifact version")),
     };
     let work = type_nodes(&ty)?;
     charge(
@@ -798,6 +877,13 @@ pub fn encode(module: &VerifiedModule, sources: &[SourceFile]) -> Result<Vec<u8>
         Ok(())
     })?;
     w.section(7, |w| w.index(module.entry))?;
+    w.section(8, |w| {
+        w.index(module.enums.len())?;
+        for layout in &module.enums {
+            w.ty(&types, &Type::Enum(Arc::clone(layout)))?;
+        }
+        Ok(())
+    })?;
     let length = u32::try_from(w.bytes.len() - 16)
         .map_err(|_| Error::resource("Artifact payload exceeds u32"))?;
     w.bytes[12..16].copy_from_slice(&length.to_le_bytes());
@@ -982,8 +1068,20 @@ pub fn decode(bytes: &[u8]) -> Result<Artifact> {
     let mut s = r.section(7)?;
     let entry = s.index()?;
     s.finish()?;
+    let enums = if version >= 3 {
+        let mut s = r.section(8)?;
+        let enums = s.vector(MAX_DECLARATIONS, 4, |s| match s.ty(&types)? {
+            Type::Enum(layout) => Ok(layout),
+            _ => Err(s.invalid("Enum declaration requires an enum type")),
+        })?;
+        s.finish()?;
+        enums
+    } else {
+        Vec::new()
+    };
     r.finish()?;
     let module = larp_bytecode::verify(Module {
+        enums,
         roles,
         extensions,
         classes,
@@ -1003,6 +1101,20 @@ pub fn decode(bytes: &[u8]) -> Result<Artifact> {
         ),
         verification: Some(error),
     })?;
+    // Enum descriptors in unused type-table entries still belong to the nominal
+    // universe. Each child references an earlier entry, so checking every direct
+    // descriptor also covers descriptors nested in unused container/function types.
+    for ty in &types {
+        if let Type::Enum(descriptor) = ty
+            && module
+                .module()
+                .enums
+                .get(descriptor.id)
+                .is_none_or(|canonical| canonical != descriptor)
+        {
+            return Err(Error::invalid("Noncanonical enum in artifact type table"));
+        }
+    }
     Ok(Artifact { module, sources })
 }
 
@@ -1046,6 +1158,7 @@ mod tests {
         let source = SourceFile::new(SourceId(777), "fixture.larp", "🦀");
         let span = source.span(0..4).unwrap();
         let module = larp_bytecode::verify(Module {
+            enums: Vec::new(),
             roles: vec![],
             extensions: vec![],
             classes: vec![],
@@ -1128,7 +1241,7 @@ mod tests {
         for end in 0..bytes.len() {
             assert!(decode(&bytes[..end]).is_err(), "prefix {end}");
         }
-        for (index, value) in [(0, b'X'), (8, 3), (10, 1), (16, 7)] {
+        for (index, value) in [(0, b'X'), (8, 4), (10, 1), (16, 7)] {
             let mut changed = bytes.clone();
             changed[index] = value;
             assert_eq!(
@@ -1155,8 +1268,8 @@ mod tests {
     #[test]
     fn valid_framing_cannot_bypass_bytecode_verification() {
         let mut bytes = artifact();
-        let end = bytes.len();
-        bytes[end - 4..].copy_from_slice(&1_u32.to_le_bytes());
+        let (_, entry, _) = sections(&bytes)[6];
+        bytes[entry..entry + 4].copy_from_slice(&1_u32.to_le_bytes());
         let error = decode(&bytes).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidBytecode);
         assert!(error.verification().unwrap().message.contains("Entry"));
@@ -1384,6 +1497,21 @@ mod version_tests {
     use larp_bytecode::Op;
     use larp_types::{Intrinsic, Scalar};
 
+    fn legacy(mut bytes: Vec<u8>, version: u16) -> Vec<u8> {
+        // Version 3 adds a final enum table; old frames have seven sections.
+        let mut r = Reader::new(&bytes);
+        r.take(16).unwrap();
+        for section in 1..=7 {
+            r.section(section).unwrap();
+        }
+        let end = r.pos;
+        bytes.truncate(end);
+        bytes[8..10].copy_from_slice(&version.to_le_bytes());
+        let length = (bytes.len() - 16) as u32;
+        bytes[12..16].copy_from_slice(&length.to_le_bytes());
+        bytes
+    }
+
     #[test]
     fn version_one_modules_still_load_but_cannot_claim_version_two_host_intrinsics() {
         let source = SourceFile::new(SourceId(0), "version.larp", "");
@@ -1412,6 +1540,7 @@ mod version_tests {
         };
         let module = |function| {
             larp_bytecode::verify(Module {
+                enums: Vec::new(),
                 roles: vec![],
                 classes: vec![],
                 extensions: vec![],
@@ -1422,7 +1551,7 @@ mod version_tests {
         };
         let mut old = encode(&module(function.clone()), &[source]).unwrap();
         assert_eq!(u16::from_le_bytes(old[8..10].try_into().unwrap()), VERSION);
-        old[8..10].copy_from_slice(&1u16.to_le_bytes());
+        old = legacy(old, 1);
         decode(&old).unwrap();
         for intrinsic in [Intrinsic::Arguments, Intrinsic::ReadLine] {
             let mut function = function.clone();
@@ -1443,8 +1572,226 @@ mod version_tests {
             let source = SourceFile::new(SourceId(0), "version.larp", "");
             let mut bytes = encode(&module(function), &[source]).unwrap();
             decode(&bytes).unwrap();
-            bytes[8..10].copy_from_slice(&1u16.to_le_bytes());
+            bytes = legacy(bytes, 1);
             assert_eq!(decode(&bytes).unwrap_err().kind(), ErrorKind::InvalidFormat);
         }
+    }
+}
+
+#[cfg(test)]
+mod enum_tests {
+    use super::*;
+    use larp_bytecode::Op;
+    use larp_types::Scalar;
+
+    fn layout() -> Arc<EnumType> {
+        Arc::new(EnumType {
+            id: 0,
+            name: "Funding".into(),
+            variants: vec![
+                EnumVariant {
+                    name: "Bootstrapped".into(),
+                    payload: vec![],
+                },
+                EnumVariant {
+                    name: "Deal".into(),
+                    payload: vec![Type::Text, Type::Unc],
+                },
+            ],
+        })
+    }
+
+    fn sample() -> (VerifiedModule, Vec<SourceFile>) {
+        let source = SourceFile::new(SourceId(0), "enum.larp", "// enum codec fixture\n");
+        let span = source.span(0..0).unwrap();
+        let layout = layout();
+        let ty = Type::Enum(Arc::clone(&layout));
+        let module = Module {
+            enums: vec![layout],
+            roles: vec![],
+            classes: vec![],
+            extensions: vec![],
+            entry: 0,
+            functions: vec![Function {
+                scenario: None,
+                owner: None,
+                constructor: None,
+                name: "main".into(),
+                parameters: vec![],
+                captures: vec![],
+                result: Type::Unit,
+                effects: Effects::OBSERVE,
+                locals: vec![Type::Unc, Type::Text],
+                span,
+                code: vec![
+                    Op::Constant(Scalar::Text("seed".into())),
+                    Op::Constant(Scalar::Unc(49)),
+                    Op::MakeEnum {
+                        ty: ty.clone(),
+                        variant: 1,
+                    },
+                    Op::MatchSum {
+                        ty,
+                        targets: vec![4, 6],
+                    },
+                    Op::Constant(Scalar::Unit),
+                    Op::Return,
+                    Op::Store(0),
+                    Op::Store(1),
+                    Op::Load(0),
+                    Op::Print,
+                    Op::Load(1),
+                    Op::Print,
+                    Op::Constant(Scalar::Unit),
+                    Op::Return,
+                ]
+                .into_iter()
+                .map(|op| Instruction { op, span })
+                .collect(),
+            }],
+        };
+        (larp_bytecode::verify(module).unwrap(), vec![source])
+    }
+
+    fn locations(bytes: &[u8]) -> Vec<(u8, usize, usize)> {
+        let mut reader = Reader::new(bytes);
+        reader.take(16).unwrap();
+        let mut locations = Vec::new();
+        while reader.pos < bytes.len() {
+            let id = reader.u8().unwrap();
+            let length = reader.index().unwrap();
+            locations.push((id, reader.pos, length));
+            reader.take(length).unwrap();
+        }
+        locations
+    }
+
+    #[test]
+    fn enum_types_payload_dispatch_and_canonical_table_roundtrip_deterministically() {
+        let (module, sources) = sample();
+        let bytes = encode(&module, &sources).unwrap();
+        let decoded = decode(&bytes).unwrap();
+        assert_eq!(decoded.module.module().enums, module.module().enums);
+        assert_eq!(decoded.module.disassemble(), module.disassemble());
+        assert_eq!(encode(&decoded.module, &decoded.sources).unwrap(), bytes);
+        assert_eq!(
+            locations(&bytes)
+                .iter()
+                .map(|(id, _, _)| *id)
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3, 4, 5, 6, 7, 8]
+        );
+        for end in 0..bytes.len() {
+            assert!(decode(&bytes[..end]).is_err(), "prefix {end}");
+        }
+    }
+
+    #[test]
+    fn enum_type_tags_require_version_three_and_prior_payload_types() {
+        let ty = Type::Enum(layout());
+        let mut table = TypeTable::default();
+        table.intern(&ty).unwrap();
+        let mut writer = Writer::new();
+        write_type(&mut writer, &table, &ty).unwrap();
+        assert_eq!(writer.bytes[0], 15);
+        for version in [1, 2] {
+            let mut reader = Reader::new(&writer.bytes);
+            reader.version = version;
+            assert_eq!(
+                read_type(&mut reader, &table.types).unwrap_err().kind(),
+                ErrorKind::InvalidFormat
+            );
+        }
+        let mut reader = Reader::new(&writer.bytes);
+        assert!(read_type(&mut reader, &[]).is_err());
+        let mut reader = Reader::new(&writer.bytes);
+        assert_eq!(read_type(&mut reader, &table.types).unwrap(), ty);
+    }
+
+    #[test]
+    fn enum_metadata_still_requires_bytecode_nominal_identity_validation() {
+        let (module, sources) = sample();
+        let mut bytes = encode(&module, &sources).unwrap();
+        let (_, start, length) = locations(&bytes)[1];
+        let mut reader = Reader::new(&bytes[start..start + length]);
+        let count = reader.index().unwrap();
+        let mut types = Vec::new();
+        let mut enum_position = None;
+        for _ in 0..count {
+            let position = reader.pos;
+            let ty = read_type(&mut reader, &types).unwrap();
+            if matches!(ty, Type::Enum(_)) {
+                enum_position = Some(start + position + 1);
+            }
+            types.push(ty);
+        }
+        let position = enum_position.unwrap();
+        bytes[position..position + 4].copy_from_slice(&1u32.to_le_bytes());
+        let error = decode(&bytes).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidBytecode);
+        assert!(error.verification().is_some());
+    }
+
+    #[test]
+    fn unused_enum_descriptors_must_match_the_canonical_table() {
+        let (module, sources) = sample();
+        let original = encode(&module, &sources).unwrap();
+        for id in [0, 999] {
+            let mut bytes = original.clone();
+            let (_, start, length) = locations(&bytes)[1];
+            let mut writer = Writer::new();
+            writer.u8(15).unwrap();
+            writer.index(id).unwrap();
+            writer.string("Ghost").unwrap();
+            writer.index(1).unwrap();
+            writer.string("Empty").unwrap();
+            writer.index(0).unwrap();
+            let extra = writer.bytes;
+            let count = u32::from_le_bytes(bytes[start..start + 4].try_into().unwrap());
+            bytes[start..start + 4].copy_from_slice(&(count + 1).to_le_bytes());
+            bytes[start - 4..start].copy_from_slice(&((length + extra.len()) as u32).to_le_bytes());
+            bytes.splice(start + length..start + length, extra);
+            let payload = (bytes.len() - 16) as u32;
+            bytes[12..16].copy_from_slice(&payload.to_le_bytes());
+            let error = decode(&bytes).unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::InvalidFormat);
+            assert!(error.to_string().contains("Noncanonical enum"));
+        }
+    }
+
+    #[test]
+    fn enum_table_references_and_shape_limits_are_checked_before_execution() {
+        let (module, sources) = sample();
+        let mut bytes = encode(&module, &sources).unwrap();
+        let (_, start, _) = locations(&bytes)[7];
+        // The first interned type is text, which cannot serve as an enum declaration.
+        bytes[start + 4..start + 8].copy_from_slice(&0u32.to_le_bytes());
+        assert_eq!(decode(&bytes).unwrap_err().kind(), ErrorKind::InvalidFormat);
+
+        let mut writer = Writer::new();
+        writer.u8(15).unwrap();
+        writer.index(0).unwrap();
+        writer.string("E").unwrap();
+        writer.index(MAX_ENUM_VARIANTS + 1).unwrap();
+        assert_eq!(
+            read_type(&mut Reader::new(&writer.bytes), &[])
+                .unwrap_err()
+                .kind(),
+            ErrorKind::ResourceLimit
+        );
+
+        let mut writer = Writer::new();
+        writer.u8(15).unwrap();
+        writer.index(0).unwrap();
+        writer.string("E").unwrap();
+        writer.index(1).unwrap();
+        writer.string("V").unwrap();
+        writer.index(MAX_ENUM_PAYLOAD + 1).unwrap();
+        assert_eq!(
+            read_type(&mut Reader::new(&writer.bytes), &[])
+                .unwrap_err()
+                .kind(),
+            ErrorKind::ResourceLimit
+        );
     }
 }

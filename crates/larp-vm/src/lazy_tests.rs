@@ -28,6 +28,7 @@ fn function(locals: Vec<Type>, result: Type, effects: Effects, code: Vec<Op>) ->
 }
 fn module(main: Function, helpers: Vec<Function>) -> VerifiedModule {
     verify(Module {
+        enums: Vec::new(),
         entry: 0,
         roles: vec![],
         extensions: vec![],

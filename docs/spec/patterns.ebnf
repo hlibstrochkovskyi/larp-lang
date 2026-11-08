@@ -1,0 +1,37 @@
+(* Experimental 0.3.0-dev extension to grammar.ebnf and modules.ebnf.
+   enum and match are reserved in both parser modes; import remains reserved
+   only in source-unit mode. These productions describe syntax, not proof that
+   the compiler implements RFC 0003. Semantic rules are in that RFC.
+   Standalone programs retain their required main_character. Source units retain
+   imports and declaration visibility: their declaration is unit_declaration. *)
+
+declaration      = function | archetype | role | enumeration ;
+unit_declaration = [ visibility ], declaration ;
+qualified        = IDENT, { "::", IDENT } ;
+type             = qualified, [ "<", type_arg, { ",", type_arg }, ">" ]
+                 | "fn", "(", [ types ], ")", "->", type, [ effects ] ;
+enumeration      = "enum", IDENT, "{", variant, { ",", variant }, [ "," ], "}" ;
+variant          = IDENT, [ "(", types, [ "," ], ")" ] ;
+
+postfix          = primary, { call | ".", IDENT | "[", expression, "]" | "?" } ;
+primary          = INT | FLOAT | STRING | "fr" | "cap" | "no_bitches"
+                 | qualified | "self" | "(", expression, ")"
+                 | "[", [ arguments ], "]"
+                 | "new", qualified, "(", [ arguments ], ")"
+                 | match_expression ;
+match_expression = "match", "(", expression, ")", "{",
+                   [ match_arm, { ",", match_arm }, [ "," ] ], "}" ;
+match_arm        = pattern, "=>", ( expression | block ) ;
+pattern          = "_" | "fr" | "cap" | "no_bitches" | constructor_pattern ;
+constructor_pattern = qualified, [ "(", [ binders, [ "," ] ], ")" ] ;
+binders          = IDENT, { ",", IDENT } ;
+
+(* '_' is an ignored payload binder; a qualified '_::Variant' starts with an
+   ordinary enum identifier rather than a wildcard. Built-in constructors and
+   qualified enum constructors are resolved against the scrutinee type.
+   Syntax retains duplicate/unknown constructors, mismatched payload arity and
+   empty matches for semantic diagnostics. Declaration parentheses require at
+   least one payload type; a nullary declaration has no parentheses.
+   Limits: 256 enum variants, 64 fields per variant, 257 match arms, 64 binders
+   per pattern, syntax nesting 128. Each match child expression retains the
+   normal expression budget independently of the match's combined arms. *)

@@ -13,6 +13,21 @@ pub struct DiagnosticCode {
 
 pub const CODES: &[DiagnosticCode] = &[
     DiagnosticCode {
+        id: "LARP-T015",
+        title: "Invalid enum declaration or constructor",
+        explanation: "Enum types need distinct named variants with valid non-unit payloads and an acyclic bounded layout. Use the nominal enum's own variant and the exact payload count/types. An exported enum cannot expose private payload types.",
+    },
+    DiagnosticCode {
+        id: "LARP-T016",
+        title: "Invalid match expression",
+        explanation: "Match a verdict, option, result or nominal enum with correctly typed constructor patterns and distinct payload binders. Cover every alternative, using a final wildcard if needed; duplicate or unreachable arms are errors. Normally completing arms must agree in type.",
+    },
+    DiagnosticCode {
+        id: "LARP-T017",
+        title: "Invalid result propagation",
+        explanation: "Postfix ? requires a result<T,E> operand and a known result<U,E> return boundary with exactly the same E. Annotate a lambda's function type when its result is unknown. Use explicit win for successful returns. A lazy result initializer is its own deferred boundary; propagation cannot leave a scenario block or constructor.",
+    },
+    DiagnosticCode {
         id: "LARP-J001",
         title: "Project manifest loading failed",
         explanation: "No larp.toml was found, or the selected manifest could not be read as a regular UTF-8 file within the 64 KiB limit. Use --manifest-path to select an existing larp.toml explicitly. An invalid nearest manifest is never skipped.",

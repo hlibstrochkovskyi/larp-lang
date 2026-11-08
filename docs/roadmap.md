@@ -133,8 +133,8 @@ value immediately. `sybau` dynamically suppresses ordinary `yap` across calls
 without removing observation effects or muting inspection/diagnostics. Source
 return/break lowering and verified control-flow joins preserve nesting.
 
-All 89 current corpus cases are active and executable. This closes the current
-fixture inventory; it does not prove every normative rule. The first-preview
+All 89 M6 corpus cases were activated and executed for this milestone. This closed
+its fixture inventory; it does not prove every normative rule. The first-preview
 publication has separate [exact-commit evidence](releases/0.1.0-preview.1-publication.md). See [lazy and suppression validation](validation-lazy-and-suppression.md).
 
 Implemented artifact slice: deterministic versioned `.larpbc`, embedded source
@@ -265,11 +265,33 @@ roadmap entry does not establish that the hosted gate passed.
 There is no dependency registry, project workspace, incremental build cache,
 recursive formatter, project test runner, or automatic release in this milestone.
 
+## M9 — Nominal sums and expected-error flow (implementation; acceptance in progress)
+
+[RFC 0003](rfcs/0003-enums-patterns-and-propagation.md) defines nominal value
+`enum` declarations, exhaustive expression-oriented `match`, and postfix result
+propagation with exact error types. The development compiler lowers them through
+typed CFG construction, independently verified sum dispatch and the VM. The
+[practical guide](patterns.md) includes executable examples. Artifact writer 3
+adds canonical enum layouts and total payload dispatch; readers retain 1 and 2.
+The published preview is unchanged.
+
+Gate: execute every variant and built-in sum alternative, managed payloads,
+first-class constructors, lexical captures, module identity/privacy, contextual
+arm types, block-arm control flow, exact-error propagation, lazy return boundaries,
+source evaluation order and `sybau` cleanup. Reject malformed coverage/layouts,
+forged descriptor/dispatch bytecode and forbidden region/effect paths, including
+unreachable operations. Run source, formatted, loaded-artifact and stress-GC
+contracts. Preserve genuine historical v1/v2 artifacts and add a genuine frozen
+v3 producer fixture. Required workspace, corpus, guide, project, version,
+resource and reproducibility gates, plus packaged Ubuntu 24.04/26.04 same-archive
+execution, must pass for the exact proposed commit before M9 is marked complete.
+Current local examples are evidence of implementation, not completion of that gate.
+
 ## Next language work
 
-Enums, richer pattern matching, and result propagation should form the next
-reviewable language slice, followed by user-defined generics and standard-library
-growth. These require separate RFCs and executable acceptance criteria.
+User-defined generics and standard-library growth follow the M9 acceptance gate.
+Richer patterns, recursive enum representations and additional error-flow syntax
+need separate RFCs and executable criteria.
 
 ## Later RFCs
 

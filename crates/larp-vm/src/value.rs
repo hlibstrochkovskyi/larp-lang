@@ -11,9 +11,19 @@ pub(crate) enum Value {
     Lazy(Handle),
     Array(Handle),
     Object(Handle),
-    View { entry: usize },
-    Role { object: Handle, role: usize },
+    View {
+        entry: usize,
+    },
+    Role {
+        object: Handle,
+        role: usize,
+    },
     FixedArray(Vec<Value>),
+    Enum {
+        ty: std::sync::Arc<larp_types::EnumType>,
+        variant: usize,
+        fields: Vec<Value>,
+    },
 }
 
 impl Value {
@@ -28,6 +38,23 @@ impl Value {
             (Self::Object(a), Self::Object(b)) => a == b,
             (Self::Role { object: a, role: x }, Self::Role { object: b, role: y }) => {
                 a == b && x == y
+            }
+            (
+                Self::Enum {
+                    ty: a,
+                    variant: av,
+                    fields: af,
+                },
+                Self::Enum {
+                    ty: b,
+                    variant: bv,
+                    fields: bf,
+                },
+            ) => {
+                a.id == b.id
+                    && av == bv
+                    && af.len() == bf.len()
+                    && af.iter().zip(bf).all(|(a, b)| a.equals(b))
             }
             (Self::FixedArray(a), Self::FixedArray(b)) => {
                 a.len() == b.len() && a.iter().zip(b).all(|(a, b)| a.equals(b))
@@ -45,7 +72,10 @@ impl Value {
                 | Self::Array(handle)
                 | Self::Object(handle) => pending.push(*handle),
                 Self::Role { object, .. } => pending.push(*object),
-                Self::FixedArray(elements) => values.extend(elements),
+                Self::FixedArray(elements)
+                | Self::Enum {
+                    fields: elements, ..
+                } => values.extend(elements),
                 Self::Option(Some(value)) | Self::Result(Ok(value)) | Self::Result(Err(value)) => {
                     values.push(value)
                 }

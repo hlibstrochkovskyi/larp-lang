@@ -40,6 +40,25 @@ def validate_projects(projects: dict, binary_sha256: str) -> None:
 
 
 
+def validate_patterns(patterns: dict, binary_sha256: str) -> None:
+    """Require all executable pattern-guide samples with the packaged binary."""
+    if (not isinstance(patterns, dict) or patterns.get("status") != "passed"
+            or patterns.get("binary_sha256") != binary_sha256
+            or any(not re.fullmatch(r"[0-9a-f]{64}", patterns.get(key, ""))
+                   for key in ("document_sha256", "contracts_sha256", "driver_sha256"))):
+        raise ValueError("Missing or inconsistent pattern-guide execution evidence")
+    count = patterns.get("samples")
+    identifiers = patterns.get("case_ids")
+    if (type(count) is not int or count < 1 or not isinstance(identifiers, list)
+            or len(identifiers) != count
+            or any(not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9-]*", name)
+                   for name in identifiers)
+            or len(set(identifiers)) != count
+            or type(patterns.get("vm_executions")) is not int or patterns["vm_executions"] != count * 5
+            or type(patterns.get("cli_commands")) is not int or patterns["cli_commands"] != count * 14 + 1):
+        raise ValueError("Incomplete pattern-guide execution counts or sample inventory")
+
+
 def validate_workflow(workflow: dict, binary_sha256: str) -> None:
     """Require generated and sibling projects to execute every declared CLI step."""
     if (not isinstance(workflow, dict) or workflow.get("schema_version") != 1
@@ -72,7 +91,7 @@ def validate(reports: dict, revision: str) -> dict:
     common = None
     hosts = {}
     fields = ("revision", "archive", "archive_sha256", "binary_sha256", "version", "target",
-              "rustc", "cargo", "checker_sha256", "checksummed_files", "conformance_cases", "identity", "historical_versions", "preview", "projects", "project_workflow")
+              "rustc", "cargo", "checker_sha256", "checksummed_files", "conformance_cases", "identity", "historical_versions", "preview", "projects", "project_workflow", "patterns")
     for label, release in HOSTS.items():
         report = reports[label]
         if (report.get("schema_version") != 1 or report.get("status") != "passed"
@@ -89,6 +108,7 @@ def validate(reports: dict, revision: str) -> dict:
         validate_preview_evidence(identity, report.get("preview"))
         validate_projects(report.get("projects"), report["binary_sha256"])
         validate_workflow(report.get("project_workflow"), report["binary_sha256"])
+        validate_patterns(report.get("patterns"), report["binary_sha256"])
         cases = report.get("conformance_cases")
         if report.get("historical_versions") != report.get("identity", {}).get("artifact", {}).get("read"):
             raise ValueError(f"Historical artifact execution does not cover declared read versions: {label}")
