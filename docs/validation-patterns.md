@@ -42,11 +42,14 @@ return inference correct when every match arm returns from a block body.
 
 ## Remaining acceptance gates
 
-A clean implementation commit is needed to produce a genuine version-3 frozen
-artifact with traceable producer revision and executable/source hashes. Existing
-version-1/2 fixtures must remain byte-for-byte unchanged. The complete version
-gate must execute every advertised historical version before reader-3 compatibility
-is accepted. A round trip with the current encoder alone is insufficient.
+A clean tracked archive of implementation commit
+`33ea7fb7861de9f17772dc89f072aadb22ea1b1c` produced the real version-3
+[frozen fixture](../tests/compatibility/artifacts/README.md#version-3-production-and-verification).
+The producer and current CLI executed its exact bytes after the source path was
+made unavailable, with ordinary/stress GC and stdout `49\ncap\n`. The version
+gate passed: writer 3; frozen historical readers 1, 2 and 3; JSON schemas 1.
+The existing version-1/2 source, artifact bytes and manifest records are unchanged.
+Resource smoke cases also completed with their expected ordinary/stress outcomes.
 
 Exact-commit CI, two clean offline release builds, extracted-candidate execution
 and the Ubuntu 24.04/26.04 same-archive matrix remain required before full M9

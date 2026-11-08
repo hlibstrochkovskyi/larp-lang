@@ -1,6 +1,6 @@
 # Historical bytecode compatibility fixtures
 
-[Project overview](../../../README.md) · [Version policy](../../../docs/versioning.md) · [Artifact format](../../../docs/bytecode-format-v2.md)
+[Project overview](../../../README.md) · [Version policy](../../../docs/versioning.md) · [Artifact format](../../../docs/bytecode-format-v3.md)
 
 These are frozen artifacts emitted by genuine earlier LARP compilers. They test
 whether the current loader, verifier, and VM still accept the advertised wire
@@ -18,7 +18,7 @@ python3 tools/check_version.py --bin target/debug/larp --output artifacts/versio
 
 Use a new or empty `--output` directory for each run. If `CARGO_TARGET_DIR` is set,
 adjust `--bin` to the actual binary location. The checker validates CLI identity,
-current encoding, and the hashes and normal/stress-GC execution of both frozen
+current encoding, and the hashes and normal/stress-GC execution of all frozen
 fixtures. It never recompiles the historical source to obtain fixture bytes.
 
 ## Inventory and manifest
@@ -38,13 +38,14 @@ stderr and exit with status 0.
 | --- | --- | --- | --- | --- |
 | `collections-v1` | 1 | `044b02dbbeca710ccd28f2f65745361e7b40447f` | 1862 | `5\n50\n` |
 | `host-arguments-v2` | 2 | `b381fd3178ab78115317a4e37796e72b5401ed1e` | 502 | `2\n` |
+| `sums-v3` | 3 | `33ea7fb7861de9f17772dc89f072aadb22ea1b1c` | 2592 | `49\ncap\n` |
 
 The v1 source is an exact copy of `examples/collections.larp` at its producer
 revision. It exercises collection callbacks and ordering. The v2 source uses
 the host-input intrinsic `args()` and is run with program arguments `unc bro`.
 This distinguishes v2 functionality from a header-only change to v1 bytes.
 
-## Recorded production and verification
+## Recorded version-1/2 production and verification
 
 Both producers were built on 2026-10-19 using their complete tracked source
 archives, exported with `sh tools/git-local.sh archive --format=tar REVISION`.
@@ -91,3 +92,23 @@ Add a separately identified historical fixture when introducing another wire
 version or an additional compatibility contract. Regenerating these files with
 the current encoder would remove the historical evidence they are meant to
 preserve.
+
+## Version-3 production and verification
+
+The `sums-v3` fixture was produced on 2026-11-09 from the complete tracked archive
+of `33ea7fb7861de9f17772dc89f072aadb22ea1b1c`. A separate extracted source tree
+and target directory built the real CLI with locked offline Cargo dependencies
+and `CARGO_INCREMENTAL=0`. The manifest records the exact source archive, CLI,
+source and artifact hashes and actual Rust/Cargo identities.
+
+The producer compiled `sums-v3.larp` under that basename. The program constructs
+a multi-payload nominal enum, dispatches it with `match`, and propagates both
+success and failure through `?`. The unmodified artifact contains the version-3
+`MakeEnum` and `MatchSum` operations. Its source path was moved out of the way
+before both the producer and current CLI checked and ran the artifact under
+ordinary and stress GC: exit 0, stdout `49\ncap\n`, empty stderr. Raw commands
+and hashes remain in ignored `artifacts/m9-producer/verification.json`.
+
+The version-3 fixture extends the inventory; the version-1/2 source, hexadecimal
+bytes and manifest records were preserved unchanged. Future changes must retain
+all three fixtures, rather than regenerate them with a later encoder.
