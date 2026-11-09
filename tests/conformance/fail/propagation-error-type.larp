@@ -1,0 +1,2 @@
+sidequest parse(text input) -> result<mf, mf> uses() { return win(parseScore(input)?); }
+main_character {}

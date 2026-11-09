@@ -1,0 +1,1 @@
+main_character { baddie<mf> value = some(1); mf answer = match (value) { some(x) => x, }; }

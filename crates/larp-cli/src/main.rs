@@ -24,6 +24,7 @@ Usage:
   larp fmt FILE.larp [--check|--stdout]
 
 Implemented: scalar types, first-class functions, closures, arrays, options/results,
+nominal enums, exhaustive match, result propagation (?),
 archetypes, roles, extensions, constructors, private/public fields, bound methods,
 branches, loops, checked conversions, effect bounds, typed IR,
 verified bytecode and versioned artifacts, eager collection pipelines, isolated scenarios,

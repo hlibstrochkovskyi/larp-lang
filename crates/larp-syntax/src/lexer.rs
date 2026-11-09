@@ -161,7 +161,7 @@ impl Lexer<'_> {
         for punctuation in [
             "::", "->", "=>", "..", "==", "!=", "<=", ">=", "&&", "||", "+=", "-=", "*=", "/=",
             "%=", "{", "}", "(", ")", "[", "]", ";", ":", ",", ".", "+", "-", "*", "/", "%", "!",
-            "=", "<", ">",
+            "=", "<", ">", "?",
         ] {
             if self.source.text()[start..].starts_with(punctuation) {
                 self.offset = start + punctuation.len();

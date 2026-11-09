@@ -128,9 +128,11 @@ cargo build -p larp-cli --release --locked --offline
 
 Source builds use the checked-out commit; they do not reproduce the published
 archive merely by sharing its version string. This development branch reports
-`0.3.0-dev` and adds the [project workflow](docs/projects.md); the published
-`0.2.0-preview.1` does not include that workflow. Other platforms are not yet part
-of the release compatibility policy.
+`0.3.0-dev` and adds the [project workflow](docs/projects.md) and
+[enums, exhaustive matching, and result propagation](docs/patterns.md). These
+development features are not included in `0.2.0-preview.1`; M9 acceptance checks
+remain in progress. Other platforms are not yet part of the release compatibility
+policy.
 
 ### Start a project on the development branch
 
@@ -168,7 +170,8 @@ arrays, closures, and lazy cells. Source checks and an independent bytecode
 verifier preserve types, visibility, effects, and scenario restrictions.
 
 The published preview supports standalone and multi-file programs; development
-builds also support manifest-based projects. Dependency packages, re-exports,
+builds also support manifest-based projects and the
+[enum/match/result-propagation slice](docs/patterns.md). Dependency packages, re-exports,
 user-defined generics, inheritance, async, FFI, and a native backend remain future
 work. There is no stable source/API compatibility promise or hostile-code sandbox.
 The [implementation status](docs/implementation-status.md) lists working features
@@ -196,7 +199,8 @@ keep program output on stdout and report structured events on stderr.
 ## Learn, build, contribute
 
 - **Write LARP:** [practical reference](docs/reference.md), [examples](examples/),
-  [project workflow](docs/projects.md), [CLI and diagnostics](docs/diagnostics.md).
+  [project workflow](docs/projects.md), [development enums and matching](docs/patterns.md),
+  [CLI and diagnostics](docs/diagnostics.md).
 - **Understand the implementation:** [architecture](docs/architecture.md),
   [development guide](docs/development.md), [roadmap](docs/roadmap.md).
 - **Help the project:** [contribution guide](CONTRIBUTING.md),

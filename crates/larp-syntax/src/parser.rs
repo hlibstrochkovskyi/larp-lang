@@ -9,6 +9,11 @@ const MAX_DEPTH: usize = 128;
 pub fn parse(source: &SourceFile) -> std::result::Result<Program, Vec<Diagnostic>> {
     let unit = parse_source(source, false)?;
     Ok(Program {
+        enums: unit
+            .enums
+            .into_iter()
+            .map(|declaration| declaration.item)
+            .collect(),
         roles: unit
             .roles
             .into_iter()
@@ -45,7 +50,9 @@ fn parse_source(
         depth: 0,
         errors: Vec::new(),
         unit_mode,
+        compound_tokens: 0,
     };
+    let mut enums = Vec::new();
     let mut imports = Vec::new();
     let mut classes = Vec::new();
     let mut roles = Vec::new();
@@ -72,7 +79,11 @@ fn parse_source(
             }
         } else {
             declarations_started = true;
-            if parser.word("sidequest") {
+            if parser.word("enum") {
+                parser
+                    .enumeration()
+                    .map(|item| enums.push(Declaration { public, item }))
+            } else if parser.word("sidequest") {
                 parser
                     .function(true)
                     .map(|item| functions.push(Declaration { public, item }))
@@ -102,9 +113,9 @@ fn parse_source(
                 Err(parser.error(
                     "LARP-P002",
                     if unit_mode {
-                        "Expected import, role, archetype, sidequest, or main_character"
+                        "Expected import, enum, role, archetype, sidequest, or main_character"
                     } else {
-                        "Expected role, archetype, sidequest, or main_character"
+                        "Expected enum, role, archetype, sidequest, or main_character"
                     },
                 ))
             }
@@ -126,6 +137,7 @@ fn parse_source(
     }
     if parser.errors.is_empty() {
         Ok(SourceUnit {
+            enums,
             imports,
             roles,
             classes,
@@ -144,11 +156,15 @@ struct Parser<'a> {
     depth: usize,
     errors: Vec<Diagnostic>,
     unit_mode: bool,
+    // Tokens inside completed match primaries have their own bounded child
+    // expressions. Exclude their non-overlapping ranges from enclosing budgets.
+    compound_tokens: usize,
 }
 
 impl Parser<'_> {
     fn top_level_start(&self) -> bool {
         self.word("sidequest")
+            || self.word("enum")
             || self.word("archetype")
             || self.word("role")
             || self.word("main_character")
@@ -176,20 +192,15 @@ impl Parser<'_> {
     }
     fn reference_name(&mut self) -> Result<Name> {
         let mut name = self.name()?;
-        if self.unit_mode {
-            while self.eat("::") {
-                let segment = self.name()?;
-                name.text.push_str("::");
-                name.text.push_str(&segment.text);
-                name.span = self.joined(name.span);
-            }
+        while self.eat("::") {
+            let segment = self.name()?;
+            name.text.push_str("::");
+            name.text.push_str(&segment.text);
+            name.span = self.joined(name.span);
         }
         Ok(name)
     }
-    fn looks_like_unit_binding(&mut self) -> bool {
-        if !self.unit_mode {
-            return false;
-        }
+    fn looks_like_typed_binding(&mut self) -> bool {
         let saved = self.pos;
         let binding = self.ty().is_ok()
             && matches!(self.current().kind, Kind::Word(_))
@@ -289,6 +300,8 @@ impl Parser<'_> {
                     | "goon"
                     | "touch_grass"
                     | "archetype"
+                    | "enum"
+                    | "match"
                     | "role"
                     | "highkey"
                     | "lowkey"
@@ -392,6 +405,61 @@ impl Parser<'_> {
         self.expect(")")?;
         Ok(Some(effects))
     }
+    fn enumeration(&mut self) -> Result<Enum> {
+        let start = self.current().span;
+        self.expect_word("enum")?;
+        let name = self.name()?;
+        self.expect("{")?;
+        let mut variants = Vec::new();
+        if self.punct("}") {
+            return Err(self.error("LARP-P001", "An enum requires at least one variant"));
+        }
+        loop {
+            if variants.len() >= 256 {
+                return Err(self.error("LARP-P003", "An enum exceeds the 256-variant limit"));
+            }
+            let start = self.current().span;
+            let name = self.name()?;
+            let mut payloads = Vec::new();
+            if self.eat("(") {
+                if self.punct(")") {
+                    return Err(
+                        self.error("LARP-P001", "A nullary enum variant has no parentheses")
+                    );
+                }
+                loop {
+                    if payloads.len() >= 64 {
+                        return Err(
+                            self.error("LARP-P003", "An enum variant exceeds the 64-payload limit")
+                        );
+                    }
+                    payloads.push(self.ty()?);
+                    if !self.eat(",") {
+                        break;
+                    }
+                    if self.punct(")") {
+                        break;
+                    }
+                }
+                self.expect(")")?;
+            }
+            variants.push(Variant {
+                name,
+                payloads,
+                span: self.joined(start),
+            });
+            if !self.eat(",") || self.punct("}") {
+                break;
+            }
+        }
+        self.expect("}")?;
+        Ok(Enum {
+            name,
+            variants,
+            span: self.joined(start),
+        })
+    }
+
     fn function(&mut self, allow_receiver: bool) -> Result<Function> {
         self.expect_word("sidequest")?;
         let ordinary = !self.word("fn")
@@ -716,7 +784,7 @@ impl Parser<'_> {
                 "LARP-P002",
                 "This statement is not implemented in the executable core yet",
             ));
-        } else if self.looks_like_unit_binding()
+        } else if self.looks_like_typed_binding()
             || self.word("fn")
             || (matches!(&self.current().kind, Kind::Word(_))
                 && matches!(
@@ -792,6 +860,7 @@ impl Parser<'_> {
     }
     fn expr_inner(&mut self, minimum: u8) -> Result<Expr> {
         let token_start = self.pos;
+        let compound_start = self.compound_tokens;
         let start = self.current().span;
         if minimum == 0 && self.looks_like_lambda() {
             return self.lambda();
@@ -806,6 +875,12 @@ impl Parser<'_> {
                 ExprKind::Verdict(word == "fr")
             }
             Kind::Word(ref word) if word == "self" => ExprKind::SelfValue,
+            Kind::Word(ref word) if word == "match" => {
+                let kind = self.match_expression()?;
+                let nested = self.compound_tokens - compound_start;
+                self.compound_tokens += (self.pos - token_start).saturating_sub(nested);
+                kind
+            }
             Kind::Word(ref word) if word == "new" => {
                 let class = self.reference_name()?;
                 self.expect("(")?;
@@ -813,7 +888,7 @@ impl Parser<'_> {
                 if !self.punct(")") {
                     loop {
                         arguments.push(self.expr(0)?);
-                        if self.pos - token_start > 256 {
+                        if self.expression_tokens(token_start, compound_start) > 256 {
                             return Err(self.error(
                                 "LARP-P003",
                                 "An expression exceeds the current 256-token limit",
@@ -850,7 +925,7 @@ impl Parser<'_> {
                 if !self.punct("]") {
                     loop {
                         elements.push(self.expr(0)?);
-                        if self.pos - token_start > 256 {
+                        if self.expression_tokens(token_start, compound_start) > 256 {
                             return Err(self.error(
                                 "LARP-P003",
                                 "An expression exceeds the current 256-token limit",
@@ -878,7 +953,7 @@ impl Parser<'_> {
         };
         let mut non_associative = None;
         loop {
-            if self.pos - token_start > 256 {
+            if self.expression_tokens(token_start, compound_start) > 256 {
                 return Err(self.error(
                     "LARP-P003",
                     "An expression exceeds the current 256-token limit",
@@ -934,6 +1009,15 @@ impl Parser<'_> {
                 };
                 continue;
             }
+            if minimum <= 15 && self.eat("?") {
+                left = Expr {
+                    kind: ExprKind::Propagate {
+                        operand: Box::new(left),
+                    },
+                    span: self.joined(start),
+                };
+                continue;
+            }
             if self.punct("=>") {
                 return Err(self.error("LARP-P002", "Lambda parameters need parentheses"));
             }
@@ -963,6 +1047,87 @@ impl Parser<'_> {
         }
         Ok(left)
     }
+    fn expression_tokens(&self, start: usize, compound_start: usize) -> usize {
+        (self.pos - start).saturating_sub(self.compound_tokens - compound_start)
+    }
+
+    fn match_expression(&mut self) -> Result<ExprKind> {
+        self.expect("(")?;
+        let value = Box::new(self.expr(0)?);
+        self.expect(")")?;
+        self.expect("{")?;
+        let mut arms = Vec::new();
+        while !self.punct("}") {
+            if arms.len() >= 257 {
+                return Err(self.error("LARP-P003", "A match exceeds the 257-arm limit"));
+            }
+            let start = self.current().span;
+            let pattern = self.pattern()?;
+            self.expect("=>")?;
+            let body = if self.punct("{") {
+                LambdaBody::Block(self.block()?)
+            } else {
+                LambdaBody::Expression(Box::new(self.expr(0)?))
+            };
+            arms.push(MatchArm {
+                pattern,
+                body,
+                span: self.joined(start),
+            });
+            if !self.eat(",") {
+                break;
+            }
+        }
+        self.expect("}")?;
+        Ok(ExprKind::Match { value, arms })
+    }
+
+    fn pattern(&mut self) -> Result<Pattern> {
+        let start = self.current().span;
+        let kind = if self.word("_")
+            && self
+                .tokens
+                .get(self.pos + 1)
+                .is_none_or(|token| token.kind != Kind::Punctuation("::"))
+        {
+            self.advance();
+            PatternKind::Wildcard
+        } else if self.eat_word("fr") {
+            PatternKind::Verdict(true)
+        } else if self.eat_word("cap") {
+            PatternKind::Verdict(false)
+        } else if self.eat_word("no_bitches") {
+            PatternKind::None
+        } else {
+            let path = self.reference_name()?;
+            let bindings = if self.eat("(") {
+                let mut names = Vec::new();
+                if !self.punct(")") {
+                    loop {
+                        if names.len() >= 64 {
+                            return Err(
+                                self.error("LARP-P003", "A pattern exceeds the 64-payload limit")
+                            );
+                        }
+                        names.push(self.name()?);
+                        if !self.eat(",") || self.punct(")") {
+                            break;
+                        }
+                    }
+                }
+                self.expect(")")?;
+                Some(names)
+            } else {
+                None
+            };
+            PatternKind::Constructor { path, bindings }
+        };
+        Ok(Pattern {
+            kind,
+            span: self.joined(start),
+        })
+    }
+
     fn try_type_arguments(&mut self) -> Option<Vec<TypeExpr>> {
         if !self.punct("<") {
             return None;

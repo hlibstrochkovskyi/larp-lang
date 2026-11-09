@@ -83,6 +83,7 @@ pub(super) fn check_program(
                 ));
             }
         }
+        let enums = super::enums::collect(ast, project, &mut class_types)?;
         let mut roles = Vec::new();
         for role in &ast.roles {
             let mut seen = HashSet::new();
@@ -442,6 +443,7 @@ pub(super) fn check_program(
         }
         let tables = Tables {
             project: project.is_some(),
+            enums,
             headers,
             names,
             types: class_types,
@@ -506,6 +508,7 @@ pub(super) fn check_program(
         }
         functions.extend(generated);
         let mut program = Program {
+            enums: tables.enums,
             classes: tables.classes,
             roles: tables.roles,
             extensions: tables.extensions,

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "funding-and-runway",
+      "stdout": "49\n490\n20\n7\n",
+      "stderr": ""
+    },
+    {
+      "id": "payload-capture-and-deferred-error",
+      "stdout": "3\n3\n7\n7\n",
+      "stderr": ""
+    }
+  ]
+}

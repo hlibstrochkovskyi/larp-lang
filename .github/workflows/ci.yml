@@ -29,6 +29,7 @@ jobs:
       - run: python3 tools/run_conformance.py --formatted --artifacts --gc-stress
       - run: python3 tools/run_reference.py
       - run: python3 tools/run_reference.py --document README.md --contracts docs/readme-cases.json --output artifacts/readme-validation
+      - run: python3 tools/run_reference.py --document docs/patterns.md --contracts docs/pattern-cases.json --output artifacts/pattern-validation
       - run: python3 tools/run_projects.py --bin target/debug/larp --output artifacts/project-validation
       - run: python3 tools/check_project_workflow.py --bin target/debug/larp --output artifacts/project-workflow
       - run: python3 tools/measure_resources.py --samples 1 --output artifacts/ci-resources
@@ -51,6 +52,7 @@ jobs:
           path: |
             artifacts/project-validation/project-report.json
             artifacts/project-workflow/workflow-report.json
+            artifacts/pattern-validation/validation.json
           retention-days: 14
 
   reproducible-build:
@@ -112,6 +114,7 @@ jobs:
             artifacts/candidate-compatibility/version-contract/version-report.json
             artifacts/candidate-compatibility/projects/project-report.json
             artifacts/candidate-compatibility/project-workflow/workflow-report.json
+            artifacts/candidate-compatibility/patterns/validation.json
           retention-days: 14
 
   candidate-matrix:

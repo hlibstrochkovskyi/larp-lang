@@ -127,6 +127,18 @@ impl Builder<'_> {
         span: Span,
         evaluate: bool,
     ) -> Result<Value> {
+        if let ExprKind::Name(name) = &callee.kind
+            && let Some((ty, variant)) = self.tables.enum_variant(name)?
+        {
+            if !type_arguments.is_empty() {
+                return Err(error(
+                    "LARP-T015",
+                    span,
+                    "Enum constructors do not accept type arguments",
+                ));
+            }
+            return self.construct_enum(ty, variant, arguments, span, evaluate);
+        }
         if let ExprKind::Name(name) = &callee.kind {
             if self.resolve(&name.text).is_none() && self.scenario_forbidden.contains(&name.text) {
                 return Err(error(
@@ -692,8 +704,8 @@ impl Builder<'_> {
         let success_payload = self.local(success_type.clone());
         let error_payload = self.local(error_type.clone());
         let result = self.local(success_type.clone());
-        self.function.blocks[success].parameter = Some(success_payload);
-        self.function.blocks[failure].parameter = Some(error_payload);
+        self.function.blocks[success].parameters = vec![success_payload];
+        self.function.blocks[failure].parameters = vec![error_payload];
         self.terminate(
             Terminator::MatchResult {
                 value: receiver.slot,

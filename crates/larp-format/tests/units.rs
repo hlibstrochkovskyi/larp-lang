@@ -135,7 +135,7 @@ fn namespace_import_and_visibility_comments_remain_separated_and_exact() {
 }
 
 #[test]
-fn unit_syntax_is_opt_in_and_legacy_import_bindings_are_preserved() {
+fn import_declarations_are_opt_in_and_legacy_import_bindings_are_preserved() {
     let text = "main_character{mf import=49;yap(import);}";
     let old = larp_format::format(&source(text)).unwrap();
     assert!(old.contains("mf import = 49;"));
@@ -144,7 +144,6 @@ fn unit_syntax_is_opt_in_and_legacy_import_bindings_are_preserved() {
     for text in [
         "import\"math.larp\"as math;main_character{}",
         "highkey sidequest answer()->mf{return 49;}main_character{}",
-        "main_character{yap(math::answer());}",
     ] {
         checked(text);
         assert!(larp_format::format(&source(text)).is_err());

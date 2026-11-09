@@ -10,9 +10,12 @@ mod bound_builtins;
 mod calls;
 mod closures;
 mod declarations;
+mod enums;
 mod lazy;
 mod modules;
 mod objects;
+mod patterns;
+mod propagation;
 mod roles;
 mod scenarios;
 use modules::{Declarations, Scope};
@@ -33,6 +36,7 @@ struct Header {
 
 struct Tables {
     project: bool,
+    enums: Vec<std::sync::Arc<larp_types::EnumType>>,
     headers: Vec<Header>,
     names: Scope<usize>,
     types: Scope<Type>,
@@ -220,7 +224,7 @@ impl<'a> Builder<'a> {
                 effects: header.effects,
                 locals: header.parameters.clone(),
                 blocks: vec![Block {
-                    parameter: None,
+                    parameters: Vec::new(),
                     instructions: Vec::new(),
                     terminator: Terminator::Unreachable,
                     span,
@@ -306,7 +310,7 @@ impl<'a> Builder<'a> {
     fn new_block(&mut self, span: Span) -> BlockId {
         let id = self.function.blocks.len();
         self.function.blocks.push(Block {
-            parameter: None,
+            parameters: Vec::new(),
             instructions: Vec::new(),
             terminator: Terminator::Unreachable,
             span,
@@ -743,6 +747,21 @@ impl<'a> Builder<'a> {
                     .map(|class| Type::class(class, self.tables.classes[class].name.as_str()))
             }),
             ExprKind::New { class, .. } => self.tables.types.get(class).cloned(),
+            ExprKind::Name(name) if self.tables.enum_variant(name).ok().flatten().is_some() => {
+                let (ty, variant) = self.tables.enum_variant(name).ok().flatten()?;
+                let Type::Enum(layout) = &ty else {
+                    unreachable!()
+                };
+                if layout.variants[variant].payload.is_empty() {
+                    Some(ty)
+                } else {
+                    Some(Type::function(
+                        layout.variants[variant].payload.clone(),
+                        ty,
+                        Effects::NONE,
+                    ))
+                }
+            }
             ExprKind::Name(name) => {
                 self.resolve(&name.text)
                     .map(|binding| binding.ty)
@@ -786,6 +805,10 @@ impl<'a> Builder<'a> {
                         }
                     })
             }
+            ExprKind::Propagate { operand } => match self.hint(operand) {
+                Some(Type::Result(pair)) => Some(pair.0.clone()),
+                _ => None,
+            },
             ExprKind::Float(_) => Some(Type::Geeked),
             ExprKind::Text(_) => Some(Type::Text),
             ExprKind::Verdict(_) => Some(Type::Verdict),
@@ -911,6 +934,12 @@ impl<'a> Builder<'a> {
     ) -> Result<Value> {
         let span = expression.span;
         let value = match &expression.kind {
+            ExprKind::Match { value, arms } => {
+                self.match_expression(value, arms, expected.clone(), span, evaluate)?
+            }
+            ExprKind::Propagate { operand } => {
+                self.propagate(operand, expected.clone(), span, evaluate)?
+            }
             ExprKind::Integer(digits) => self.integer(digits, false, expected.clone(), span)?,
             ExprKind::Array(elements) => {
                 self.array_literal(elements, expected.clone(), span, evaluate)?
@@ -949,6 +978,10 @@ impl<'a> Builder<'a> {
             ExprKind::SelfValue => self.self_value(span)?,
             ExprKind::New { class, arguments } => {
                 self.construct(class, arguments, span, evaluate)?
+            }
+            ExprKind::Name(name) if self.tables.enum_variant(name)?.is_some() => {
+                let (ty, variant) = self.tables.enum_variant(name)?.unwrap();
+                self.enum_reference(ty, variant, span)?
             }
             ExprKind::Name(name) => {
                 if let Some(binding) = self.resolve(&name.text) {

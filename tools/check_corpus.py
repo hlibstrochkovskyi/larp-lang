@@ -37,7 +37,7 @@ def main() -> None:
         require(case_id not in seen_ids, f"Duplicate case ID: {case_id}")
         seen_ids.add(case_id)
         require(case["status"] in {"pending", "active"}, f"Unknown fixture status: {case_id}")
-        require(case["milestone"] in {f"M{i}" for i in range(1, 7)},
+        require(case["milestone"] in {f"M{i}" for i in range(1, 10)},
                 f"Unknown milestone: {case_id}")
         require(isinstance(case["path"], str), f"Invalid path: {case_id}")
         relative = Path(case["path"])

@@ -1,0 +1,21 @@
+sidequest first() -> mf uses(observe) { yap("first"); return 1; }
+sidequest last() -> mf uses(observe) { yap("last"); return 2; }
+sidequest middle(mf first, mf value, mf last) -> mf uses() { return value; }
+sidequest attempt(text input) -> result<unc, text> uses(observe, abort) {
+    mf score = middle(first(), parseScore(input)?, last());
+    return win(fraud<unc>(score));
+}
+sidequest quiet(text input) -> result<mf, text> uses(observe) {
+    sybau {
+        mf score = parseScore(input)?;
+        yap("quiet");
+        return win(score);
+    }
+}
+main_character {
+    yap(attempt("bad").cope(err => 0));
+    yap(attempt("49").cope(err => 0));
+    yap(quiet("bad").cope(err => 7));
+    sybau { quiet("bad"); yap("still quiet"); }
+    yap("audible");
+}

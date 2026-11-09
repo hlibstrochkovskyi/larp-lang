@@ -648,6 +648,45 @@ fn execute_host_runtime(
                     );
                 }
             }
+            Op::MakeEnum {
+                ty: Type::Enum(descriptor),
+                variant,
+            } => {
+                let count = descriptor.variants[*variant].payload.len();
+                let fields = stack.split_off(stack.len() - count);
+                stack.push(Value::Enum {
+                    ty: descriptor.clone(),
+                    variant: *variant,
+                    fields,
+                });
+            }
+            Op::MakeEnum { .. } => unreachable!("verified enum construction"),
+            Op::MatchSum { targets, .. } => {
+                let variant = match stack.pop().unwrap() {
+                    Value::Enum {
+                        variant, fields, ..
+                    } => {
+                        stack.extend(fields);
+                        variant
+                    }
+                    Value::Option(None) => 0,
+                    Value::Option(Some(value)) => {
+                        stack.push(*value);
+                        1
+                    }
+                    Value::Result(Ok(value)) => {
+                        stack.push(*value);
+                        0
+                    }
+                    Value::Result(Err(value)) => {
+                        stack.push(*value);
+                        1
+                    }
+                    Value::Scalar(Scalar::Verdict(value)) => usize::from(value),
+                    _ => unreachable!("verified sum dispatch"),
+                };
+                frame.pc = targets[variant];
+            }
             Op::MatchResult { success, error, .. } => {
                 let Value::Result(result) = stack.pop().unwrap() else {
                     unreachable!("verified result")

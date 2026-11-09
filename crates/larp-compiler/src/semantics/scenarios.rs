@@ -358,8 +358,24 @@ pub(super) fn specialize(program: &mut Program) -> Result<()> {
             }
             let mut replacements = Vec::new();
             for (block_id, block) in function.blocks.iter().enumerate() {
+                if let Terminator::MatchSum { value, .. } = block.terminator
+                    && !function.locals[value].is_snapshot()
+                {
+                    return Err(error(
+                        "LARP-E002",
+                        block.span,
+                        "Scenario matching requires SnapshotValue alternatives",
+                    ));
+                }
                 for (instruction_id, instruction) in block.instructions.iter().enumerate() {
                     match &instruction.kind {
+                        Inst::MakeEnum { ty, .. } if !ty.is_snapshot() => {
+                            return Err(error(
+                                "LARP-E002",
+                                instruction.span,
+                                "Scenario enum construction requires every variant to contain SnapshotValues",
+                            ));
+                        }
                         Inst::Scenario { .. }
                         | Inst::Construct { .. }
                         | Inst::IntoRole { .. }

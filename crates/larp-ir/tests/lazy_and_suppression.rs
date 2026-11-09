@@ -20,7 +20,7 @@ fn lazy_cells_forcing_and_balanced_silence_survive_lowering_and_verification() {
                 effects,
                 locals,
                 blocks: vec![Block {
-                    parameter: None,
+                    parameters: Vec::new(),
                     instructions,
                     terminator,
                     span,
@@ -65,6 +65,7 @@ fn lazy_cells_forcing_and_balanced_silence_survive_lowering_and_verification() {
         Terminator::Return(Some(0)),
     );
     let program = Program {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         classes: vec![],

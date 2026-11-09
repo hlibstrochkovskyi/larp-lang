@@ -57,6 +57,7 @@ fn module() -> Module {
     thunk.captures = vec![Type::Mf];
     thunk.locals = vec![Type::Mf];
     Module {
+        enums: Vec::new(),
         classes: vec![],
         roles: vec![],
         extensions: vec![],

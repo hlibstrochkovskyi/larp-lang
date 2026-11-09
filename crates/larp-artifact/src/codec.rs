@@ -1,4 +1,4 @@
-//! Explicit wire tags shared by versions 1 and 2. Version 2 adds host input.
+//! Explicit wire tags shared by versions 1, 2, and 3.
 //!
 //! Every tag below is an unsigned byte. Indices and vector/string lengths use
 //! checked u32 values through Reader/Writer; integer payloads use their stated
@@ -20,7 +20,7 @@
 //! 11 GetField, 12 SetField, 13 CallIndirect, 14 Intrinsic, 15 MatchResult,
 //! 16 Return, 17 Print, 18 Assert, 19 Crash, 20 IntoRole, 21 CallRole,
 //! 22 Scenario, 23 Canon, 24 Flex, 25 Palantir, 26 MakeLazy, 27 Force,
-//! 28 SilenceEnter, 29 SilenceExit.
+//! 28 SilenceEnter, 29 SilenceExit. Version 3 adds 30 MakeEnum, 31 MatchSum.
 //!
 //! These tables are wire contracts, independent of Rust enum discriminants.
 
@@ -34,7 +34,9 @@ pub(super) fn collect_op_types(table: &mut TypeTable, op: &Op) -> Result<()> {
         | Op::Binary(_, ty)
         | Op::CallIndirect(ty)
         | Op::Force(ty)
-        | Op::MatchResult { ty, .. } => {
+        | Op::MatchResult { ty, .. }
+        | Op::MakeEnum { ty, .. }
+        | Op::MatchSum { ty, .. } => {
             table.intern(ty)?;
         }
         Op::Intrinsic(operation) => {
@@ -79,6 +81,8 @@ pub(super) fn write_op(w: &mut Writer, types: &TypeTable, op: &Op) -> Result<()>
         Op::Force(_) => 27,
         Op::SilenceEnter => 28,
         Op::SilenceExit => 29,
+        Op::MakeEnum { .. } => 30,
+        Op::MatchSum { .. } => 31,
     };
     w.u8(tag)?;
     match op {
@@ -113,6 +117,14 @@ pub(super) fn write_op(w: &mut Writer, types: &TypeTable, op: &Op) -> Result<()>
             w.ty(types, ty)?;
             w.index(*success)?;
             w.index(*error)
+        }
+        Op::MakeEnum { ty, variant } => {
+            w.ty(types, ty)?;
+            w.index(*variant)
+        }
+        Op::MatchSum { ty, targets } => {
+            w.ty(types, ty)?;
+            w.indices(targets)
         }
         Op::IntoRole { class, role } => {
             w.index(*class)?;
@@ -196,6 +208,14 @@ pub(super) fn read_op(r: &mut Reader<'_>, types: &[Type]) -> Result<Op> {
         27 => Op::Force(r.ty(types)?),
         28 => Op::SilenceEnter,
         29 => Op::SilenceExit,
+        30 if r.version >= 3 => Op::MakeEnum {
+            ty: r.ty(types)?,
+            variant: r.index()?,
+        },
+        31 if r.version >= 3 => Op::MatchSum {
+            ty: r.ty(types)?,
+            targets: r.indices(larp_types::MAX_ENUM_VARIANTS)?,
+        },
         _ => return Err(r.invalid("Unknown instruction tag")),
     })
 }
@@ -468,6 +488,21 @@ mod tests {
             Op::Force(Type::lazy(Type::option(Type::Mf), Effects::ABORT)),
             Op::SilenceEnter,
             Op::SilenceExit,
+            Op::MakeEnum {
+                ty: Type::Enum(std::sync::Arc::new(larp_types::EnumType {
+                    id: 0,
+                    name: "Funding".into(),
+                    variants: vec![larp_types::EnumVariant {
+                        name: "Angel".into(),
+                        payload: vec![Type::Unc],
+                    }],
+                })),
+                variant: 0,
+            },
+            Op::MatchSum {
+                ty: Type::option(Type::Mf),
+                targets: vec![4, 7],
+            },
         ]
     }
 
@@ -692,6 +727,18 @@ mod tests {
             assert_eq!(table.types.len(), before);
             let bytes = encode(&op, &table);
             read_op(&mut Reader::new(&bytes), &table.types).unwrap();
+        }
+    }
+    #[test]
+    fn version_three_operations_are_rejected_under_legacy_versions() {
+        for op in operations().into_iter().skip(30) {
+            let types = type_table(&op);
+            let bytes = encode(&op, &types);
+            for version in [1, 2] {
+                let mut reader = Reader::new(&bytes);
+                reader.version = version;
+                assert!(read_op(&mut reader, &types.types).is_err());
+            }
         }
     }
 }

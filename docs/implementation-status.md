@@ -9,9 +9,12 @@ The [preview audit](preview-readiness.md) records resolved semantic regressions,
 release evidence, and remaining design questions; a finite passing corpus and a
 published preview do not approve the whole proposed specification. File modules
 are included in this release as described below. This branch reports `0.3.0-dev`
-and adds manifest-based project commands; dependency package management remains
-future work. The implementation commit passed its [exact-commit hosted
-validation](validation-project-workflow.md#hosted-implementation-evidence); later
+and adds manifest-based project commands plus the M9 enum/match/propagation
+slice described below. The M9 implementation candidate passed
+[local and hosted gates](validation-patterns.md); later revisions need their own
+checks. Dependency
+package management remains future work. The M8 implementation commit passed its
+[exact-commit hosted validation](validation-project-workflow.md#hosted-implementation-evidence); later
 revisions still require their own checks.
 
 ## Working features
@@ -129,6 +132,44 @@ CLI uses a vendored upstream TOML parser rather than a custom TOML subset.
 This implementation is not yet a published release; local results and hosted
 checks must be tied to the exact commit independently of the M7 release record.
 
+## Enums, matching, and propagation (`0.3.0-dev`)
+
+The development compiler implements [RFC 0003](rfcs/0003-enums-patterns-and-propagation.md)
+through typed IR, independent bytecode verification, and the VM. The current
+public release does not include this slice. The [practical guide](patterns.md)
+has complete examples exercised by ordered [execution contracts](pattern-cases.json);
+the [validation record](validation-patterns.md) identifies the passed local and
+exact-commit hosted candidate checks without claiming a new release.
+
+- Nominal `enum` values have nullary or positional-payload variants, pure
+  first-class payload constructors, and exact type identity across files.
+  Wrapper copies preserve reference-payload identity. Managed payloads are traced.
+  Equality and SnapshotValue eligibility inspect all variants, not only the active
+  one. Acyclic enum type graphs, 256 variants, and 64 fields per variant bound
+  the initial representation; user generics and inherent enum methods are deferred.
+- Exhaustive `match` expressions cover enums, verdicts, options, and results.
+  Payload identifiers and `_` bind per arm; nested patterns and guards are deferred.
+  Scrutinees evaluate once. Expected types reach normally completing arms;
+  otherwise the first completing arm establishes the result type. Block arms
+  yield unit on normal completion and preserve surrounding return/loop boundaries.
+  Unselected bodies still receive name/type/effect and region checks.
+- Postfix `?` propagates a result's error from a known result-returning boundary,
+  with exact error-type agreement and potentially different success types.
+  Explicit return values still require `win`/`fumble`. A result-typed `nonchalant`
+  initializer owns its own deferred return boundary and memoizes an error normally.
+  Main/constructors and direct crossing of scenario boundaries reject propagation.
+  Operand order and local `sybau` cleanup remain explicit in the checked CFG.
+- `highkey enum` exports its variants and checks payloads for private nominal
+  leaks. Qualified constructors and patterns use `module::Enum::Variant`.
+  New diagnostics are `LARP-T015` (enum), `T016` (match), and `T017` (propagation).
+
+The writer is now [artifact version 3](bytecode-format-v3.md), with readers 1/2/3.
+New canonical descriptor and typed dispatch checks apply to nested and dead
+operations as well as reachable code. Genuine frozen fixtures and the packaged
+same-archive matrix remain required before claiming M9 compatibility acceptance.
+`enum` and `match` are newly reserved identifiers. This source change does not
+change the baseline specification number or either JSON schema.
+
 ## Roles, extensions, and bound built-ins
 
 The M4 feature set is implemented and exercised through the compiler and VM.
@@ -181,7 +222,8 @@ outer function bindings, reference captures/returns, reference allocation, role
 dispatch, and unverified indirect targets are rejected.
 
 Roots may contain scalar/text/ConversionError values and recursive
-option/result/fixed SnapshotValues. Nested scenarios, root-bound method
+option/result/fixed SnapshotValues; development enums qualify only when all
+variant payloads qualify. Nested scenarios, root-bound method
 extraction, copied first-class root bindings, crossing return/break, and external
 I/O are rejected. Loops wholly inside a scenario may break. Ordinary error
 results are data and do not cancel selected commit. Selective commit preserves
@@ -269,7 +311,8 @@ syntactically valid source without requiring type validity. It preserves raw
 tokens/comments and checks its result before publication. Default mode writes
 atomically; check/preview modes never write. See [formatter policy](formatter.md)
 and the [artifact format](bytecode-format-v1.md) for baseline wire tables, limits, and output publication. The encoder now writes
-[wire version 2](bytecode-format-v2.md), with version-1 loading retained.
+[wire version 3](bytecode-format-v3.md), with version-1 and version-2 loading retained.
+The published `0.2.0-preview.1` compiler still writes version 2 and reads 1/2.
 Compile/runtime failures exit with 1; invalid CLI arguments exit with 2.
 
 No-file project commands are available on this development branch:
@@ -292,8 +335,8 @@ not removed from the project objective. Later syntax is explicitly rejected.
 
 The scenario model remains independent and is not a substitute for compiling
 scenario programs. GC manages objects, closures, dynamic arrays, and lazy cells,
-including cycles among reference values. Option/result/fixed-array wrappers are
-owned values that trace any contained handles. Role values trace their underlying object handle;
+including cycles among reference values. Option/result/enum/fixed-array wrappers
+are owned values that trace any contained handles. Role values trace their underlying object handle;
 extracted methods retain that handle through closure captures. Text uses owned
 immutable storage. Active scenario frames root the original object and their
 snapshot/claim buffers. Active forcing frames root their lazy cell across nested
@@ -301,7 +344,10 @@ allocations, and memoized cells release captured initializer inputs.
 
 ## Current limits and conservative checks
 
-- Parser nesting: 128 guarded levels; each expression: at most 256 tokens.
+- Parser nesting: 128 guarded levels; each child expression: at most 256 tokens.
+  Match aggregate ranges do not charge every arm against one expression budget;
+  an outer operator chain still has its ordinary limit. Enums allow at most 256
+  variants and 64 fields per variant; matches allow at most 257 arms.
 - Type complexity: at most 128 nested edges and 4096 expanded nodes per type,
   counting repeated shared subtrees. The verifier preflights types across the
   entire module, including complete parameter/capture/result headers, before
@@ -400,8 +446,10 @@ allocation failure; fuel and traced-object counters are not a memory sandbox.
 `python3 tools/run_conformance.py` executes every active fixture through `check`
 and `run`, comparing stdout, explicitly declared inspection output, or primary diagnostic codes and source locations.
 `--gc-stress` repeats execution with collection at every object, array, closure,
-and lazy-cell allocation safepoint. All 89 current fixtures are active; `--all`
-selects the same complete inventory and passes. `--artifacts` also builds valid
+and lazy-cell allocation safepoint. M6 activated its 89-case inventory; later
+features add cases with their own execution evidence. `--all` includes pending
+cases if any exist; inspect the current manifest and harness report rather than
+inferring coverage from a historical count. `--artifacts` also builds valid
 programs, loads/verifies them, and compares execution with source; invalid source
 must fail build without producing output. `--formatted` formats temporary copies,
 checks idempotence, and compiles/executes the same contracts; it composes with

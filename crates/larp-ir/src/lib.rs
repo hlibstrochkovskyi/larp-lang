@@ -8,6 +8,7 @@ pub type BlockId = usize;
 
 #[derive(Clone, Debug)]
 pub struct Program {
+    pub enums: Vec<std::sync::Arc<larp_types::EnumType>>,
     pub roles: Vec<larp_bytecode::Role>,
     pub extensions: Vec<larp_bytecode::Extension>,
     pub classes: Vec<larp_bytecode::Class>,
@@ -32,7 +33,7 @@ pub struct Function {
 
 #[derive(Clone, Debug)]
 pub struct Block {
-    pub parameter: Option<Local>,
+    pub parameters: Vec<Local>,
     pub instructions: Vec<Instruction>,
     pub terminator: Terminator,
     pub span: Span,
@@ -46,6 +47,12 @@ pub struct Instruction {
 
 #[derive(Clone, Debug)]
 pub enum InstructionKind {
+    MakeEnum {
+        destination: Local,
+        ty: Type,
+        variant: usize,
+        arguments: Vec<Local>,
+    },
     Lazy {
         destination: Local,
         function: usize,
@@ -158,6 +165,10 @@ pub enum InstructionKind {
 
 #[derive(Clone, Debug)]
 pub enum Terminator {
+    MatchSum {
+        value: Local,
+        targets: Vec<BlockId>,
+    },
     ConstructReturn {
         class: usize,
         fields: Vec<Local>,
@@ -202,6 +213,7 @@ impl Function {
                     pending.push(when_true);
                     pending.push(when_false);
                 }
+                Terminator::MatchSum { ref targets, .. } => pending.extend(targets),
                 Terminator::MatchResult { success, error, .. } => {
                     pending.push(success);
                     pending.push(error);
@@ -223,12 +235,13 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
             let mut code = Vec::new();
             let mut offsets = vec![0; function.blocks.len()];
             let mut patches = Vec::new();
+            let mut sum_patches = Vec::new();
             for (id, block) in function.blocks.iter().enumerate() {
                 if !reachable[id] {
                     continue;
                 }
                 offsets[id] = code.len();
-                if let Some(local) = block.parameter {
+                for &local in block.parameters.iter().rev() {
                     code.push(ByteInstruction {
                         op: Op::Store(local),
                         span: block.span,
@@ -238,6 +251,21 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                     let span = instruction.span;
                     let mut emit = |op| code.push(ByteInstruction { op, span });
                     match &instruction.kind {
+                        InstructionKind::MakeEnum {
+                            destination,
+                            ty,
+                            variant,
+                            arguments,
+                        } => {
+                            for argument in arguments {
+                                emit(Op::Load(*argument));
+                            }
+                            emit(Op::MakeEnum {
+                                ty: ty.clone(),
+                                variant: *variant,
+                            });
+                            emit(Op::Store(*destination));
+                        }
                         InstructionKind::Lazy {
                             destination,
                             function,
@@ -469,6 +497,20 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                 }
                 let span = block.span;
                 match block.terminator {
+                    Terminator::MatchSum { value, ref targets } => {
+                        code.push(ByteInstruction {
+                            op: Op::Load(value),
+                            span,
+                        });
+                        sum_patches.push((code.len(), targets.clone()));
+                        code.push(ByteInstruction {
+                            op: Op::MatchSum {
+                                ty: function.locals[value].clone(),
+                                targets: vec![0; targets.len()],
+                            },
+                            span,
+                        });
+                    }
                     Terminator::ConstructReturn { class, ref fields } => {
                         for field in fields {
                             code.push(ByteInstruction {
@@ -564,6 +606,18 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
                     _ => unreachable!("only jumps require block patches"),
                 }
             }
+            for (pc, targets) in sum_patches {
+                let Op::MatchSum {
+                    targets: offsets_out,
+                    ..
+                } = &mut code[pc].op
+                else {
+                    unreachable!("sum branch patch")
+                };
+                for (destination, block) in offsets_out.iter_mut().zip(targets) {
+                    *destination = offsets[block];
+                }
+            }
             ByteFunction {
                 scenario: function.scenario,
                 owner: function.owner,
@@ -580,6 +634,7 @@ pub fn lower(program: &Program) -> larp_bytecode::Module {
         })
         .collect();
     larp_bytecode::Module {
+        enums: program.enums.clone(),
         roles: program.roles.clone(),
         extensions: program.extensions.clone(),
         classes: program.classes.clone(),

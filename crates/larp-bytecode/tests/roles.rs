@@ -66,6 +66,7 @@ fn module() -> Module {
         vec![Op::Load(0), Op::Return],
     );
     Module {
+        enums: Vec::new(),
         entry: 0,
         roles: vec![Role {
             name: "Readable".into(),

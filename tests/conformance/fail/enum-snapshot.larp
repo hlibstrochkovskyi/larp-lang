@@ -1,0 +1,3 @@
+enum Storage { Empty, Shared(mfs<mf>), }
+archetype Model { highkey Storage value; init() { self.value = Storage::Empty; } }
+main_character { Model model = new Model(); larp (model) as Empty { canon model.value; } }

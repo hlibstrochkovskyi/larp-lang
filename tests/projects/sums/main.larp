@@ -1,0 +1,27 @@
+import "lib/funding.larp" as finance;
+
+main_character {
+    fn(unc) -> finance::Funding uses() angel = finance::Funding::Angel;
+    finance::Funding direct = angel(20);
+    unc initial = match (direct) {
+        finance::Funding::Bootstrapped => 0,
+        finance::Funding::Angel(amount) => amount,
+        finance::Funding::Deal(_, amount) => amount,
+    };
+    yap(initial);
+
+    result<finance::Funding, text> parsed = finance::parseFunding("49");
+    unc projected = match (parsed) {
+        win(funding) => match (funding) {
+            finance::Funding::Bootstrapped => 0,
+            finance::Funding::Angel(amount) => amount,
+            finance::Funding::Deal(_, amount) => amount,
+        },
+        fumble(_) => 0,
+    };
+    yap(projected);
+    yap(match (finance::parseFunding("unc")) {
+        win(_) => "funded",
+        fumble(error) => error,
+    });
+}

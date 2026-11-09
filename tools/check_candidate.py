@@ -15,7 +15,7 @@ import tarfile
 import tomllib
 
 from version_contract import specification_version, validate_identity
-from check_candidate_matrix import validate_projects, validate_workflow
+from check_candidate_matrix import validate_patterns, validate_projects, validate_workflow
 from check_project_workflow import summary as workflow_summary
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -238,6 +238,29 @@ def main() -> None:
         if workflow["driver_sha256"] != contents["tools/check_project_workflow.py"]:
             raise RuntimeError("Project workflow did not execute the archived validation driver")
         report["project_workflow"] = portable_workflow
+        pattern_output = output / "patterns"
+        invoke([sys.executable, "-B", str(root / "tools/run_reference.py"), "--bin", str(executable),
+                "--document", str(root / "docs/patterns.md"),
+                "--contracts", str(root / "docs/pattern-cases.json"),
+                "--output", str(pattern_output)], root, timeout=120)
+        patterns = json.loads(pattern_output.joinpath("validation.json").read_text(encoding="utf-8"))
+        pattern_inventory = json.loads(root.joinpath("docs/pattern-cases.json").read_text(encoding="utf-8"))
+        commands = patterns["commands"]
+        pattern_summary = {
+            "status": "passed", "binary_sha256": patterns["binary_sha256"],
+            "document_sha256": patterns["reference_sha256"], "contracts_sha256": patterns["contracts_sha256"],
+            "driver_sha256": contents["tools/run_reference.py"], "samples": patterns["samples"],
+            "case_ids": [case["id"] for case in pattern_inventory["cases"]],
+            "vm_executions": sum(command["arguments"][0] == "run" for command in commands),
+            "cli_commands": len(commands),
+        }
+        validate_patterns(pattern_summary, contents["bin/larp"])
+        if (patterns.get("schema_version") != 1
+                or any(command.get("returncode") != 0 for command in commands)
+                or patterns["reference_sha256"] != contents["docs/patterns.md"]
+                or patterns["contracts_sha256"] != contents["docs/pattern-cases.json"]):
+            raise RuntimeError("Packaged pattern-guide execution differs from its archived contracts")
+        report["patterns"] = pattern_summary
         save()
         if checked_contents(root) != contents:
             raise RuntimeError("Candidate payload changed during execution")

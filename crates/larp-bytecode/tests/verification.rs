@@ -25,6 +25,7 @@ fn function(code: Vec<Op>, locals: Vec<Type>, effects: Effects) -> Function {
 
 fn rejects(code: Vec<Op>, locals: Vec<Type>, expected: &str) {
     let result = verify(Module {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         classes: vec![],
@@ -132,6 +133,7 @@ fn effects_cannot_be_hidden_in_direct_calls_or_unreachable_instructions() {
     );
     assert!(
         verify(Module {
+            enums: Vec::new(),
             roles: vec![],
             extensions: vec![],
             classes: vec![],
@@ -149,6 +151,7 @@ fn effects_cannot_be_hidden_in_direct_calls_or_unreachable_instructions() {
     );
     assert!(
         verify(Module {
+            enums: Vec::new(),
             roles: vec![],
             extensions: vec![],
             classes: vec![],
@@ -166,6 +169,7 @@ fn effects_cannot_be_hidden_in_direct_calls_or_unreachable_instructions() {
     );
     assert!(
         verify(Module {
+            enums: Vec::new(),
             roles: vec![],
             extensions: vec![],
             classes: vec![],
@@ -188,6 +192,7 @@ fn entry_and_parameter_signatures_are_verified() {
     entry.parameters = vec![Type::Mf];
     assert!(
         verify(Module {
+            enums: Vec::new(),
             roles: vec![],
             extensions: vec![],
             classes: vec![],
@@ -207,6 +212,7 @@ fn entry_and_parameter_signatures_are_verified() {
     callee.parameters = vec![Type::Mf];
     assert!(
         verify(Module {
+            enums: Vec::new(),
             roles: vec![],
             extensions: vec![],
             classes: vec![],
@@ -256,6 +262,7 @@ fn combined_function_headers_are_bounded_before_forward_closure_comparisons() {
             .cloned()
             .collect();
         let error = verify(Module {
+            enums: Vec::new(),
             roles: vec![],
             extensions: vec![],
             classes: vec![],
@@ -277,6 +284,7 @@ fn analysis_work_is_bounded_across_individually_valid_functions() {
         .collect();
     let ordinary = function(code, vec![Type::Mf; 1024], Effects::NONE);
     let error = verify(Module {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         classes: vec![],
@@ -312,6 +320,7 @@ fn derived_intrinsic_signatures_share_the_verification_type_work_budget() {
         Effects::NONE,
     );
     let error = verify(Module {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         classes: vec![],
@@ -339,6 +348,7 @@ fn host_io_effects_are_verified_even_in_unreachable_instructions() {
             Effects::NONE,
         );
         let error = verify(Module {
+            enums: Vec::new(),
             roles: vec![],
             extensions: vec![],
             classes: vec![],

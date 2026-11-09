@@ -11,6 +11,7 @@ mod scenarios;
 
 #[derive(Clone, Debug)]
 pub struct Module {
+    pub enums: Vec<std::sync::Arc<larp_types::EnumType>>,
     pub roles: Vec<Role>,
     pub extensions: Vec<Extension>,
     pub classes: Vec<Class>,
@@ -96,6 +97,14 @@ pub struct Instruction {
 
 #[derive(Clone, Debug)]
 pub enum Op {
+    MakeEnum {
+        ty: Type,
+        variant: usize,
+    },
+    MatchSum {
+        ty: Type,
+        targets: Vec<usize>,
+    },
     MakeLazy(usize),
     Force(Type),
     SilenceEnter,
@@ -187,6 +196,18 @@ impl VerifiedModule {
 
     pub fn disassemble(&self) -> String {
         let mut result = String::new();
+        for descriptor in &self.0.enums {
+            let _ = writeln!(result, "enum {} {}", descriptor.id, descriptor.name);
+            for (index, variant) in descriptor.variants.iter().enumerate() {
+                let fields = variant
+                    .payload
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let _ = writeln!(result, "  variant {index} {}({fields})", variant.name);
+            }
+        }
         for (index, role) in self.0.roles.iter().enumerate() {
             let _ = writeln!(result, "role {index} {}", role.name);
             for (slot, method) in role.methods.iter().enumerate() {
@@ -305,8 +326,19 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
     if entry.owner.is_some() || entry.constructor.is_some() || entry.scenario.is_some() {
         return Err(invalid("Entry cannot belong to a class"));
     }
-    classes::preflight_types(&module)?;
     let mut type_work = 0usize;
+    for descriptor in &module.enums {
+        let ty = Type::Enum(descriptor.clone());
+        if !ty.within_limits() || !charge_type_work(&ty, &mut type_work) {
+            return Err(VerifyError {
+                kind: VerifyErrorKind::ResourceLimit,
+                function: module.entry,
+                instruction: None,
+                message: "Enum type work budget exceeded".into(),
+            });
+        }
+    }
+    classes::preflight_types(&module)?;
     // A forward call/closure can expose another function's types during
     // dataflow. Validate every type before any structural type comparison.
     for (index, function) in module.functions.iter().enumerate() {
@@ -383,7 +415,9 @@ pub fn verify(module: Module) -> Result<VerifiedModule, VerifyError> {
                 | Op::Binary(_, ty)
                 | Op::Force(ty)
                 | Op::CallIndirect(ty)
-                | Op::MatchResult { ty, .. } => validate(ty, Some(pc))?,
+                | Op::MatchResult { ty, .. }
+                | Op::MakeEnum { ty, .. }
+                | Op::MatchSum { ty, .. } => validate(ty, Some(pc))?,
                 Op::Intrinsic(operation) => {
                     for ty in operation.types() {
                         validate(ty, Some(pc))?;
@@ -416,6 +450,13 @@ fn charge_type_work(ty: &Type, work: &mut usize) -> bool {
     while let Some(ty) = pending.pop() {
         let cost = match ty {
             Type::Class(_, name) | Type::Role(_, name) => 1usize.saturating_add(name.len()),
+            Type::Enum(descriptor) => 1usize.saturating_add(descriptor.name.len()).saturating_add(
+                descriptor
+                    .variants
+                    .iter()
+                    .map(|variant| variant.name.len())
+                    .sum::<usize>(),
+            ),
             _ => 1,
         };
         *work = work.saturating_add(cost);
@@ -431,6 +472,12 @@ fn charge_type_work(ty: &Type, work: &mut usize) -> bool {
             | Type::Array(payload)
             | Type::FixedArray(payload, _)
             | Type::Lazy(payload, _) => pending.push(payload),
+            Type::Enum(descriptor) => pending.extend(
+                descriptor
+                    .variants
+                    .iter()
+                    .flat_map(|variant| &variant.payload),
+            ),
             Type::Result(payloads) => {
                 pending.push(&payloads.0);
                 pending.push(&payloads.1);
@@ -617,6 +664,27 @@ fn verify_function(
                 };
                 effects = effects.union(signature.effects);
             }
+            Op::MakeEnum { ty, variant } => {
+                if !matches!(ty, Type::Enum(descriptor) if *variant < descriptor.variants.len()) {
+                    return Err(error(
+                        Some(pc),
+                        "Invalid enum construction type or variant".into(),
+                    ));
+                }
+            }
+            Op::MatchSum { ty, targets } => {
+                let Some(alternatives) = ty.alternatives() else {
+                    return Err(error(Some(pc), "Invalid sum dispatch type".into()));
+                };
+                if targets.len() != alternatives.len()
+                    || targets.iter().any(|target| *target >= function.code.len())
+                {
+                    return Err(error(
+                        Some(pc),
+                        "Invalid or incomplete sum dispatch targets".into(),
+                    ));
+                }
+            }
             Op::MatchResult {
                 ty,
                 success,
@@ -782,11 +850,11 @@ fn verify_function(
                 pop(&mut state, ty.clone())?;
                 state.stack.push(binary_type(*op, ty, ty).unwrap());
             }
-            Op::Jump(target) => successors.push((*target, None)),
+            Op::Jump(target) => successors.push((*target, Vec::new())),
             Op::JumpIfFalse(target) => {
                 pop(&mut state, Type::Verdict)?;
-                successors.push((*target, None));
-                successors.push((pc + 1, None));
+                successors.push((*target, Vec::new()));
+                successors.push((pc + 1, Vec::new()));
             }
             Op::Call(target) => {
                 let callee = &module.functions[*target];
@@ -856,14 +924,30 @@ fn verify_function(
                 }
                 state.stack.push(signature.result);
             }
+            Op::MakeEnum {
+                ty: ty @ Type::Enum(descriptor),
+                variant,
+            } => {
+                for parameter in descriptor.variants[*variant].payload.iter().rev() {
+                    pop(&mut state, parameter.clone())?;
+                }
+                state.stack.push(ty.clone());
+            }
+            Op::MakeEnum { .. } => unreachable!("validated enum construction"),
+            Op::MatchSum { ty, targets } => {
+                pop(&mut state, ty.clone())?;
+                for (target, payload) in targets.iter().zip(ty.alternatives().unwrap()) {
+                    successors.push((*target, payload));
+                }
+            }
             Op::MatchResult {
                 ty: ty @ Type::Result(payloads),
                 success,
                 error,
             } => {
                 pop(&mut state, ty.clone())?;
-                successors.push((*success, Some(payloads.0.clone())));
-                successors.push((*error, Some(payloads.1.clone())));
+                successors.push((*success, vec![payloads.0.clone()]));
+                successors.push((*error, vec![payloads.1.clone()]));
             }
             Op::MatchResult { .. } => unreachable!("validated result type"),
             Op::Print => {
@@ -897,12 +981,13 @@ fn verify_function(
             return Err(failure("Operand stack limit exceeded".into()).resource());
         }
         if successors.is_empty() {
-            successors.push((pc + 1, None));
+            successors.push((pc + 1, Vec::new()));
         }
         for (next, payload) in successors {
             let mut state = state.clone();
-            if let Some(payload) = payload {
-                state.stack.push(payload);
+            state.stack.extend(payload);
+            if state.stack.len() > 65_536 {
+                return Err(failure("Operand stack limit exceeded".into()).resource());
             }
             if next >= function.code.len() {
                 return Err(failure("Execution falls outside the function".into()));

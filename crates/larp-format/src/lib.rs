@@ -6,9 +6,9 @@
 use larp_diagnostics::Diagnostic;
 use larp_source::{SourceFile, Span};
 use larp_syntax::{
-    Block, Class, CommentKind, Expr, ExprKind, Function, LambdaBody, Program, Role, SourceUnit,
-    Statement, StatementKind, Token, TokenKind, TypeExpr, TypeExprKind, lex_with_comments, parse,
-    parse_unit,
+    Block, Class, CommentKind, Enum, Expr, ExprKind, Function, LambdaBody, Program, Role,
+    SourceUnit, Statement, StatementKind, Token, TokenKind, TypeExpr, TypeExprKind,
+    lex_with_comments, parse, parse_unit,
 };
 use larp_types::Unary;
 
@@ -159,6 +159,8 @@ struct Flags {
     angle_open: bool,
     angle_close: bool,
     unary: bool,
+    comma_brace: bool,
+    postfix: bool,
 }
 struct Annotations<'a> {
     source: &'a SourceFile,
@@ -231,6 +233,9 @@ impl<'a> Annotations<'a> {
         self.block(&function.body);
     }
     fn program(&mut self, program: &Program) {
+        for item in &program.enums {
+            self.enumeration(item);
+        }
         for role in &program.roles {
             self.role(role);
         }
@@ -243,6 +248,9 @@ impl<'a> Annotations<'a> {
         self.block(&program.main);
     }
     fn unit(&mut self, unit: &SourceUnit) {
+        for item in &unit.enums {
+            self.enumeration(&item.item);
+        }
         for role in &unit.roles {
             self.role(&role.item);
         }
@@ -254,6 +262,20 @@ impl<'a> Annotations<'a> {
         }
         if let Some(main) = &unit.main {
             self.block(main);
+        }
+    }
+    fn enumeration(&mut self, item: &Enum) {
+        self.mark(
+            item.name.span.range().end,
+            item.span.range().end,
+            "{",
+            false,
+            |flags| flags.comma_brace = true,
+        );
+        for variant in &item.variants {
+            for payload in &variant.payloads {
+                self.ty(payload);
+            }
         }
     }
     fn role(&mut self, role: &Role) {
@@ -343,6 +365,32 @@ impl<'a> Annotations<'a> {
     }
     fn expr(&mut self, expr: &Expr) {
         match &expr.kind {
+            ExprKind::Match { value, arms } => {
+                self.mark(
+                    value.span.range().end,
+                    expr.span.range().end,
+                    "{",
+                    false,
+                    |flags| flags.comma_brace = true,
+                );
+                self.expr(value);
+                for arm in arms {
+                    match &arm.body {
+                        LambdaBody::Expression(value) => self.expr(value),
+                        LambdaBody::Block(block) => self.block(block),
+                    }
+                }
+            }
+            ExprKind::Propagate { operand } => {
+                self.mark(
+                    operand.span.range().end,
+                    expr.span.range().end,
+                    "?",
+                    true,
+                    |flags| flags.postfix = true,
+                );
+                self.expr(operand);
+            }
             ExprKind::Unary { op, operand } => {
                 let raw = match op {
                     Unary::Negate => "-",
@@ -519,7 +567,10 @@ fn space(previous: Leaf<'_>, next: Leaf<'_>) -> bool {
         return true;
     }
     let (left, right) = (previous.raw, next.raw);
-    if next.flags.angle_close || matches!(right, ")" | "]" | "," | ";" | "." | "::") {
+    if next.flags.postfix
+        || next.flags.angle_close
+        || matches!(right, ")" | "]" | "," | ";" | "." | "::")
+    {
         return false;
     }
     if previous.flags.angle_open || matches!(left, "(" | "[" | "." | "::") {
@@ -537,7 +588,7 @@ fn space(previous: Leaf<'_>, next: Leaf<'_>) -> bool {
     if right == "(" {
         return matches!(
             left,
-            "if" | "while" | "loop" | "larp" | "return" | "in" | "="
+            "if" | "while" | "loop" | "larp" | "match" | "return" | "in" | "="
         ) || is_operator(previous);
     }
     if right == "[" {
@@ -634,7 +685,10 @@ impl<'a> Renderer<'a> {
         if self.pending_break != Break::None {
             let continuation = self.pending_break == Break::AfterBlock
                 && !leaf.comment()
-                && matches!(leaf.raw, "else" | ";" | "," | ")" | "]" | "." | "(" | "[");
+                && matches!(
+                    leaf.raw,
+                    "else" | ";" | "," | ")" | "]" | "." | "(" | "[" | "?"
+                );
             if !(continuation || leaf.comment() && leaf.inline_before && self.column != 0) {
                 self.newline()?;
                 if root
@@ -695,7 +749,7 @@ impl<'a> Renderer<'a> {
                 self.pending_break = Break::Required;
                 self.sequence(
                     children,
-                    if block {
+                    if block && !node.first.flags.comma_brace {
                         Layout::Statements
                     } else {
                         Layout::BrokenList

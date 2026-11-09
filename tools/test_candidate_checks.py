@@ -45,6 +45,11 @@ def synthetic_reports() -> dict:
                            "sources": {"src/main.larp": "b" * 64,
                                        "src/aura.larp" if identifier == "scaffold" else "lib/aura.larp": "d" * 64},
                            "commands": expected_commands(identifier)} for identifier in STAGES]},
+            "patterns": {"status": "passed", "binary_sha256": "c" * 64,
+                         "document_sha256": "d" * 64, "contracts_sha256": "e" * 64,
+                         "driver_sha256": "f" * 64, "samples": 2,
+                         "case_ids": ["funding-and-runway", "payload-capture-and-deferred-error"],
+                         "vm_executions": 10, "cli_commands": 29},
             "conformance_modes": [{"flags": copy.copy(mode), "passed": 2, "pending": 0} for mode in MODES],
             "environment": {"system": "Linux", "machine": "x86_64", "glibc": "synthetic libc",
                             "os_release": {"ID": "ubuntu", "VERSION_ID": release},
@@ -119,6 +124,27 @@ class MatrixEvidenceTests(unittest.TestCase):
         reports["ubuntu-26.04"]["projects"]["manifest_sha256"] = "f" * 64
         with self.assertRaises(ValueError):
             validate(reports, REVISION)
+
+    def test_missing_or_incomplete_pattern_guide_is_rejected_even_on_both_hosts(self):
+        for change in (None, {"status": "failed"}, {"binary_sha256": "a" * 64},
+                       {"samples": True}, {"vm_executions": 9}, {"cli_commands": 28},
+                       {"case_ids": ["duplicate", "duplicate"]},
+                       {"document_sha256": "invalid"}, {"contracts_sha256": "invalid"}):
+            reports = synthetic_reports()
+            for report in reports.values():
+                if change is None:
+                    report.pop("patterns")
+                else:
+                    report["patterns"].update(change)
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                validate(reports, REVISION)
+
+    def test_different_pattern_guide_or_driver_across_hosts_is_rejected(self):
+        for field in ("document_sha256", "contracts_sha256", "driver_sha256"):
+            reports = synthetic_reports()
+            reports["ubuntu-26.04"]["patterns"][field] = "a" * 64
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                validate(reports, REVISION)
 
     def test_matching_candidate_on_two_distinct_hosts(self):
         result = validate(synthetic_reports(), REVISION)

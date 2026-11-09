@@ -1,0 +1,2 @@
+enum Loop { Next(baddie<Loop>), }
+main_character {}

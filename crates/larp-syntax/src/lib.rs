@@ -18,6 +18,7 @@ pub struct Name {
 #[derive(Debug)]
 pub struct SourceUnit {
     pub imports: Vec<Import>,
+    pub enums: Vec<Declaration<Enum>>,
     pub roles: Vec<Declaration<Role>>,
     pub classes: Vec<Declaration<Class>>,
     pub functions: Vec<Declaration<Function>>,
@@ -40,10 +41,49 @@ pub struct Import {
 
 #[derive(Debug)]
 pub struct Program {
+    pub enums: Vec<Enum>,
     pub roles: Vec<Role>,
     pub classes: Vec<Class>,
     pub functions: Vec<Function>,
     pub main: Block,
+}
+
+#[derive(Debug)]
+pub struct Enum {
+    pub name: Name,
+    pub variants: Vec<Variant>,
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub struct Variant {
+    pub name: Name,
+    pub payloads: Vec<TypeExpr>,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug)]
+pub struct MatchArm {
+    pub pattern: Pattern,
+    pub body: LambdaBody,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug)]
+pub struct Pattern {
+    pub kind: PatternKind,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug)]
+pub enum PatternKind {
+    Wildcard,
+    Verdict(bool),
+    None,
+    Constructor {
+        path: Name,
+        bindings: Option<Vec<Name>>,
+    },
 }
 
 #[derive(Debug)]
@@ -209,6 +249,13 @@ pub struct Expr {
 
 #[derive(Clone, Debug)]
 pub enum ExprKind {
+    Match {
+        value: Box<Expr>,
+        arms: Vec<MatchArm>,
+    },
+    Propagate {
+        operand: Box<Expr>,
+    },
     Integer(String),
     Float(String),
     Text(String),

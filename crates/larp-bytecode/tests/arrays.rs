@@ -34,6 +34,7 @@ fn unit() -> Function {
 
 fn verify_target(target: Function) -> Result<(), VerifyError> {
     verify(Module {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         classes: vec![],

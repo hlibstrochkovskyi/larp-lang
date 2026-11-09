@@ -159,12 +159,30 @@ impl Builder<'_> {
                     .as_ref()
                     .filter(|_| !infer_result)
                     .map(|signature| signature.result.clone());
-                let value = child.expression(expression, expected, true)?;
-                child.function.result = signature
-                    .as_ref()
-                    .filter(|_| !infer_result)
-                    .map_or(value.ty, |signature| signature.result.clone());
-                child.terminate(Terminator::Return(Some(value.slot)), span);
+                let entry = child.current;
+                let mut value = child.expression(expression, expected, true)?;
+                // A match block arm can return directly from this lambda while
+                // its expression is still being checked. Its implicit result
+                // must agree with those returns rather than overwriting them.
+                if child.function.reachable_from(entry)[child.current] {
+                    let known = signature
+                        .as_ref()
+                        .filter(|_| !infer_result)
+                        .map(|signature| signature.result.clone())
+                        .or_else(|| child.inferred_result.as_ref().and_then(Clone::clone));
+                    if let Some(known) = known {
+                        value = child.coerce_role(value, &known, span)?;
+                        child.matches(known.clone(), value.ty.clone(), span)?;
+                        child.function.result = known;
+                    } else {
+                        child.function.result = value.ty.clone();
+                    }
+                    if child.inferred_result.is_some() {
+                        child.inferred_result = Some(Some(child.function.result.clone()));
+                        child.inferred_returns.push((value.ty.clone(), span));
+                    }
+                    child.terminate(Terminator::Return(Some(value.slot)), span);
+                }
             }
         }
         child.finish();
@@ -253,7 +271,32 @@ fn free_names(parameters: &[ast::LambdaParameter], body: &ast::LambdaBody) -> BT
                         self.expr(argument);
                     }
                 }
-                ExprKind::Unary { operand, .. } => self.expr(operand),
+                ExprKind::Unary { operand, .. } | ExprKind::Propagate { operand } => {
+                    self.expr(operand)
+                }
+                ExprKind::Match { value, arms } => {
+                    self.expr(value);
+                    for arm in arms {
+                        self.bound.push(HashSet::new());
+                        if let ast::PatternKind::Constructor {
+                            bindings: Some(bindings),
+                            ..
+                        } = &arm.pattern.kind
+                        {
+                            self.bound.last_mut().unwrap().extend(
+                                bindings
+                                    .iter()
+                                    .filter(|name| name.text != "_")
+                                    .map(|name| name.text.clone()),
+                            );
+                        }
+                        match &arm.body {
+                            ast::LambdaBody::Expression(value) => self.expr(value),
+                            ast::LambdaBody::Block(block) => self.block(block),
+                        }
+                        self.bound.pop();
+                    }
+                }
                 ExprKind::Binary { left, right, .. } => {
                     self.expr(left);
                     self.expr(right);

@@ -1,0 +1,3 @@
+enum Left { Value, }
+enum Right { Value, }
+main_character { Left value = Left::Value; mf answer = match (value) { Right::Value => 1, }; }

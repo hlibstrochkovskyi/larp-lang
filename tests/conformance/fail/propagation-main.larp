@@ -1,0 +1,1 @@
+main_character { mf value = parseScore("49")?; }

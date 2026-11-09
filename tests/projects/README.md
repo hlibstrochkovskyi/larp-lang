@@ -1,8 +1,9 @@
 # Multi-file acceptance projects
 
-These projects exercise whole-project compilation in the `0.2.0-preview.1` candidate.
-They extend the single-file corpus in `tests/conformance`; they are not features
-of the published `v0.1.0-preview.1` release. Each project has one entry unit and
+These projects exercise whole-project compilation with the development toolchain.
+They extend the single-file corpus in `tests/conformance`. The cross-file pitch
+is supported by the published `v0.2.0-preview.1`; the enum/result project requires
+`0.3.0-dev` and is not part of that published release. Each project has one entry unit and
 explicitly imported library units. Library files intentionally have no
 `main_character` block and cannot run as independent programs.
 
@@ -59,6 +60,22 @@ acceptance test with:
 cargo test -p larp-cli --test projects --locked --offline committed_pitch_project
 ```
 
+## Cross-file alternatives and propagation
+
+`sums/main.larp` imports the public `Funding` enum and `parseFunding` function
+from `sums/lib/funding.larp`. It extracts a module-qualified variant constructor
+as a first-class function, matches every qualified variant, and performs a nested
+match over a returned result and its enum payload. The imported function uses
+`?` to propagate parse failures before wrapping a successful amount. Its exact
+standard output is `20\n49\ninvalid mf\n`, with no standard error.
+
+```sh
+cargo run --locked --offline -- run tests/projects/sums/main.larp --gc-stress
+```
+
+The standalone driver below checks this project alongside the pitch, including
+formatted source and loaded bytecode after source paths become unavailable.
+
 ## Packaged-binary acceptance
 
 The [manifest](manifest.json) binds the exact source inventory to stdout and
@@ -68,7 +85,7 @@ inspection expectations. Run the standalone driver without rebuilding a CLI:
 python3 tools/run_projects.py --bin target/debug/larp --output artifacts/project-validation
 ```
 
-It executes one project in five modes: ordinary/stress source, ordinary/stress
+It executes each listed project in five modes: ordinary/stress source, ordinary/stress
 loaded artifact, and a formatted loaded artifact with stress GC. Formatting is
 checked per source unit; source snapshots are renamed and retained before
 artifact execution so the original embedded paths are unavailable. The driver

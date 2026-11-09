@@ -4,7 +4,10 @@ This guide describes the implemented developer-preview subset. See the
 [specification](spec/v0.1.md) for exact rules and
 [implementation status](implementation-status.md) for limits and deferred work.
 Each `larp` block below is a complete, independently executable source file.
-[Validation](validation-reference.md) records their real CLI execution.
+[Validation](validation-reference.md) records their real CLI execution. For
+new `0.3.0-dev` syntax, read the separate
+[enum/match/result-propagation guide](patterns.md); the current public release
+does not include those development features.
 
 ## Build and run
 
@@ -21,7 +24,9 @@ One UTF-8 file contains declarations and exactly one `main_character` entry.
 Declarations may refer to later declarations. Braces delimit blocks; statements
 end with `;`. Comments use `//` or non-nesting `/* ... */`. Identifiers use ASCII
 letters, digits, and underscores; strings support Unicode and `\" \\ \n \r \t`.
-There are no imports, mutable globals, user generics, inheritance, or async.
+These standalone examples need no imports; [file modules](modules.md) support
+explicit libraries. Mutable globals, user generics, inheritance, and async remain
+absent.
 
 ## Values, numbers, and control flow
 

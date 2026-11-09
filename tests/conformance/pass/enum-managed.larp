@@ -1,0 +1,27 @@
+archetype Box {
+    highkey mf value;
+    init(mf value) { self.value = value; }
+}
+enum Cargo {
+    Empty,
+    Object(Box),
+    Items(mfs<mf>),
+    Callback(fn() -> mf uses(read)),
+}
+sidequest makeCargo() -> Cargo uses(read, write, abort) {
+    return Cargo::Object(new Box(49));
+}
+main_character {
+    mfs<Cargo> cargo = [makeCargo(), Cargo::Items([20, 21])];
+    fn(Cargo) -> mf uses(read, abort) score = item => match (item) {
+        Cargo::Empty => 0,
+        Cargo::Object(box) => box.value,
+        Cargo::Items(items) => items[0] + items[1],
+        Cargo::Callback(callback) => callback(),
+    };
+    cargo.map(score).forEach(x => yap(x));
+    Box box = new Box(7);
+    cargo.push(Cargo::Callback(() => box.value));
+    box.value = 8;
+    yap(score(cargo[2]));
+}

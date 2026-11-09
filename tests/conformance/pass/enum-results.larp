@@ -1,0 +1,22 @@
+enum Funding {
+    Bootstrapped,
+    Angel(unc),
+    Deal(text, unc),
+}
+sidequest runway(text input) -> result<unc,text> uses(abort) {
+    mf score = parseScore(input)?;
+    return win(fraud<unc>(score) * 10);
+}
+main_character {
+    Funding funding = Funding::Angel(fortnine);
+    unc money = match (funding) {
+        Funding::Bootstrapped => 0,
+        Funding::Angel(amount) => amount,
+        Funding::Deal(_, amount) => amount,
+    };
+    yap(money);
+    yap(runway("49").cope(err => 0));
+    yap(runway("bad").cope(err => 20));
+    nonchalant result<mf,text> lazyScore = win(parseScore("bad")?);
+    yap(lazyScore.cope(err => 7));
+}

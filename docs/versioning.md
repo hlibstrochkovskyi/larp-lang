@@ -8,12 +8,15 @@ The language is experimental; this policy defines identities and evidence for
 subsequent releases.
 
 The development toolchain is **`0.3.0-dev`**, adding manifest-based projects
-under [RFC 0002](rfcs/0002-project-workflow.md). The published toolchain remains
+under [RFC 0002](rfcs/0002-project-workflow.md), plus the
+[enum/match/propagation slice](patterns.md) under [RFC 0003](rfcs/0003-enums-patterns-and-propagation.md).
+M9 acceptance checks remain in progress. The published toolchain remains
 `0.2.0-preview.1`, with experimental file modules under
 [RFC 0001](rfcs/0001-file-modules.md). The `0.1` specification remains the
-single-file design baseline. Both extensions keep artifact wire encoding and
-JSON schemas unchanged. Project manifests have a separate schema-1 identity,
-validated by the CLI; it is not a language edition or artifact version.
+single-file design baseline. Module/project extensions keep wire encoding
+unchanged; enums and typed sum dispatch advance the development writer to wire 3,
+retaining readers 1/2/3. Both JSON schemas remain unchanged. Project manifests
+have a separate schema-1 identity, validated by the CLI; it is not a language edition or artifact version.
 
 ## Independent version identities
 
@@ -21,7 +24,7 @@ validated by the CLI; it is not a language edition or artifact version.
 | --- | --- | --- |
 | Toolchain version | `0.3.0-dev` | CLI and workspace package version from the root Cargo manifest |
 | Language specification | `0.1` | The [proposed language specification](spec/v0.1.md), with experimental implementation status |
-| Artifact wire version | Writer `2`; reader `1`, `2` | Explicit encodings accepted by the artifact decoder, subject to verification |
+| Artifact wire version | Writer `3`; reader `1`, `2`, `3` | Explicit encodings accepted by the artifact decoder, subject to verification |
 | Diagnostic JSON schema | `1` | The [structured diagnostic protocol](diagnostics.md) |
 | Version-info JSON schema | `1` | The machine-readable CLI identity described below |
 | Project manifest schema | `1` | CLI configuration selected by the required `schema` field in `larp.toml` |
@@ -76,7 +79,7 @@ The command emits one JSON object followed by a newline on stdout, exits
 successfully, and leaves stderr empty. For the current workspace it reports:
 
 ```json
-{"schema_version":1,"name":"larp","version":"0.3.0-dev","channel":"development","language_spec":"0.1","language_status":"experimental","artifact":{"write":2,"read":[1,2]},"diagnostics_schema":1}
+{"schema_version":1,"name":"larp","version":"0.3.0-dev","channel":"development","language_spec":"0.1","language_status":"experimental","artifact":{"write":3,"read":[1,2,3]},"diagnostics_schema":1}
 ```
 
 `schema_version` versions this version-info object separately from diagnostics.
@@ -100,6 +103,12 @@ fields. Removing or renaming required fields, changing their types, or changing
 their meaning incompatibly requires a new schema. Diagnostic and version-info
 schema numbers are incremented separately. Human diagnostic prose, formatting,
 and help text are not a machine protocol; use structured diagnostic fields.
+
+Development source compatibility also changes deliberately: `enum` and `match`
+are reserved identifiers, and older uses of those names must be renamed. The
+public `0.2.0-preview.1` executable reads only wire versions 1 and 2; it cannot
+load newly emitted wire-3 files. Rebuild retained source with the intended
+compiler rather than changing an artifact header.
 
 ## Bytecode and updates
 

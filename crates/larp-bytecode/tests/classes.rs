@@ -57,6 +57,7 @@ fn module() -> Module {
     );
     getter.owner = Some(0);
     Module {
+        enums: Vec::new(),
         roles: vec![],
         extensions: vec![],
         classes: vec![Class {

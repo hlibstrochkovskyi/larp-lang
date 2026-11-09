@@ -1,9 +1,12 @@
 # Source formatter
 
-Status: implemented M6 tool, extended with experimental file-module syntax in
-the development compiler. Final module acceptance validation is pending.
-The [M6 validation record](validation-formatter.md) describes the original
-single-file tool; [RFC 0001](rfcs/0001-file-modules.md) records the module contract.
+Status: implemented M6 tool, with file-module syntax published in
+[`0.2.0-preview.1`](releases/0.2.0-preview.1-publication.md). The development
+`0.3.0-dev` formatter additionally accepts enums, match arms, and postfix `?`
+under [RFC 0003](rfcs/0003-enums-patterns-and-propagation.md); M9 acceptance checks
+remain in progress. The [M6 validation record](validation-formatter.md) describes
+the original single-file tool; [RFC 0001](rfcs/0001-file-modules.md) records the
+module contract.
 
 The library exposes two entry points with the same result type:
 
@@ -14,7 +17,9 @@ The library exposes two entry points with the same result type:
 
 Both return `Result<String, Vec<Diagnostic>>`. The legacy API retains its grammar,
 including existing identifiers named `import`; the source-unit grammar reserves
-`import`. Neither API loads dependencies or resolves import paths.
+`import`. Both development APIs reserve `enum` and `match` and accept the
+[pattern grammar extension](spec/patterns.ebnf). Neither API loads dependencies
+or resolves import paths.
 
 ## Commands and failure
 
@@ -91,7 +96,9 @@ imports and top-level `highkey`/`lowkey` declarations remain in source order.
 Nested qualified types, constructors, typed lambdas, and extension receiver
 types use the same AST annotations as their single-file counterparts.
 Multiline list layout and comments can introduce breaks without adding trailing
-commas (the grammar does not accept them).
+commas. Development enum declarations and match arms accept optional trailing
+commas, which are preserved when present; ordinary call lists retain their
+existing punctuation rules.
 Long opaque tokens and comments may exceed the soft target. There is no alignment
 matrix, import sorting, configurable style, or formatter-disable pragma in this
 slice. The tool policy can evolve separately from language semantics.
@@ -124,6 +131,14 @@ main_character {
     }
 }
 ```
+
+Development enum and match braces use comma-separated layout rather than
+statement-only layout. Qualified variant names remain compact, and postfix `?`
+stays attached to its operand. Original comments, token order and optional
+trailing commas survive reformatting. Focused tests in
+[`patterns.rs`](../crates/larp-format/tests/patterns.rs) cover these constructs;
+the [pattern guide contracts](pattern-cases.json) execute formatted examples
+through the compiler and VM.
 
 ## Resource policy
 
