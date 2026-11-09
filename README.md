@@ -114,8 +114,9 @@ remains available as a historical release.
 
 ### Build from source
 
-Use Rust **1.99.0+**, Cargo, and a native linker. The main workspace has no
-third-party Rust dependencies and builds offline after installing the toolchain.
+Use Rust **1.99.0+**, Cargo, and a native linker. The manifest parser and its
+locked dependencies are vendored, so workspace builds work offline after
+installing the toolchain. See [third-party sources and licenses](THIRD_PARTY.md).
 Python **3.11+**, rustfmt, and Clippy are needed for development checks.
 
 ```sh
@@ -126,8 +127,29 @@ cargo build -p larp-cli --release --locked --offline
 ```
 
 Source builds use the checked-out commit; they do not reproduce the published
-archive merely by sharing its version string. Other platforms are not yet part
+archive merely by sharing its version string. This development branch reports
+`0.3.0-dev` and adds the [project workflow](docs/projects.md); the published
+`0.2.0-preview.1` does not include that workflow. Other platforms are not yet part
 of the release compatibility policy.
+
+### Start a project on the development branch
+
+With a `0.3.0-dev` source build available on `PATH`:
+
+```sh
+larp new aura-app
+cd aura-app
+larp check
+larp run --gc-stress
+larp build
+larp run target/aura-app.larpbc
+```
+
+The generated two-file program prints `Your first sidequest:`, `50`, and `fr`.
+`larp.toml` selects the entry source; `check`, `run`, and `build` discover it from
+the project directory or its descendants. Explicit file commands continue to
+work. See [project commands and boundaries](docs/projects.md) before adapting an
+existing directory. This is development functionality, not a new public release.
 
 ## Cursed vocabulary. Concrete semantics.
 
@@ -145,7 +167,8 @@ Closures capture bindings as snapshots. A tracing collector manages objects,
 arrays, closures, and lazy cells. Source checks and an independent bytecode
 verifier preserve types, visibility, effects, and scenario restrictions.
 
-This preview supports standalone and multi-file programs. Packages, re-exports,
+The published preview supports standalone and multi-file programs; development
+builds also support manifest-based projects. Dependency packages, re-exports,
 user-defined generics, inheritance, async, FFI, and a native backend remain future
 work. There is no stable source/API compatibility promise or hostile-code sandbox.
 The [implementation status](docs/implementation-status.md) lists working features
@@ -173,7 +196,7 @@ keep program output on stdout and report structured events on stderr.
 ## Learn, build, contribute
 
 - **Write LARP:** [practical reference](docs/reference.md), [examples](examples/),
-  [CLI and diagnostics](docs/diagnostics.md).
+  [project workflow](docs/projects.md), [CLI and diagnostics](docs/diagnostics.md).
 - **Understand the implementation:** [architecture](docs/architecture.md),
   [development guide](docs/development.md), [roadmap](docs/roadmap.md).
 - **Help the project:** [contribution guide](CONTRIBUTING.md),
@@ -185,4 +208,5 @@ keep program output on stdout and report structured events on stderr.
 ## License
 
 [MIT](LICENSE) · Copyright (c) 2026 **Hlib Strochkovskyi**.
-Packaged Rust runtime components retain their own license notices.
+Vendored dependencies and packaged Rust runtime components retain their own
+license notices; see [THIRD_PARTY.md](THIRD_PARTY.md).

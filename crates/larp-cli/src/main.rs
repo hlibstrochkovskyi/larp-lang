@@ -1,4 +1,6 @@
+mod manifest;
 mod project;
+mod scaffold;
 
 use larp_source::{SourceFile, SourceId};
 use std::io::{Read, Seek, Write};
@@ -14,9 +16,10 @@ Usage:
   larp --help
   larp --version [--json]
   larp explain CODE
-  larp build FILE.larp [-o FILE.larpbc]
-  larp check FILE.larp|FILE.larpbc
-  larp run FILE.larp|FILE.larpbc [--fuel INSTRUCTIONS] [--gc-stress] [-- ARG...]
+  larp new NAME
+  larp build [FILE.larp | --manifest-path larp.toml] [-o FILE.larpbc]
+  larp check [FILE.larp|FILE.larpbc | --manifest-path larp.toml]
+  larp run [FILE.larp|FILE.larpbc | --manifest-path larp.toml] [--fuel INSTRUCTIONS] [--gc-stress] [-- ARG...]
   larp dump FILE.larp|FILE.larpbc [--ir]
   larp fmt FILE.larp [--check|--stdout]
 
@@ -26,6 +29,8 @@ branches, loops, checked conversions, effect bounds, typed IR,
 verified bytecode and versioned artifacts, eager collection pipelines, isolated scenarios,
 pure memoized lazy bindings, host arguments/stdin, dynamic observation suppression,
 and tracing GC. palantir reports go to stderr.
+With no file operand, check/run/build use the nearest ancestor larp.toml.
+Project build output defaults to target/NAME.larpbc under the manifest root.
 Artifacts embed source maps and are verified again when loaded. --ir requires source.
 fmt preserves tokens and comments; its default mode updates the source file.
 --gc-stress collects at every object/array/closure/lazy allocation safepoint.";
@@ -39,6 +44,9 @@ enum DiagnosticFormat {
 impl DiagnosticFormat {
     fn event(self, kind: &str, code: Option<&str>, message: &str) {
         match self {
+            Self::Text if kind == "project_error" && code.is_some() => {
+                eprintln!("error[{}]: {message}", code.unwrap())
+            }
             Self::Text => eprintln!("{message}"),
             Self::Json => eprint!("{}", larp_diagnostics::json::event(kind, code, message)),
         }
@@ -122,20 +130,28 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             }
         },
-        ["check", path] => process(path, Mode::Check, format),
-        ["build", path] => process(
-            path,
-            Mode::Build(Path::new(path).with_extension("larpbc")),
-            format,
-        ),
-        ["build", path, "-o", output] => process(path, Mode::Build(PathBuf::from(output)), format),
-        ["run", path, options @ ..] => match run_options(options) {
-            Ok(run) => process(path, Mode::Run(run), format),
-            Err(message) => {
-                format.error(message);
-                ExitCode::from(2)
+        ["new", name] => {
+            if let Err(message) = scaffold::validate_name(name) {
+                format.event("project_error", Some("LARP-J004"), &message);
+                return ExitCode::from(2);
             }
-        },
+            match scaffold::create(name) {
+                Ok(path) => {
+                    println!(
+                        "Created project {}\n\n  cd {name}\n  larp check\n  larp run\n  larp build",
+                        path.display()
+                    );
+                    ExitCode::SUCCESS
+                }
+                Err(message) => {
+                    format.event("project_error", Some("LARP-J004"), &message);
+                    ExitCode::from(1)
+                }
+            }
+        }
+        [command @ ("check" | "build" | "run"), options @ ..] => {
+            project_command(command, options, format)
+        }
         ["dump", path] => process(path, Mode::Dump, format),
         ["dump", path, "--ir"] => process(path, Mode::Ir, format),
         ["fmt", path] if !path.starts_with("--") => {
@@ -152,6 +168,126 @@ fn main() -> ExitCode {
             ExitCode::from(2)
         }
     }
+}
+
+struct ProjectContext {
+    project: manifest::Project,
+    default_output: bool,
+}
+
+fn project_command(command: &str, mut options: &[&str], format: DiagnosticFormat) -> ExitCode {
+    let mut file = None;
+    let mut manifest_path = None;
+    let mut output = None;
+    let mut run_flags = Vec::new();
+    // A positional file remains the first operand, preserving the existing CLI.
+    if let Some((first, rest)) = options.split_first()
+        && (!first.starts_with('-') || (!first.starts_with("--") && *first != "-o"))
+    {
+        file = Some(*first);
+        options = rest;
+    }
+    let usage = || {
+        format.error(
+            "unknown, duplicate, conflicting, or incomplete command option; see larp --help",
+        );
+        ExitCode::from(2)
+    };
+    while !options.is_empty() {
+        options = match options {
+            ["--manifest-path", path, rest @ ..]
+                if manifest_path.is_none()
+                    && !matches!(
+                        *path,
+                        "--manifest-path" | "--fuel" | "--gc-stress" | "--" | "-o"
+                    ) =>
+            {
+                manifest_path = Some(*path);
+                rest
+            }
+            ["-o", path, rest @ ..]
+                if command == "build"
+                    && output.is_none()
+                    && !matches!(
+                        *path,
+                        "--manifest-path" | "--fuel" | "--gc-stress" | "--" | "-o"
+                    ) =>
+            {
+                output = Some(PathBuf::from(path));
+                rest
+            }
+            ["--fuel", value, rest @ ..] if command == "run" => {
+                run_flags.extend(["--fuel", *value]);
+                rest
+            }
+            ["--gc-stress", rest @ ..] if command == "run" => {
+                run_flags.push("--gc-stress");
+                rest
+            }
+            ["--", rest @ ..] if command == "run" => {
+                run_flags.push("--");
+                run_flags.extend_from_slice(rest);
+                &[]
+            }
+            _ => return usage(),
+        };
+    }
+    if file.is_some() && manifest_path.is_some() {
+        return usage();
+    }
+    let run = if command == "run" {
+        match run_options(&run_flags) {
+            Ok(run) => Some(run),
+            Err(message) => {
+                format.error(message);
+                return ExitCode::from(2);
+            }
+        }
+    } else {
+        None
+    };
+    let project = if file.is_none() {
+        match manifest::load(manifest_path) {
+            Ok(project) => Some(ProjectContext {
+                project,
+                default_output: command == "build" && output.is_none(),
+            }),
+            Err(error) => {
+                match error.source {
+                    Some((source, range)) => {
+                        let source = *source;
+                        let span = source
+                            .span(range)
+                            .unwrap_or_else(|| source.span(0..0).unwrap());
+                        let diagnostic =
+                            larp_diagnostics::Diagnostic::error(error.code, span, error.message);
+                        format.diagnostic(&diagnostic, &[source]);
+                    }
+                    None => format.event("project_error", Some(error.code), &error.message),
+                }
+                return ExitCode::from(1);
+            }
+        }
+    } else {
+        None
+    };
+    let path = file.unwrap_or_else(|| project.as_ref().unwrap().project.entry.to_str().unwrap());
+    let mode = match command {
+        "check" => Mode::Check,
+        "run" => Mode::Run(run.unwrap()),
+        "build" => Mode::Build(output.unwrap_or_else(|| {
+            match &project {
+                Some(context) => context
+                    .project
+                    .root
+                    .join("target")
+                    .join(format!("{}.larpbc", context.project.name)),
+                None => Path::new(path).with_extension("larpbc"),
+            }
+        })),
+        _ => unreachable!(),
+    };
+    process_with_project(path, mode, format, project.as_ref())
 }
 
 struct Run {
@@ -206,6 +342,15 @@ enum FormatMode {
 }
 
 fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
+    process_with_project(path, mode, format, None)
+}
+
+fn process_with_project(
+    path: &str,
+    mode: Mode,
+    format: DiagnosticFormat,
+    project_context: Option<&ProjectContext>,
+) -> ExitCode {
     let mut file = match std::fs::File::open(path) {
         Ok(file) => file,
         Err(error) => return input_error(path, &error, format),
@@ -217,10 +362,11 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
     if let Err(error) = file.rewind() {
         return input_error(path, &error, format);
     }
-    if prefix == b"LARPBC\r\n"
-        || Path::new(path)
-            .extension()
-            .is_some_and(|ext| ext == "larpbc")
+    if project_context.is_none()
+        && (prefix == b"LARPBC\r\n"
+            || Path::new(path)
+                .extension()
+                .is_some_and(|ext| ext == "larpbc"))
     {
         if matches!(mode, Mode::Ir | Mode::Build(_) | Mode::Format(_)) {
             format.error("build, fmt, and dump --ir require source input");
@@ -244,18 +390,30 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
         };
         return execute(&artifact.module, &artifact.sources, mode, format);
     }
-    let text = if matches!(mode, Mode::Format(_)) {
+    let text = if matches!(mode, Mode::Format(_)) || project_context.is_some() {
         let mut bytes = Vec::new();
-        let limit = larp_format::MAX_SOURCE_BYTES;
+        let limit = if project_context.is_some() {
+            larp_compiler::project::MAX_SOURCE_BYTES
+        } else {
+            larp_format::MAX_SOURCE_BYTES
+        };
         if let Err(error) = file.take((limit + 1) as u64).read_to_end(&mut bytes) {
             return input_error(path, &error, format);
         }
         if bytes.len() > limit {
             let source = SourceFile::new(SourceId(0), path, "");
             let diagnostic = larp_diagnostics::Diagnostic::error(
-                "LARP-P003",
+                if project_context.is_some() {
+                    "LARP-M005"
+                } else {
+                    "LARP-P003"
+                },
                 source.span(0..0).unwrap(),
-                "Formatter source size limit exceeded",
+                if matches!(mode, Mode::Format(_)) {
+                    "Formatter source size limit exceeded"
+                } else {
+                    "Project source size limit exceeded"
+                },
             );
             format.diagnostic(&diagnostic, &[source]);
             return ExitCode::from(1);
@@ -263,6 +421,14 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
         match String::from_utf8(bytes) {
             Ok(text) => text,
             Err(error) => {
+                if project_context.is_some() {
+                    format.event(
+                        "project_error",
+                        Some("LARP-J003"),
+                        &format!("project entry must contain valid UTF-8: {error}"),
+                    );
+                    return ExitCode::from(1);
+                }
                 return input_error(
                     path,
                     &std::io::Error::new(std::io::ErrorKind::InvalidData, error),
@@ -278,6 +444,18 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
         text
     };
     let source = SourceFile::new(SourceId(0), path, text);
+    if project_context.is_some()
+        && source.text().bytes().filter(|&byte| byte == b'\n').count() + 1
+            > larp_compiler::project::MAX_SOURCE_LINES
+    {
+        let diagnostic = larp_diagnostics::Diagnostic::error(
+            "LARP-M005",
+            source.span(0..0).unwrap(),
+            "Project aggregate source line limit exceeded",
+        );
+        format.diagnostic(&diagnostic, &[source]);
+        return ExitCode::from(1);
+    }
     if let Mode::Format(mode) = mode {
         return format_source(path, &source, mode, format);
     }
@@ -286,7 +464,11 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
     let graph = if larp_syntax::parse(&source).is_ok() {
         None
     } else {
-        let (entry, mut resolver) = match project::open_entry(Path::new(path)) {
+        let opened = match project_context {
+            Some(context) => project::open_project(Path::new(path), &context.project.root),
+            None => project::open_entry(Path::new(path)),
+        };
+        let (entry, mut resolver) = match opened {
             Ok(entry) => entry,
             Err(message) => {
                 let diagnostic = larp_diagnostics::Diagnostic::error(
@@ -331,6 +513,17 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
             ExitCode::SUCCESS
         }
         Mode::Build(output) => {
+            if let Some(context) = project_context
+                && std::fs::canonicalize(&output)
+                    .is_ok_and(|output| output == context.project.manifest)
+            {
+                format.event(
+                    "project_error",
+                    Some("LARP-J003"),
+                    "artifact output must differ from the project manifest",
+                );
+                return ExitCode::from(1);
+            }
             if output == Path::new(path)
                 || std::fs::canonicalize(&output).ok().is_some_and(|output| {
                     sources.iter().any(|source| {
@@ -338,6 +531,14 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
                     })
                 })
             {
+                if project_context.is_some() {
+                    format.event(
+                        "project_error",
+                        Some("LARP-J003"),
+                        "artifact output must differ from every loaded source file",
+                    );
+                    return ExitCode::from(1);
+                }
                 format.error("artifact output must differ from the source file");
                 return ExitCode::from(2);
             }
@@ -352,6 +553,31 @@ fn process(path: &str, mode: Mode, format: DiagnosticFormat) -> ExitCode {
                     return ExitCode::from(1);
                 }
             };
+            if let Some(context) = project_context
+                && context.default_output
+            {
+                let target = context.project.root.join("target");
+                let result = match std::fs::symlink_metadata(&target) {
+                    Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {
+                        Ok(())
+                    }
+                    Ok(_) => Err(std::io::Error::other(
+                        "default target must be a directory, not a symlink",
+                    )),
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                        std::fs::create_dir(&target)
+                    }
+                    Err(error) => Err(error),
+                };
+                if let Err(error) = result {
+                    format.event(
+                        "project_error",
+                        Some("LARP-J003"),
+                        &format!("cannot create project output directory: {error}"),
+                    );
+                    return ExitCode::from(1);
+                }
+            }
             if let Err(error) = write_file(&output, &bytes, None, None) {
                 format.error(format_args!("cannot write '{}': {error}", output.display()));
                 return ExitCode::from(1);

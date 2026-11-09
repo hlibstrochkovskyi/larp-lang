@@ -72,6 +72,12 @@ Its single root directory contains:
 - `THIRD_PARTY.md` and `THIRD_PARTY/rust/`, preserving upstream runtime attribution
   and license texts from the exact compiler distribution. These components keep
   their own terms; the upstream inventory can cover more code than this CLI uses.
+  Development candidates preserve the checked-in dependency inventory as
+  `THIRD_PARTY.md`, retain `vendor/` license/checksum files, and write the separate
+  runtime index to `THIRD_PARTY/RUST.md`. Older candidates without a checked-in
+  inventory use `THIRD_PARTY.md` for the runtime index. See
+  [third-party dependencies](../THIRD_PARTY.md). Neither inventory replaces the
+  other.
 
 After unpacking and entering the single root directory:
 

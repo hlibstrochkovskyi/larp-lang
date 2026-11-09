@@ -74,9 +74,11 @@ values preserve all effect and scenario restrictions.
 
 ## Paths, artifacts, and formatting
 
-The CLI uses the canonical entry file's parent as the project root. Imports are
-relative to their importing file and remain within that root after symlink
-resolution. Use `/` paths ending in `.larp`; absolute paths, backslashes, NULs,
+Explicit-file commands use the canonical entry file's parent as their root.
+Development `0.3.0-dev` [manifest-based commands](projects.md) instead use the
+canonical manifest parent, allowing imports between sibling source directories
+inside that root. Imports are relative to their importing file and remain within
+the selected root after symlink resolution. Use `/` paths ending in `.larp`; absolute paths, backslashes, NULs,
 missing/nonregular files, and escaping symlinks are rejected. `..` is accepted
 only within the root. There is no package registry or network lookup.
 

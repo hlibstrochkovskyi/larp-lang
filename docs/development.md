@@ -26,6 +26,8 @@ implementation does not translate programs into another language or use host
 subsystems in anticipation of future work.
 
 The multifile compiler and CLI acceptance tests run with the workspace suite.
+The [project workflow guide](projects.md) covers manifest/scaffold behavior;
+`crates/larp-cli/tests/project_workflow.rs` executes that CLI boundary.
 The [project fixture guide](../tests/projects/README.md) also provides commands
 for source, artifact, formatting, and GC-stress execution.
 
@@ -43,6 +45,7 @@ gates; bounded fuzz campaigns have a [separate workflow](../.github/workflows/fu
 | Artifact encoder, loader, or verifier | Loaded-artifact conformance and version compatibility |
 | Formatter or parser layout | Formatted/loaded-artifact conformance |
 | README or practical reference examples | Documentation execution harness and source consistency |
+| Manifest discovery, project roots, scaffolding, or no-file commands | CLI project-workflow tests, generated source/artifact runs, and packaged project contracts |
 | CLI identity, release metadata, or candidate tooling | Version-contract check and candidate-tool unit tests |
 | Runtime resource accounting | Resource measurements on Linux |
 | Build or distribution tooling | Independent reproducibility and packaged-candidate checks |

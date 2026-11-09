@@ -1,0 +1,3 @@
+# Preserve unchanged upstream sources and notices, including their whitespace.
+vendor/** -whitespace linguist-vendored
+vendor-notices/** -whitespace linguist-vendored
